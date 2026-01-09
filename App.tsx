@@ -1,0 +1,382 @@
+
+import React, { useState, useEffect } from 'react';
+import { Auth } from './components/Auth';
+import { Calendar } from './components/Calendar';
+import { TodoList } from './components/TodoList';
+import { EventModal } from './components/EventModal';
+import { ChatAssistant } from './components/ChatAssistant';
+import { ThemeSwitcher } from './components/ThemeSwitcher';
+import { SettingsModal } from './components/SettingsModal';
+import { User, CalendarEvent, Todo, Theme } from './types';
+import * as storage from './utils/storage';
+import { LogOut, Layout, Settings } from 'lucide-react';
+
+const App: React.FC = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [theme, setTheme] = useState<Theme>('modern');
+  const [initializing, setInitializing] = useState(true);
+
+  // AI State
+  const [aiMessage, setAiMessage] = useState<{text: string, id: string} | null>(null);
+  
+  // Gamification State
+  const [lastCompletedTask, setLastCompletedTask] = useState<string | null>(null);
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  const triggerAiMessage = (text: string) => {
+    setAiMessage({ text, id: crypto.randomUUID() });
+  };
+
+  useEffect(() => {
+    // Load data from local storage on mount
+    const storedUser = storage.getUser();
+    const storedEvents = storage.getEvents();
+    const storedTodos = storage.getTodos();
+    const storedTheme = storage.getTheme();
+    
+    if (storedUser) setUser(storedUser);
+    if (storedEvents) setEvents(storedEvents);
+    if (storedTodos) setTodos(storedTodos);
+    if (storedTheme) setTheme(storedTheme);
+    
+    setInitializing(false);
+
+    // Morning Briefing
+    if (storedUser && !sessionStorage.getItem('olli_greeted')) {
+      const now = new Date();
+      const hour = now.getHours();
+      let greeting = "Bună dimineața";
+      if (hour >= 12) greeting = "Salut";
+      if (hour >= 18) greeting = "Bună seara";
+
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const todayEvents = (storedEvents || []).filter(e => e.date === todayStr).length;
+      const pendingTasks = (storedTodos || []).filter(t => !t.completed).length;
+
+      let message = `${greeting}! ☀️ Azi ai ${todayEvents} evenimente și ${pendingTasks} task-uri de rezolvat. Să avem o zi productivă!`;
+
+      if (pendingTasks === 0 && todayEvents === 0) {
+        message += "\n\nCe liniște... Nu vrei să adăugăm un task nou sau un plan? 📝";
+      }
+
+      setTimeout(() => triggerAiMessage(message), 1500);
+      sessionStorage.setItem('olli_greeted', 'true');
+    }
+  }, []);
+
+  const handleLogin = (newUser: User) => {
+    storage.saveUser(newUser);
+    setUser(newUser);
+    if (!sessionStorage.getItem('olli_greeted')) {
+       setTimeout(() => triggerAiMessage(`Bine ai venit, ${newUser.name}! Sunt Olli, asistentul tău. 🦉`), 1000);
+       sessionStorage.setItem('olli_greeted', 'true');
+    }
+  };
+
+  const handleLogout = () => {
+    storage.clearUser();
+    setUser(null);
+    sessionStorage.removeItem('olli_greeted');
+  };
+
+  const handleThemeChange = (newTheme: Theme) => {
+    setTheme(newTheme);
+    storage.saveTheme(newTheme);
+  };
+
+  const handleImportData = (data: any) => {
+    if (data.user) {
+        setUser(data.user);
+        storage.saveUser(data.user);
+    }
+    if (data.events && Array.isArray(data.events)) {
+        setEvents(data.events);
+        storage.saveEvents(data.events);
+    }
+    if (data.todos && Array.isArray(data.todos)) {
+        setTodos(data.todos);
+        storage.saveTodos(data.todos);
+    }
+    if (data.theme) {
+        setTheme(data.theme);
+        storage.saveTheme(data.theme);
+    }
+    triggerAiMessage("Datele au fost restaurate cu succes! 💾");
+  };
+
+  // Event Handlers
+  const handleOpenModal = (date: Date) => {
+    setSelectedDate(date);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveEvent = (eventData: Omit<CalendarEvent, 'id'>) => {
+    if (eventData.time) {
+      const conflict = events.find(e => 
+        e.date === eventData.date && 
+        e.time === eventData.time
+      );
+      if (conflict) {
+        triggerAiMessage(`⚠️ Atenție! Te-ai suprapus cu evenimentul '${conflict.title}' la ora ${eventData.time}. Sper că te poți clona! 👯‍♂️`);
+      }
+    }
+
+    const newEvent: CalendarEvent = {
+      id: crypto.randomUUID(),
+      ...eventData
+    };
+    const updatedEvents = [...events, newEvent];
+    setEvents(updatedEvents);
+    storage.saveEvents(updatedEvents);
+  };
+
+  const handleDeleteEvent = (id: string) => {
+    const updatedEvents = events.filter(e => e.id !== id);
+    setEvents(updatedEvents);
+    storage.saveEvents(updatedEvents);
+  };
+
+  const handleDeleteEventByTitle = (titleFragment: string): boolean => {
+    const target = titleFragment.toLowerCase();
+    const event = events.find(e => e.title.toLowerCase().includes(target));
+    if (event) {
+      handleDeleteEvent(event.id);
+      return true;
+    }
+    return false;
+  };
+
+  // Todo Handlers
+  const handleAddTodo = (text: string) => {
+    const newTodo: Todo = {
+      id: crypto.randomUUID(),
+      text,
+      completed: false
+    };
+    const updatedTodos = [newTodo, ...todos];
+    setTodos(updatedTodos);
+    storage.saveTodos(updatedTodos);
+  };
+
+  const handleToggleTodo = (id: string) => {
+    let completedTaskName: string | null = null;
+    
+    const updatedTodos = todos.map(t => {
+      if (t.id === id) {
+        const newStatus = !t.completed;
+        if (newStatus) {
+            completedTaskName = t.text;
+        }
+        return { ...t, completed: newStatus };
+      }
+      return t;
+    });
+    
+    setTodos(updatedTodos);
+    storage.saveTodos(updatedTodos);
+
+    if (completedTaskName) {
+        // Trigger Confetti
+        // @ts-ignore
+        if (window.confetti) {
+             // @ts-ignore
+             window.confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        }
+        // Update state to trigger Olli praise (add timestamp to ensure uniqueness if same task toggled)
+        setLastCompletedTask(`${completedTaskName}::${Date.now()}`);
+    }
+  };
+
+  const handleToggleTodoByText = (textFragment: string): boolean => {
+    const target = textFragment.toLowerCase();
+    const todo = todos.find(t => t.text.toLowerCase().includes(target));
+    if (todo) {
+      handleToggleTodo(todo.id);
+      return true;
+    }
+    return false;
+  };
+
+  const handleDeleteTodo = (id: string) => {
+    const updatedTodos = todos.filter(t => t.id !== id);
+    setTodos(updatedTodos);
+    storage.saveTodos(updatedTodos);
+  };
+
+  if (initializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Auth onLogin={handleLogin} />;
+  }
+
+  // Theme Base Classes
+  const getThemeBackground = () => {
+    switch(theme) {
+      case 'neon': return 'bg-slate-950';
+      case 'pastel': return 'bg-stone-100';
+      default: return 'bg-slate-50';
+    }
+  };
+
+  const getHeaderStyles = () => {
+    switch(theme) {
+      case 'neon': return 'bg-slate-900 border-slate-800';
+      case 'pastel': return 'bg-white border-orange-100';
+      default: return 'bg-white border-slate-200';
+    }
+  };
+
+  const getLogoStyles = () => {
+    switch(theme) {
+      case 'neon': return 'from-cyan-500 to-blue-600 shadow-cyan-500/20';
+      case 'pastel': return 'from-orange-400 to-rose-400 shadow-orange-400/20';
+      default: return 'from-primary to-secondary shadow-primary/30';
+    }
+  };
+
+  const getTitleStyles = () => {
+    switch(theme) {
+      case 'neon': return 'from-cyan-400 to-blue-400';
+      case 'pastel': return 'from-orange-500 to-rose-500';
+      default: return 'from-primary to-secondary';
+    }
+  };
+
+  return (
+    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${getThemeBackground()}`}>
+      {/* Header */}
+      <header className={`sticky top-0 z-10 shadow-sm transition-colors duration-300 ${getHeaderStyles()}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-2">
+              <div className={`bg-gradient-to-br p-2 rounded-lg text-white shadow-lg ${getLogoStyles()}`}>
+                <Layout size={24} />
+              </div>
+              <span className={`text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r ${getTitleStyles()}`}>
+                Smart Calendar
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-4 md:gap-6">
+              <ThemeSwitcher currentTheme={theme} onThemeChange={handleThemeChange} />
+              
+              <div className="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-700">
+                <button
+                    onClick={() => setIsSettingsOpen(true)}
+                    className={`p-2 rounded-lg transition-colors ${
+                      theme === 'neon' 
+                      ? 'text-slate-400 hover:text-cyan-400 hover:bg-slate-800' 
+                      : 'text-slate-500 hover:text-primary hover:bg-slate-100'
+                    }`}
+                    title="Settings"
+                >
+                    <Settings size={20} />
+                </button>
+
+                <div className="hidden md:flex flex-col items-end">
+                  <span className={`text-sm font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>
+                    {user.name}
+                  </span>
+                  <span className={`text-xs ${theme === 'neon' ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {user.email}
+                  </span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className={`p-2 rounded-lg transition-colors ${
+                    theme === 'neon' 
+                    ? 'text-slate-400 hover:text-red-400 hover:bg-red-900/20' 
+                    : 'text-slate-500 hover:text-red-500 hover:bg-red-50'
+                  }`}
+                  title="Logout"
+                >
+                  <LogOut size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Calendar Section (2/3) */}
+          <div className="w-full lg:w-2/3">
+            <Calendar 
+              events={events} 
+              onDateSelect={handleOpenModal}
+              onDeleteEvent={handleDeleteEvent}
+              theme={theme}
+            />
+          </div>
+
+          {/* Todo List Section (1/3) */}
+          <div className="w-full lg:w-1/3">
+            <div className="sticky top-24">
+              <TodoList 
+                todos={todos}
+                onAddTodo={handleAddTodo}
+                onToggleTodo={handleToggleTodo}
+                onDeleteTodo={handleDeleteTodo}
+                theme={theme}
+              />
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className={`border-t py-6 mt-auto transition-colors duration-300 ${
+        theme === 'neon' ? 'bg-slate-900 border-slate-800 text-slate-500' : 'bg-white border-slate-200 text-slate-400'
+      }`}>
+        <div className="max-w-7xl mx-auto px-4 text-center text-sm">
+          <p>© {new Date().getFullYear()} Smart Calendar. Olli AI integrated.</p>
+        </div>
+      </footer>
+
+      <EventModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveEvent}
+        initialDate={selectedDate}
+      />
+
+      <SettingsModal 
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        user={user}
+        events={events}
+        todos={todos}
+        theme={theme}
+        onImportData={handleImportData}
+      />
+
+      <ChatAssistant 
+        events={events}
+        todos={todos}
+        onAddEvent={handleSaveEvent}
+        onAddTodo={handleAddTodo}
+        onDeleteEvent={handleDeleteEventByTitle}
+        onToggleTodo={handleToggleTodoByText}
+        theme={theme}
+        incomingMessage={aiMessage}
+        lastCompletedTask={lastCompletedTask}
+      />
+    </div>
+  );
+};
+
+export default App;
