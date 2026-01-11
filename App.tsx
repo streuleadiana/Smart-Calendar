@@ -19,6 +19,7 @@ const App: React.FC = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [theme, setTheme] = useState<Theme>('modern');
+  const [accentColor, setAccentColor] = useState<string>('blue');
   const [initializing, setInitializing] = useState(true);
 
   // AI State
@@ -51,37 +52,15 @@ const App: React.FC = () => {
     const storedEvents = storage.getEvents();
     const storedTodos = storage.getTodos();
     const storedTheme = storage.getTheme();
+    const storedAccent = localStorage.getItem('app_accent_color');
     
     if (storedEvents) setEvents(storedEvents);
     if (storedTodos) setTodos(storedTodos);
     if (storedTheme) setTheme(storedTheme);
+    if (storedAccent) setAccentColor(storedAccent);
     
     setInitializing(false);
   }, []);
-
-  // Morning Briefing Effect - runs when user is present and data changes
-  useEffect(() => {
-    if (userName && !sessionStorage.getItem('olli_greeted')) {
-      const now = new Date();
-      const hour = now.getHours();
-      let greeting = "Bună dimineața";
-      if (hour >= 12) greeting = "Salut";
-      if (hour >= 18) greeting = "Bună seara";
-
-      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const todayEvents = events.filter(e => e.date === todayStr).length;
-      const pendingTasks = todos.filter(t => !t.completed).length;
-
-      let message = `${greeting}, ${userName}! ☀️ Azi ai ${todayEvents} evenimente și ${pendingTasks} task-uri de rezolvat. Să avem o zi productivă!`;
-
-      if (pendingTasks === 0 && todayEvents === 0) {
-        message += "\n\nCe liniște... Nu vrei să adăugăm un task nou sau un plan? 📝";
-      }
-
-      setTimeout(() => triggerAiMessage(message), 1500);
-      sessionStorage.setItem('olli_greeted', 'true');
-    }
-  }, [userName, events, todos]);
 
   const handleStartApp = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,11 +69,6 @@ const App: React.FC = () => {
     const name = nameInput.trim();
     localStorage.setItem('app_username', name);
     setUserName(name);
-
-    if (!sessionStorage.getItem('olli_greeted')) {
-        setTimeout(() => triggerAiMessage(`Salut, ${name}! Bine ai venit. 🦉`), 1000);
-        sessionStorage.setItem('olli_greeted', 'true');
-    }
   };
 
   const handleLogout = () => {
@@ -107,6 +81,11 @@ const App: React.FC = () => {
   const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme);
     storage.saveTheme(newTheme);
+  };
+
+  const handleAccentChange = (newColor: string) => {
+    setAccentColor(newColor);
+    localStorage.setItem('app_accent_color', newColor);
   };
 
   const handleImportData = (data: any) => {
@@ -269,6 +248,39 @@ const App: React.FC = () => {
     storage.saveTodos(updatedTodos);
   };
 
+  const getAccentBtnClass = () => {
+    switch(accentColor) {
+      case 'purple': return 'bg-purple-600 hover:bg-purple-700 shadow-purple-500/30';
+      case 'pink': return 'bg-pink-500 hover:bg-pink-600 shadow-pink-500/30';
+      case 'orange': return 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/30';
+      case 'green': return 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30';
+      case 'teal': return 'bg-teal-500 hover:bg-teal-600 shadow-teal-500/30';
+      default: return 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/30';
+    }
+  };
+
+  const getAccentTextClass = () => {
+    switch(accentColor) {
+      case 'purple': return 'text-purple-600';
+      case 'pink': return 'text-pink-500';
+      case 'orange': return 'text-orange-500';
+      case 'green': return 'text-emerald-500';
+      case 'teal': return 'text-teal-500';
+      default: return 'text-indigo-600';
+    }
+  };
+
+  const getAccentBgLight = () => {
+    switch(accentColor) {
+        case 'purple': return 'bg-purple-50';
+        case 'pink': return 'bg-pink-50';
+        case 'orange': return 'bg-orange-50';
+        case 'green': return 'bg-emerald-50';
+        case 'teal': return 'bg-teal-50';
+        default: return 'bg-indigo-50';
+    }
+  };
+
   if (initializing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -282,7 +294,7 @@ const App: React.FC = () => {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-4">
              <div className="bg-white/90 backdrop-blur-xl p-8 rounded-3xl shadow-2xl w-full max-w-md text-center border border-white/20 animate-in zoom-in-95 duration-300">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-indigo-50 text-indigo-600 mb-6 shadow-sm">
+                <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full mb-6 shadow-sm ${getAccentBgLight()} ${getAccentTextClass()}`}>
                     <Sparkles size={40} />
                 </div>
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">Bine ai venit! 👋</h1>
@@ -303,7 +315,7 @@ const App: React.FC = () => {
                     <button 
                         type="submit" 
                         disabled={!nameInput.trim()}
-                        className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg"
+                        className={`w-full py-3.5 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg ${getAccentBtnClass()}`}
                     >
                         <span>Începe</span>
                         <ArrowRight size={20} />
@@ -411,6 +423,7 @@ const App: React.FC = () => {
               onDeleteEvent={handleDeleteEvent}
               onEditEvent={openEditModal}
               theme={theme}
+              accentColor={accentColor}
             />
           </div>
 
@@ -425,6 +438,7 @@ const App: React.FC = () => {
                 onTogglePin={handleTogglePin}
                 onChangeColor={handleChangeTodoColor}
                 theme={theme}
+                accentColor={accentColor}
               />
               
               <div className={`mt-auto pt-6 border-t ${theme === 'neon' ? 'border-slate-800' : 'border-slate-200'}`}>
@@ -486,6 +500,8 @@ const App: React.FC = () => {
         onDeleteEvent={handleDeleteEventByTitle}
         onToggleTodo={handleToggleTodoByText}
         theme={theme}
+        accentColor={accentColor}
+        onAccentChange={handleAccentChange}
         incomingMessage={aiMessage}
         lastCompletedTask={lastCompletedTask}
       />

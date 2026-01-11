@@ -11,6 +11,7 @@ interface TodoListProps {
   onTogglePin: (id: string) => void;
   onChangeColor: (id: string, color: string) => void;
   theme: Theme;
+  accentColor?: string;
 }
 
 const TODO_COLORS = [
@@ -27,7 +28,8 @@ export const TodoList: React.FC<TodoListProps> = ({
   onDeleteTodo, 
   onTogglePin,
   onChangeColor,
-  theme 
+  theme,
+  accentColor = 'blue'
 }) => {
   const [newTodo, setNewTodo] = useState('');
   const [isPinned, setIsPinned] = useState(false);
@@ -53,8 +55,52 @@ export const TodoList: React.FC<TodoListProps> = ({
     : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-secondary/50 focus:border-secondary';
 
   const textClass = isNeon ? 'text-slate-300' : 'text-slate-700';
-  const iconClass = isNeon ? 'text-cyan-400' : 'text-secondary';
   const completedText = isNeon ? 'text-slate-600' : 'text-slate-400';
+
+  const getAccentBtnClass = () => {
+    if (isNeon) return 'bg-cyan-600 hover:bg-cyan-500';
+    if (isPastel) return 'bg-orange-400 hover:bg-orange-500';
+
+    switch(accentColor) {
+        case 'purple': return 'bg-purple-600 hover:bg-purple-700';
+        case 'pink': return 'bg-pink-500 hover:bg-pink-600';
+        case 'orange': return 'bg-orange-500 hover:bg-orange-600';
+        case 'green': return 'bg-emerald-500 hover:bg-emerald-600';
+        case 'teal': return 'bg-teal-500 hover:bg-teal-600';
+        default: return 'bg-indigo-600 hover:bg-indigo-700';
+    }
+  };
+
+  const getAccentTextClass = () => {
+    if (isNeon) return 'text-cyan-400';
+    if (isPastel) return 'text-orange-500';
+
+    switch(accentColor) {
+        case 'purple': return 'text-purple-600';
+        case 'pink': return 'text-pink-500';
+        case 'orange': return 'text-orange-500';
+        case 'green': return 'text-emerald-500';
+        case 'teal': return 'text-teal-500';
+        default: return 'text-indigo-600';
+    }
+  };
+  
+  const getAccentBgLight = () => {
+      if (isNeon) return 'bg-cyan-900/50';
+      if (isPastel) return 'bg-orange-100/50';
+
+      switch(accentColor) {
+        case 'purple': return 'bg-purple-50 text-purple-600';
+        case 'pink': return 'bg-pink-50 text-pink-500';
+        case 'orange': return 'bg-orange-50 text-orange-500';
+        case 'green': return 'bg-emerald-50 text-emerald-500';
+        case 'teal': return 'bg-teal-50 text-teal-500';
+        default: return 'bg-indigo-50 text-indigo-600';
+    }
+  }
+
+  const iconClass = getAccentTextClass();
+  const headerIconBg = getAccentBgLight();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +121,7 @@ export const TodoList: React.FC<TodoListProps> = ({
   return (
     <div className={`rounded-2xl shadow-sm border h-full flex flex-col overflow-hidden ${containerClass}`}>
       <div className={`p-4 border-b flex items-center gap-2 ${headerClass}`}>
-        <div className={`p-1.5 rounded-md ${isNeon ? 'bg-cyan-900/50 text-cyan-400' : 'bg-secondary/10 text-secondary'}`}>
+        <div className={`p-1.5 rounded-md ${headerIconBg}`}>
           <ListTodo size={20} />
         </div>
         <h3 className="font-bold">My Tasks</h3>
@@ -96,7 +142,7 @@ export const TodoList: React.FC<TodoListProps> = ({
           <button
             type="submit"
             disabled={!newTodo.trim()}
-            className={`absolute right-1.5 top-1.5 p-1.5 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${isNeon ? 'bg-cyan-600 hover:bg-cyan-500' : 'bg-secondary hover:bg-purple-600'}`}
+            className={`absolute right-1.5 top-1.5 p-1.5 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${getAccentBtnClass()}`}
           >
             <Plus size={16} />
           </button>
@@ -156,7 +202,7 @@ export const TodoList: React.FC<TodoListProps> = ({
                 className={`flex-shrink-0 transition-colors ${
                   todo.completed 
                     ? iconClass 
-                    : isNeon ? 'text-slate-600 hover:text-cyan-400' : 'text-slate-300 hover:text-secondary'
+                    : isNeon ? 'text-slate-600 hover:text-cyan-400' : `text-slate-300 hover:${iconClass.replace('text-', 'text-')}`
                 }`}
               >
                 {todo.completed ? <CheckSquare size={20} /> : <Square size={20} />}

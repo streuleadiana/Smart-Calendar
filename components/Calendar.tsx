@@ -10,6 +10,7 @@ interface CalendarProps {
   onDeleteEvent: (id: string) => void;
   onEditEvent: (event: CalendarEvent) => void;
   theme: Theme;
+  accentColor?: string;
 }
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -18,7 +19,7 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDeleteEvent, onEditEvent, theme }) => {
+export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDeleteEvent, onEditEvent, theme, accentColor = 'blue' }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
 
@@ -34,6 +35,17 @@ export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDele
       case 'personal': return 'bg-emerald-500';
       case 'study': return 'bg-amber-500';
       default: return 'bg-slate-500';
+    }
+  };
+
+  const getAccentBadgeClass = () => {
+     switch(accentColor) {
+        case 'purple': return 'bg-purple-600 text-white';
+        case 'pink': return 'bg-pink-500 text-white';
+        case 'orange': return 'bg-orange-500 text-white';
+        case 'green': return 'bg-emerald-500 text-white';
+        case 'teal': return 'bg-teal-500 text-white';
+        default: return 'bg-indigo-600 text-white'; // Default/Blue
     }
   };
 
@@ -92,7 +104,7 @@ export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDele
     const textMuted = isNeon ? 'text-slate-400' : 'text-slate-400';
     const dayHeaderBg = isNeon ? 'bg-slate-950 text-cyan-500' : isPastel ? 'bg-stone-100 text-stone-500' : 'bg-slate-50 text-slate-400';
     const todayHighlight = isNeon ? 'bg-cyan-900/30' : 'bg-indigo-50/40';
-    const todayBadge = isNeon ? 'bg-cyan-500 text-black shadow-cyan-500/50' : isPastel ? 'bg-orange-400 text-white' : 'bg-primary text-white';
+    const todayBadge = isNeon ? 'bg-cyan-500 text-black shadow-cyan-500/50' : isPastel ? 'bg-orange-400 text-white' : getAccentBadgeClass();
 
     return (
       <div className={`grid grid-cols-7 gap-px rounded-2xl overflow-hidden border shadow-sm ${gridBg} ${isNeon ? 'border-slate-800' : 'border-slate-200'}`}>

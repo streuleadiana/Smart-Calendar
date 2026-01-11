@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { CalendarEvent, Todo, Theme } from '../types';
-import { MessageCircle, X, Send, User as UserIcon, Mic, Sparkles, Camera, GripHorizontal, Settings, Save } from 'lucide-react';
+import { MessageCircle, X, Send, User as UserIcon, Mic, Sparkles, Camera, GripHorizontal, Settings, Save, Palette } from 'lucide-react';
 
 interface ChatAssistantProps {
   userName: string;
@@ -12,6 +12,8 @@ interface ChatAssistantProps {
   onDeleteEvent: (title: string) => boolean;
   onToggleTodo: (text: string) => boolean;
   theme: Theme;
+  accentColor: string;
+  onAccentChange: (color: string) => void;
   incomingMessage: { text: string; id: string } | null;
   lastCompletedTask: string | null;
 }
@@ -39,6 +41,15 @@ const COLOR_MAP: {[key: string]: string} = {
   'indigo': 'bg-indigo-500'
 };
 
+const ACCENT_OPTIONS = [
+    { id: 'blue', label: 'Blue', class: 'bg-blue-600' },
+    { id: 'purple', label: 'Purple', class: 'bg-purple-600' },
+    { id: 'pink', label: 'Pink', class: 'bg-pink-500' },
+    { id: 'orange', label: 'Orange', class: 'bg-orange-500' },
+    { id: 'green', label: 'Green', class: 'bg-emerald-500' },
+    { id: 'teal', label: 'Teal', class: 'bg-teal-500' },
+];
+
 const AVATARS = ["🦉", "🤖", "👽", "🦊", "🐱", "🦁", "🦄", "🧙‍♂️", "🧠", "💼", "👨‍💻", "👩‍💻"];
 
 export const ChatAssistant: React.FC<ChatAssistantProps> = ({ 
@@ -50,6 +61,8 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   onDeleteEvent,
   onToggleTodo,
   theme, 
+  accentColor,
+  onAccentChange,
   incomingMessage,
   lastCompletedTask
 }) => {
@@ -90,20 +103,24 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   const [messages, setMessages] = useState<Message[]>(() => [
     {
       id: '1',
-      text: `Salut, ${userName}! 👋 Sunt ${localStorage.getItem('assistant_name') || "Olli"} ${localStorage.getItem('assistant_avatar') || "🦉"}, asistentul tău personal. Iată cum te pot ajuta să te organizezi:
+      text: `Salut, ${userName || 'prietene'}! 👋 
+Eu sunt ${assistantName} 🦉 (dar mă poți redenumi oricând din setări ⚙️).
+
+Iată cum te pot ajuta să te organizezi:
 
 📅 *Calendar & Programări:*
-Scrie: 'Adaugă [nume] [ziua] la [ora]'
-Ex: 'Adaugă Ședință mâine la 14:00'
+'Adaugă [nume] în [ziua] la [ora]'
+
+❓ *Întrebări despre program:*
+'Ce am azi?' sau 'Ce am mâine?'
 
 📝 *Task-uri Inteligente:*
-Scrie: 'Task [nume]' + opțional 'URGENT' sau o culoare.
-Ex: 'Task cumpărături urgent' sau 'Task teme cu roșu'
+'Task [nume]' (opțional: 'URGENT' sau culoare)
 
 🗑️ *Ștergere:*
-Scrie: 'Șterge [numele activității]'
+'Șterge [numele activității]'
 
-Cu ce începem azi?`,
+Cu ce începem?`,
       sender: 'bot',
       timestamp: new Date()
     }
@@ -641,36 +658,65 @@ Cu ce începem azi?`,
     }, 600);
   };
 
-  // Styles
+  // Styles Helpers
+  const getAccentHeaderClass = () => {
+    if (theme === 'neon') return 'bg-slate-950 border-cyan-500/20 text-cyan-50';
+    if (theme === 'pastel') return 'bg-orange-50 border-orange-100 text-stone-800';
+    
+    switch(accentColor) {
+        case 'purple': return 'bg-purple-600 text-white';
+        case 'pink': return 'bg-pink-500 text-white';
+        case 'orange': return 'bg-orange-500 text-white';
+        case 'green': return 'bg-emerald-500 text-white';
+        case 'teal': return 'bg-teal-500 text-white';
+        default: return 'bg-indigo-600 text-white'; // Blue/Default
+    }
+  };
+
+  const getAccentUserMsgClass = () => {
+    if (theme === 'neon') return 'bg-cyan-600 text-white';
+    if (theme === 'pastel') return 'bg-orange-400 text-white';
+    
+    switch(accentColor) {
+        case 'purple': return 'bg-purple-600 text-white';
+        case 'pink': return 'bg-pink-500 text-white';
+        case 'orange': return 'bg-orange-500 text-white';
+        case 'green': return 'bg-emerald-500 text-white';
+        case 'teal': return 'bg-teal-500 text-white';
+        default: return 'bg-indigo-600 text-white';
+    }
+  };
+
+  const getAccentButtonClass = () => {
+    if (theme === 'neon') return 'bg-cyan-500 hover:bg-cyan-400 shadow-cyan-500/50';
+    if (theme === 'pastel') return 'bg-orange-400 hover:bg-orange-500 shadow-orange-500/30';
+    
+    switch(accentColor) {
+        case 'purple': return 'bg-purple-600 hover:bg-purple-700 shadow-purple-500/30';
+        case 'pink': return 'bg-pink-500 hover:bg-pink-600 shadow-pink-500/30';
+        case 'orange': return 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/30';
+        case 'green': return 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30';
+        case 'teal': return 'bg-teal-500 hover:bg-teal-600 shadow-teal-500/30';
+        default: return 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/30';
+    }
+  };
+
+  // Container & Bot Msg Styles (mostly static/theme based)
   const containerClass = isNeon 
     ? 'bg-slate-900 border-cyan-500/30 shadow-cyan-500/20' 
     : isPastel 
       ? 'bg-[#fffbf0] border-orange-200 shadow-orange-500/10' 
       : 'bg-white border-slate-200';
       
-  const headerClass = isNeon 
-    ? 'bg-slate-950 border-cyan-500/20 text-cyan-50' 
-    : isPastel 
-      ? 'bg-orange-50 border-orange-100 text-stone-800' 
-      : 'bg-primary/5 border-primary/10 text-slate-800';
-
-  const userMsgClass = isNeon
-    ? 'bg-cyan-600 text-white'
-    : isPastel
-      ? 'bg-orange-400 text-white'
-      : 'bg-indigo-500 text-white';
-
   const botMsgClass = isNeon
     ? 'bg-slate-800 border-slate-700 text-cyan-50'
     : isPastel
       ? 'bg-white border-orange-100 text-stone-700'
       : 'bg-white border-slate-200 text-slate-700';
 
-  const buttonClass = isNeon 
-    ? 'bg-cyan-500 hover:bg-cyan-400 shadow-cyan-500/50' 
-    : isPastel 
-      ? 'bg-orange-400 hover:bg-orange-500 shadow-orange-500/30' 
-      : 'bg-indigo-500 hover:bg-indigo-600 shadow-indigo-500/30';
+  const headerClass = getAccentHeaderClass();
+  const userMsgClass = getAccentUserMsgClass();
+  const buttonClass = getAccentButtonClass();
 
   return (
     // Only the launcher button is fixed, the window has dynamic position
@@ -684,7 +730,7 @@ Cu ce începem azi?`,
                 {/* Header (Draggable) */}
                 <div 
                     onMouseDown={handleMouseDown}
-                    className={`p-4 border-b flex justify-between items-center cursor-move select-none ${headerClass}`}
+                    className={`p-4 border-b flex justify-between items-center cursor-move select-none transition-colors duration-300 ${headerClass}`}
                 >
                     <div className="flex items-center gap-2 pointer-events-none">
                         <div className="text-2xl animate-bounce">
@@ -693,10 +739,10 @@ Cu ce începem azi?`,
                         <div>
                             <h3 className="font-bold text-sm flex items-center gap-1">
                                 {assistantName}
-                                <Sparkles size={12} className={isNeon ? 'text-yellow-300' : 'text-yellow-500'} />
+                                <Sparkles size={12} className={isNeon ? 'text-yellow-300' : 'text-yellow-400'} />
                             </h3>
                             <span className={`flex items-center gap-1 text-[10px] font-medium opacity-80`}>
-                                <span className={`w-1.5 h-1.5 rounded-full ${isListening ? 'bg-red-500 animate-pulse' : isAnalyzing ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></span>
+                                <span className={`w-1.5 h-1.5 rounded-full ${isListening ? 'bg-red-500 animate-pulse' : isAnalyzing ? 'bg-yellow-500 animate-pulse' : 'bg-green-400'}`}></span>
                                 {isListening ? 'Ascult...' : isAnalyzing ? 'Analizez...' : 'Online'}
                             </span>
                         </div>
@@ -704,13 +750,13 @@ Cu ce începem azi?`,
                     <div className="flex items-center gap-2">
                         <button 
                             onClick={() => setShowSettings(!showSettings)} 
-                            className="opacity-60 hover:opacity-100 p-1 rounded-full transition-colors hover:bg-black/5"
+                            className="opacity-60 hover:opacity-100 p-1 rounded-full transition-colors hover:bg-black/10"
                             title="Assistant Settings"
                         >
                             <Settings size={18} />
                         </button>
                         <GripHorizontal size={18} className="opacity-40" />
-                        <button onClick={() => setIsOpen(false)} className="opacity-60 hover:opacity-100 p-1 rounded-full"><X size={18} /></button>
+                        <button onClick={() => setIsOpen(false)} className="opacity-60 hover:opacity-100 p-1 rounded-full hover:bg-black/10"><X size={18} /></button>
                     </div>
                 </div>
 
@@ -747,6 +793,26 @@ Cu ce începem azi?`,
                                     >
                                         {emoji}
                                     </button>
+                                ))}
+                            </div>
+                        </div>
+
+                         <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                            <label className="text-xs font-semibold opacity-70 flex items-center gap-1">
+                                <Palette size={12} /> Alege Culoarea Temei
+                            </label>
+                            <div className="grid grid-cols-6 gap-2">
+                                {ACCENT_OPTIONS.map(opt => (
+                                    <button
+                                        key={opt.id}
+                                        onClick={() => onAccentChange(opt.id)}
+                                        className={`w-8 h-8 rounded-full transition-transform hover:scale-110 ${opt.class} ${
+                                            accentColor === opt.id 
+                                            ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' 
+                                            : 'opacity-70 hover:opacity-100'
+                                        }`}
+                                        title={opt.label}
+                                    />
                                 ))}
                             </div>
                         </div>
