@@ -372,7 +372,7 @@ const App: React.FC = () => {
 
           {/* Todo List Section (1/3) */}
           <div className="w-full lg:w-1/3">
-            <div className="sticky top-24">
+            <div className="sticky top-24 flex flex-col gap-6">
               <TodoList 
                 todos={todos}
                 onAddTodo={handleAddTodo}
@@ -382,6 +382,18 @@ const App: React.FC = () => {
                 onChangeColor={handleChangeTodoColor}
                 theme={theme}
               />
+              
+              <div className={`mt-auto pt-6 border-t ${theme === 'neon' ? 'border-slate-800' : 'border-slate-200'}`}>
+                 <a 
+                   href="https://www.buymeacoffee.com/dianastreulea" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   className="flex items-center justify-center gap-2 w-full bg-[#FFDD00] hover:bg-[#ffea00] text-black font-bold py-3 px-4 rounded-xl transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                 >
+                   <span className="text-xl">💖</span>
+                   <span className="text-sm font-bold">Susține proiectul!</span>
+                 </a>
+               </div>
             </div>
           </div>
         </div>
