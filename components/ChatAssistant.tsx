@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { CalendarEvent, Todo, Theme } from '../types';
-import { MessageCircle, X, Send, User as UserIcon, Mic, Sparkles, Camera, Image as ImageIcon, GripHorizontal } from 'lucide-react';
+import { MessageCircle, X, Send, User as UserIcon, Mic, Sparkles, Camera, GripHorizontal, Settings, Save } from 'lucide-react';
 
 interface ChatAssistantProps {
   events: CalendarEvent[];
@@ -38,6 +38,8 @@ const COLOR_MAP: {[key: string]: string} = {
   'indigo': 'bg-indigo-500'
 };
 
+const AVATARS = ["🦉", "🤖", "👽", "🦊", "🐱", "🦁", "🦄", "🧙‍♂️", "🧠", "💼", "👨‍💻", "👩‍💻"];
+
 export const ChatAssistant: React.FC<ChatAssistantProps> = ({ 
   events, 
   todos, 
@@ -50,11 +52,16 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   lastCompletedTask
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [hasNotification, setHasNotification] = useState(false); // New state for badge
+  const [hasNotification, setHasNotification] = useState(false);
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
+  // Identity State (Lazy init from localStorage)
+  const [assistantName, setAssistantName] = useState(() => localStorage.getItem('assistant_name') || "Olli");
+  const [assistantAvatar, setAssistantAvatar] = useState(() => localStorage.getItem('assistant_avatar') || "🦉");
+  const [showSettings, setShowSettings] = useState(false);
+
   // Dragging State
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const isDragging = useRef(false);
@@ -77,18 +84,43 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   
   const isNeon = theme === 'neon';
   const isPastel = theme === 'pastel';
-  const botName = "Olli";
-  const botAvatar = "🦉";
 
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<Message[]>(() => [
     {
       id: '1',
-      text: `Salut! Sunt ${botName} ${botAvatar}. \n• Folosește "Adaugă" pentru evenimente.\n• Folosește "Task" pentru to-do.\n• Poți încărca o poză cu orarul tău! 📸`,
+      text: `Salut! 👋 Sunt ${localStorage.getItem('assistant_name') || "Olli"} ${localStorage.getItem('assistant_avatar') || "🦉"}, asistentul tău personal. Iată cum te pot ajuta să te organizezi:
+
+📅 *Calendar & Programări:*
+Scrie: 'Adaugă [nume] [ziua] la [ora]'
+Ex: 'Adaugă Ședință mâine la 14:00'
+
+📝 *Task-uri Inteligente:*
+Scrie: 'Task [nume]' + opțional 'URGENT' sau o culoare.
+Ex: 'Task cumpărături urgent' sau 'Task teme cu roșu'
+
+🗑️ *Ștergere:*
+Scrie: 'Șterge [numele activității]'
+
+Cu ce începem azi?`,
       sender: 'bot',
       timestamp: new Date()
     }
   ]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const saveIdentity = () => {
+    localStorage.setItem('assistant_name', assistantName);
+    localStorage.setItem('assistant_avatar', assistantAvatar);
+    setShowSettings(false);
+    
+    // Add a confirmation message
+    setMessages(prev => [...prev, {
+        id: crypto.randomUUID(),
+        text: `Identitate actualizată! Acum sunt ${assistantName} ${assistantAvatar}. Cu ce te pot ajuta?`,
+        sender: 'bot',
+        timestamp: new Date()
+    }]);
+  };
 
   // Handle proactive messages (General)
   useEffect(() => {
@@ -140,8 +172,8 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   };
 
   useEffect(() => {
-    if (isOpen) scrollToBottom();
-  }, [messages, isOpen]);
+    if (isOpen && !showSettings) scrollToBottom();
+  }, [messages, isOpen, showSettings]);
 
   // Handle opening/closing
   const toggleChat = () => {
@@ -314,8 +346,6 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
             const colorRegex = new RegExp(`\\b(cu|culoare|color)?\\s*${colorName}\\b`, 'i');
             if (colorRegex.test(cleanText)) {
                 selectedColor = colorClass;
-                // Don't remove it yet as it might mess up other parsing steps if not careful,
-                // but ideally we should clean the title.
                 break;
             }
         }
@@ -401,7 +431,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
             date: formattedDate,
             time: timePart || undefined,
             endTime: endTimePart || undefined,
-            color: selectedColor || undefined, // Use detected color or fallback to default in logic
+            color: selectedColor || undefined,
             type: 'work'
         });
 
@@ -656,11 +686,11 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                 >
                     <div className="flex items-center gap-2 pointer-events-none">
                         <div className="text-2xl animate-bounce">
-                            {botAvatar}
+                            {assistantAvatar}
                         </div>
                         <div>
                             <h3 className="font-bold text-sm flex items-center gap-1">
-                                {botName}
+                                {assistantName}
                                 <Sparkles size={12} className={isNeon ? 'text-yellow-300' : 'text-yellow-500'} />
                             </h3>
                             <span className={`flex items-center gap-1 text-[10px] font-medium opacity-80`}>
@@ -670,57 +700,113 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => setShowSettings(!showSettings)} 
+                            className="opacity-60 hover:opacity-100 p-1 rounded-full transition-colors hover:bg-black/5"
+                            title="Assistant Settings"
+                        >
+                            <Settings size={18} />
+                        </button>
                         <GripHorizontal size={18} className="opacity-40" />
                         <button onClick={() => setIsOpen(false)} className="opacity-60 hover:opacity-100 p-1 rounded-full"><X size={18} /></button>
                     </div>
                 </div>
 
-                {/* Messages */}
-                <div className={`flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar ${isNeon ? 'bg-slate-950' : 'bg-transparent'}`}>
-                    {messages.map((msg) => (
-                    <div key={msg.id} className={`flex gap-2 ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm text-sm overflow-hidden border ${isNeon ? 'border-slate-700 bg-slate-800' : 'border-white/50 bg-white'}`}>
-                        {msg.sender === 'user' ? <UserIcon size={14} /> : botAvatar}
+                {showSettings ? (
+                    // --- SETTINGS MODE ---
+                    <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${isNeon ? 'bg-slate-950 text-white' : 'bg-white/50 text-slate-800'}`}>
+                        <h4 className="font-bold text-sm text-center mb-4">Personalizează Asistentul</h4>
+                        
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold opacity-70">Nume</label>
+                            <input 
+                                type="text" 
+                                value={assistantName} 
+                                onChange={(e) => setAssistantName(e.target.value)}
+                                className={`w-full p-2 rounded-lg text-sm border focus:ring-2 outline-none ${
+                                    isNeon ? 'bg-slate-800 border-slate-700 focus:ring-cyan-500' : 'bg-white border-slate-200 focus:ring-indigo-500'
+                                }`}
+                                placeholder="ex: Jarvis"
+                            />
                         </div>
-                        <div className={`max-w-[75%] p-3 rounded-2xl text-sm shadow-sm whitespace-pre-line ${
-                        msg.sender === 'user' ? `${userMsgClass} rounded-tr-none` : `${botMsgClass} rounded-tl-none`
-                        }`}>
-                        {msg.text}
-                        </div>
-                    </div>
-                    ))}
-                    <div ref={messagesEndRef} />
-                </div>
 
-                {/* Input */}
-                <form onSubmit={handleSend} className={`p-3 border-t ${isNeon ? 'bg-slate-900 border-slate-700' : 'bg-white/50 backdrop-blur-sm border-slate-100'}`}>
-                    <div className="relative flex items-center">
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder={isListening ? "Te ascult..." : isAnalyzing ? "Așteaptă puțin..." : "Scrie aici..."}
-                        disabled={isAnalyzing}
-                        className={`w-full pl-4 pr-24 py-2.5 rounded-full text-sm focus:outline-none focus:ring-2 transition-all ${
-                            isNeon ? 'bg-slate-800 border-slate-700 text-white focus:ring-cyan-500 placeholder:text-slate-500' : 'bg-white border-slate-200 focus:ring-indigo-500/50'
-                        } ${isListening ? 'border-red-400 ring-1 ring-red-400' : ''}`}
-                    />
-                    <div className="absolute right-1.5 flex items-center gap-1">
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold opacity-70">Avatar</label>
+                            <div className="grid grid-cols-4 gap-2">
+                                {AVATARS.map(emoji => (
+                                    <button
+                                        key={emoji}
+                                        onClick={() => setAssistantAvatar(emoji)}
+                                        className={`text-2xl p-2 rounded-lg transition-all hover:scale-110 ${
+                                            assistantAvatar === emoji 
+                                            ? (isNeon ? 'bg-slate-700 ring-2 ring-cyan-500' : 'bg-indigo-50 ring-2 ring-indigo-500')
+                                            : (isNeon ? 'bg-slate-800 hover:bg-slate-700' : 'bg-white hover:bg-slate-50 border border-slate-100')
+                                        }`}
+                                    >
+                                        {emoji}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         <button 
-                        type="button" 
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isListening || isAnalyzing}
-                        className={`p-1.5 rounded-full transition-all ${isNeon ? 'text-slate-400 hover:text-cyan-400' : 'text-slate-400 hover:text-primary hover:bg-slate-100'}`}
-                        title="Upload Schedule Image"
+                            onClick={saveIdentity}
+                            className={`w-full mt-4 py-2 rounded-lg font-bold flex items-center justify-center gap-2 transition-all active:scale-95 ${buttonClass} text-white`}
                         >
-                        <Camera size={18} />
+                            <Save size={16} />
+                            Salvează Modificările
                         </button>
+                    </div>
+                ) : (
+                    // --- CHAT MODE ---
+                    <>
+                        <div className={`flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar ${isNeon ? 'bg-slate-950' : 'bg-transparent'}`}>
+                            {messages.map((msg) => (
+                            <div key={msg.id} className={`flex gap-2 ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm text-sm overflow-hidden border ${isNeon ? 'border-slate-700 bg-slate-800' : 'border-white/50 bg-white'}`}>
+                                {msg.sender === 'user' ? <UserIcon size={14} /> : assistantAvatar}
+                                </div>
+                                <div className={`max-w-[75%] p-3 rounded-2xl text-sm shadow-sm whitespace-pre-line ${
+                                msg.sender === 'user' ? `${userMsgClass} rounded-tr-none` : `${botMsgClass} rounded-tl-none`
+                                }`}>
+                                {msg.text}
+                                </div>
+                            </div>
+                            ))}
+                            <div ref={messagesEndRef} />
+                        </div>
 
-                        <button type="button" onClick={handleVoiceInput} disabled={isListening || isAnalyzing} className={`p-1.5 rounded-full transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-slate-400 hover:bg-slate-100'}`}><Mic size={18} /></button>
-                        <button type="submit" disabled={!input.trim() || isAnalyzing} className={`p-1.5 text-white rounded-full transition-all shadow-sm ${input.trim() ? buttonClass : 'bg-slate-300 cursor-not-allowed'}`}><Send size={16} /></button>
-                    </div>
-                    </div>
-                </form>
+                        {/* Input */}
+                        <form onSubmit={handleSend} className={`p-3 border-t ${isNeon ? 'bg-slate-900 border-slate-700' : 'bg-white/50 backdrop-blur-sm border-slate-100'}`}>
+                            <div className="relative flex items-center">
+                            <input
+                                type="text"
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                placeholder={isListening ? "Te ascult..." : isAnalyzing ? "Așteaptă puțin..." : "Scrie aici..."}
+                                disabled={isAnalyzing}
+                                className={`w-full pl-4 pr-24 py-2.5 rounded-full text-sm focus:outline-none focus:ring-2 transition-all ${
+                                    isNeon ? 'bg-slate-800 border-slate-700 text-white focus:ring-cyan-500 placeholder:text-slate-500' : 'bg-white border-slate-200 focus:ring-indigo-500/50'
+                                } ${isListening ? 'border-red-400 ring-1 ring-red-400' : ''}`}
+                            />
+                            <div className="absolute right-1.5 flex items-center gap-1">
+                                <button 
+                                type="button" 
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isListening || isAnalyzing}
+                                className={`p-1.5 rounded-full transition-all ${isNeon ? 'text-slate-400 hover:text-cyan-400' : 'text-slate-400 hover:text-primary hover:bg-slate-100'}`}
+                                title="Upload Schedule Image"
+                                >
+                                <Camera size={18} />
+                                </button>
+
+                                <button type="button" onClick={handleVoiceInput} disabled={isListening || isAnalyzing} className={`p-1.5 rounded-full transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-slate-400 hover:bg-slate-100'}`}><Mic size={18} /></button>
+                                <button type="submit" disabled={!input.trim() || isAnalyzing} className={`p-1.5 text-white rounded-full transition-all shadow-sm ${input.trim() ? buttonClass : 'bg-slate-300 cursor-not-allowed'}`}><Send size={16} /></button>
+                            </div>
+                            </div>
+                        </form>
+                    </>
+                )}
             </div>
         )}
 
