@@ -1,22 +1,31 @@
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { Calendar, Layout, LogOut, ChevronLeft, ChevronRight, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 
-// NOTE: In a real project with a bundler, you would install lucide-react. 
-// Since this is a single-file logical output (for the purpose of the prompt), 
-// we assume standard imports work. If using a raw HTML environment without a bundler like Vite/CRA, 
-// you might need a different icon strategy or import maps.
-// For this standard React 18 + TS setup, these imports assume a `package.json` with `lucide-react`.
+// Debug logs to verify script execution
+console.log('Application starting...');
+console.log('Looking for root element...');
 
 const rootElement = document.getElementById('root');
+
 if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
+  const msg = 'FATAL: Could not find root element with id "root". Application cannot mount.';
+  console.error(msg);
+  document.body.innerHTML = `<div style="color:red; padding: 20px;">${msg}</div>`;
+  throw new Error(msg);
 }
 
-const root = ReactDOM.createRoot(rootElement);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+console.log('Root element found. Creating React root...');
+
+try {
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+  console.log('React application mounted successfully.');
+} catch (error) {
+  console.error('CRITICAL: Failed to mount React application:', error);
+}
