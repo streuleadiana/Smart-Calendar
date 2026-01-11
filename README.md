@@ -4,7 +4,8 @@ Un calendar personal inteligent, alimentat de inteligență artificială (Google
 
 ### 🚀 **Aplicația Live Aici: https://bespoke-blancmange-d9fb80.netlify.app/**
 
-<img width="1797" height="873" alt="image" src="https://github.com/user-attachments/assets/9e8d860e-1bda-4ff1-93a8-043ce460e2fc" />
+<img width="1883" height="861" alt="image" src="https://github.com/user-attachments/assets/0e248cb3-e966-48da-9369-40004273916a" />
+
 
 
 ---
