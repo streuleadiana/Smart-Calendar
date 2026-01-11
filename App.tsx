@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from 'react';
-import { Auth } from './components/Auth';
 import { Calendar } from './components/Calendar';
 import { TodoList } from './components/TodoList';
 import { EventModal } from './components/EventModal';
@@ -10,10 +9,13 @@ import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { SettingsModal } from './components/SettingsModal';
 import { User, CalendarEvent, Todo, Theme } from './types';
 import * as storage from './utils/storage';
-import { LogOut, Layout, Settings } from 'lucide-react';
+import { LogOut, Layout, Settings, ArrowRight, Sparkles } from 'lucide-react';
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  // Simple User State
+  const [userName, setUserName] = useState<string | null>(null);
+  const [nameInput, setNameInput] = useState('');
+
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [theme, setTheme] = useState<Theme>('modern');
@@ -39,21 +41,27 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    // Load data from local storage on mount
-    const storedUser = storage.getUser();
+    // 1. Check for logged in user name
+    const storedName = localStorage.getItem('app_username');
+    if (storedName) {
+        setUserName(storedName);
+    }
+
+    // 2. Load other data from local storage
     const storedEvents = storage.getEvents();
     const storedTodos = storage.getTodos();
     const storedTheme = storage.getTheme();
     
-    if (storedUser) setUser(storedUser);
     if (storedEvents) setEvents(storedEvents);
     if (storedTodos) setTodos(storedTodos);
     if (storedTheme) setTheme(storedTheme);
     
     setInitializing(false);
+  }, []);
 
-    // Morning Briefing
-    if (storedUser && !sessionStorage.getItem('olli_greeted')) {
+  // Morning Briefing Effect - runs when user is present and data changes
+  useEffect(() => {
+    if (userName && !sessionStorage.getItem('olli_greeted')) {
       const now = new Date();
       const hour = now.getHours();
       let greeting = "Bună dimineața";
@@ -61,10 +69,10 @@ const App: React.FC = () => {
       if (hour >= 18) greeting = "Bună seara";
 
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const todayEvents = (storedEvents || []).filter(e => e.date === todayStr).length;
-      const pendingTasks = (storedTodos || []).filter(t => !t.completed).length;
+      const todayEvents = events.filter(e => e.date === todayStr).length;
+      const pendingTasks = todos.filter(t => !t.completed).length;
 
-      let message = `${greeting}! ☀️ Azi ai ${todayEvents} evenimente și ${pendingTasks} task-uri de rezolvat. Să avem o zi productivă!`;
+      let message = `${greeting}, ${userName}! ☀️ Azi ai ${todayEvents} evenimente și ${pendingTasks} task-uri de rezolvat. Să avem o zi productivă!`;
 
       if (pendingTasks === 0 && todayEvents === 0) {
         message += "\n\nCe liniște... Nu vrei să adăugăm un task nou sau un plan? 📝";
@@ -73,20 +81,26 @@ const App: React.FC = () => {
       setTimeout(() => triggerAiMessage(message), 1500);
       sessionStorage.setItem('olli_greeted', 'true');
     }
-  }, []);
+  }, [userName, events, todos]);
 
-  const handleLogin = (newUser: User) => {
-    storage.saveUser(newUser);
-    setUser(newUser);
+  const handleStartApp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nameInput.trim()) return;
+
+    const name = nameInput.trim();
+    localStorage.setItem('app_username', name);
+    setUserName(name);
+
     if (!sessionStorage.getItem('olli_greeted')) {
-       setTimeout(() => triggerAiMessage(`Bine ai venit, ${newUser.name}! Sunt Olli, asistentul tău. 🦉`), 1000);
-       sessionStorage.setItem('olli_greeted', 'true');
+        setTimeout(() => triggerAiMessage(`Salut, ${name}! Bine ai venit. 🦉`), 1000);
+        sessionStorage.setItem('olli_greeted', 'true');
     }
   };
 
   const handleLogout = () => {
-    storage.clearUser();
-    setUser(null);
+    localStorage.removeItem('app_username');
+    setUserName(null);
+    setNameInput('');
     sessionStorage.removeItem('olli_greeted');
   };
 
@@ -96,9 +110,9 @@ const App: React.FC = () => {
   };
 
   const handleImportData = (data: any) => {
-    if (data.user) {
-        setUser(data.user);
-        storage.saveUser(data.user);
+    if (data.user && data.user.name) {
+        setUserName(data.user.name);
+        localStorage.setItem('app_username', data.user.name);
     }
     if (data.events && Array.isArray(data.events)) {
         setEvents(data.events);
@@ -263,8 +277,41 @@ const App: React.FC = () => {
     );
   }
 
-  if (!user) {
-    return <Auth onLogin={handleLogin} />;
+  // --- WELCOME SCREEN (Auth Replacement) ---
+  if (!userName) {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-4">
+             <div className="bg-white/90 backdrop-blur-xl p-8 rounded-3xl shadow-2xl w-full max-w-md text-center border border-white/20 animate-in zoom-in-95 duration-300">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-indigo-50 text-indigo-600 mb-6 shadow-sm">
+                    <Sparkles size={40} />
+                </div>
+                <h1 className="text-3xl font-bold text-slate-800 mb-2">Bine ai venit! 👋</h1>
+                <p className="text-slate-500 mb-8">Smart Calendar te ajută să te organizezi eficient.</p>
+                
+                <form onSubmit={handleStartApp} className="space-y-4">
+                    <div className="text-left">
+                        <label className="block text-sm font-semibold text-slate-700 mb-2 ml-1">Cum te numești?</label>
+                        <input 
+                            type="text" 
+                            value={nameInput}
+                            onChange={(e) => setNameInput(e.target.value)}
+                            placeholder="ex: Alex"
+                            className="w-full px-5 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-lg"
+                            autoFocus
+                        />
+                    </div>
+                    <button 
+                        type="submit" 
+                        disabled={!nameInput.trim()}
+                        className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg"
+                    >
+                        <span>Începe</span>
+                        <ArrowRight size={20} />
+                    </button>
+                </form>
+             </div>
+        </div>
+    );
   }
 
   // Theme Base Classes
@@ -333,10 +380,7 @@ const App: React.FC = () => {
 
                 <div className="hidden md:flex flex-col items-end">
                   <span className={`text-sm font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>
-                    {user.name}
-                  </span>
-                  <span className={`text-xs ${theme === 'neon' ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {user.email}
+                    {userName}
                   </span>
                 </div>
                 <button
@@ -426,7 +470,7 @@ const App: React.FC = () => {
       <SettingsModal 
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        user={user}
+        user={{ name: userName || '', email: '' }}
         events={events}
         todos={todos}
         theme={theme}
@@ -434,6 +478,7 @@ const App: React.FC = () => {
       />
 
       <ChatAssistant 
+        userName={userName || 'Prieten'}
         events={events}
         todos={todos}
         onAddEvent={handleSaveEvent}

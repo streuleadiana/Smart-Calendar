@@ -4,6 +4,7 @@ import { CalendarEvent, Todo, Theme } from '../types';
 import { MessageCircle, X, Send, User as UserIcon, Mic, Sparkles, Camera, GripHorizontal, Settings, Save } from 'lucide-react';
 
 interface ChatAssistantProps {
+  userName: string;
   events: CalendarEvent[];
   todos: Todo[];
   onAddEvent: (event: Omit<CalendarEvent, 'id'>) => void;
@@ -41,10 +42,11 @@ const COLOR_MAP: {[key: string]: string} = {
 const AVATARS = ["🦉", "🤖", "👽", "🦊", "🐱", "🦁", "🦄", "🧙‍♂️", "🧠", "💼", "👨‍💻", "👩‍💻"];
 
 export const ChatAssistant: React.FC<ChatAssistantProps> = ({ 
+  userName,
   events, 
   todos, 
   onAddEvent, 
-  onAddTodo,
+  onAddTodo, 
   onDeleteEvent,
   onToggleTodo,
   theme, 
@@ -88,7 +90,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   const [messages, setMessages] = useState<Message[]>(() => [
     {
       id: '1',
-      text: `Salut! 👋 Sunt ${localStorage.getItem('assistant_name') || "Olli"} ${localStorage.getItem('assistant_avatar') || "🦉"}, asistentul tău personal. Iată cum te pot ajuta să te organizezi:
+      text: `Salut, ${userName}! 👋 Sunt ${localStorage.getItem('assistant_name') || "Olli"} ${localStorage.getItem('assistant_avatar') || "🦉"}, asistentul tău personal. Iată cum te pot ajuta să te organizezi:
 
 📅 *Calendar & Programări:*
 Scrie: 'Adaugă [nume] [ziua] la [ora]'
