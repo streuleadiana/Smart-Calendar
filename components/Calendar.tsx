@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { CalendarEvent, Theme } from '../types';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { DayDetailModal } from './DayDetailModal';
 
 interface CalendarProps {
   events: CalendarEvent[];
@@ -18,9 +19,22 @@ const MONTH_NAMES = [
 
 export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDeleteEvent, theme }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
 
   const isNeon = theme === 'neon';
   const isPastel = theme === 'pastel';
+
+  // Helper to resolve color
+  const getEventColor = (event: CalendarEvent) => {
+    if (event.color) return event.color;
+    switch (event.type) {
+      case 'urgent': return 'bg-red-500';
+      case 'work': return 'bg-blue-500';
+      case 'personal': return 'bg-emerald-500';
+      case 'study': return 'bg-amber-500';
+      default: return 'bg-slate-500';
+    }
+  };
 
   const getDaysInMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -36,7 +50,14 @@ export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDele
 
   const handleDayClick = (day: number) => {
     const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    onDateSelect(newDate);
+    setSelectedDay(newDate);
+  };
+
+  const handleAddEventFromDetail = () => {
+    if (selectedDay) {
+        onDateSelect(selectedDay);
+        setSelectedDay(null);
+    }
   };
 
   const getEventsForDay = (day: number) => {
@@ -46,6 +67,14 @@ export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDele
     const dateStr = `${year}-${month}-${dayStr}`;
     return events.filter(e => e.date === dateStr);
   };
+
+  const getEventsForDateObj = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const dayStr = String(date.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${dayStr}`;
+      return events.filter(e => e.date === dateStr);
+  }
 
   const renderCalendarGrid = () => {
     const daysInMonth = getDaysInMonth(currentDate);
@@ -86,42 +115,42 @@ export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDele
             <div 
               key={day} 
               onClick={() => handleDayClick(day)}
-              className={`${cellBg} min-h-[120px] p-2 transition-colors cursor-pointer group relative flex flex-col gap-1 ${isToday ? todayHighlight : ''}`}
+              className={`${cellBg} min-h-[120px] p-2 transition-all cursor-pointer group relative flex flex-col gap-1 active:scale-[0.98] ${isToday ? todayHighlight : ''}`}
             >
               <div className="flex justify-between items-start mb-1">
                 <span className={`text-sm font-semibold w-7 h-7 flex items-center justify-center rounded-full transition-all ${isToday ? `${todayBadge} shadow-md scale-110` : `${textBase} group-hover:scale-110`}`}>
                   {day}
                 </span>
-                <button 
+                <div 
                   className={`opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110 ${isNeon ? 'text-cyan-400' : 'text-slate-400 hover:text-primary'}`}
-                  title="Add Event"
                 >
                   <Plus size={16} />
-                </button>
+                </div>
               </div>
               
               <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1">
-                {dayEvents.map(event => (
-                  <div 
-                    key={event.id}
-                    className={`group/event text-xs p-1.5 rounded-md border-l-2 shadow-sm transition-all hover:shadow-md cursor-default flex items-center gap-1 ${
-                        isNeon ? 'bg-slate-800 text-cyan-50 hover:bg-slate-700' : 'bg-white hover:bg-slate-50'
-                    } ${event.color.replace('bg-', 'border-')}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (window.confirm(`Delete "${event.title}"?`)) {
-                        onDeleteEvent(event.id);
-                      }
-                    }}
-                    title={`${event.title}${event.time ? ` at ${event.time}` : ''}`}
-                  >
-                     <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${event.color}`}></div>
-                     <div className={`flex-1 truncate font-medium ${isNeon ? 'text-cyan-100' : 'text-slate-700'}`}>
-                        {event.time && <span className={`${textMuted} mr-1 font-normal`}>{event.time}</span>}
-                        {event.title}
-                     </div>
-                  </div>
-                ))}
+                {dayEvents.map(event => {
+                  const colorClass = getEventColor(event);
+                  return (
+                    <div 
+                        key={event.id}
+                        className={`text-xs p-1.5 rounded-md border-l-2 shadow-sm transition-all cursor-pointer flex items-center gap-1 ${
+                            isNeon ? 'bg-slate-800 text-cyan-50 hover:brightness-110' : 'bg-white hover:brightness-95'
+                        } ${colorClass.replace('bg-', 'border-')}`}
+                        title={`${event.title}${event.time ? ` (${event.time}${event.endTime ? ` - ${event.endTime}` : ''})` : ''}`}
+                    >
+                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${colorClass}`}></div>
+                        <div className={`flex-1 truncate font-medium ${isNeon ? 'text-cyan-100' : 'text-slate-700'}`}>
+                            {event.time && (
+                                <span className={`${textMuted} mr-1 font-normal whitespace-nowrap`}>
+                                    {event.time}{event.endTime ? `-${event.endTime}` : ''}
+                                </span>
+                            )}
+                            {event.title}
+                        </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
@@ -171,6 +200,17 @@ export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDele
       </div>
       
       {renderCalendarGrid()}
+
+      {/* Day Detail Modal */}
+      <DayDetailModal 
+        isOpen={!!selectedDay}
+        date={selectedDay}
+        onClose={() => setSelectedDay(null)}
+        events={selectedDay ? getEventsForDateObj(selectedDay) : []}
+        onAddEvent={handleAddEventFromDetail}
+        onDeleteEvent={onDeleteEvent}
+        theme={theme}
+      />
     </div>
   );
 };

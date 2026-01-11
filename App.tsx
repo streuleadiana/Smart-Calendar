@@ -153,15 +153,23 @@ const App: React.FC = () => {
   };
 
   // Todo Handlers
-  const handleAddTodo = (text: string) => {
+  const handleAddTodo = (text: string, isPinned: boolean = false, color?: string) => {
     const newTodo: Todo = {
       id: crypto.randomUUID(),
       text,
-      completed: false
+      completed: false,
+      isPinned,
+      color
     };
-    const updatedTodos = [newTodo, ...todos];
-    setTodos(updatedTodos);
-    storage.saveTodos(updatedTodos);
+    
+    // Sort logic: Pinned items first, then by relative insertion order
+    const newList = [newTodo, ...todos].sort((a, b) => {
+        if (a.isPinned === b.isPinned) return 0;
+        return a.isPinned ? -1 : 1;
+    });
+
+    setTodos(newList);
+    storage.saveTodos(newList);
   };
 
   const handleToggleTodo = (id: string) => {
@@ -182,15 +190,30 @@ const App: React.FC = () => {
     storage.saveTodos(updatedTodos);
 
     if (completedTaskName) {
-        // Trigger Confetti
         // @ts-ignore
         if (window.confetti) {
              // @ts-ignore
              window.confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
         }
-        // Update state to trigger Olli praise (add timestamp to ensure uniqueness if same task toggled)
         setLastCompletedTask(`${completedTaskName}::${Date.now()}`);
     }
+  };
+
+  const handleTogglePin = (id: string) => {
+    const updated = todos.map(t => t.id === id ? { ...t, isPinned: !t.isPinned } : t);
+    // Re-sort: Pinned first
+    updated.sort((a, b) => {
+        if (a.isPinned === b.isPinned) return 0; // Preserve relative order
+        return a.isPinned ? -1 : 1;
+    });
+    setTodos(updated);
+    storage.saveTodos(updated);
+  };
+
+  const handleChangeTodoColor = (id: string, color: string) => {
+    const updated = todos.map(t => t.id === id ? { ...t, color: color } : t);
+    setTodos(updated);
+    storage.saveTodos(updated);
   };
 
   const handleToggleTodoByText = (textFragment: string): boolean => {
@@ -331,6 +354,8 @@ const App: React.FC = () => {
                 onAddTodo={handleAddTodo}
                 onToggleTodo={handleToggleTodo}
                 onDeleteTodo={handleDeleteTodo}
+                onTogglePin={handleTogglePin}
+                onChangeColor={handleChangeTodoColor}
                 theme={theme}
               />
             </div>

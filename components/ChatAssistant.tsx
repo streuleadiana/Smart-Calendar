@@ -7,7 +7,7 @@ interface ChatAssistantProps {
   events: CalendarEvent[];
   todos: Todo[];
   onAddEvent: (event: Omit<CalendarEvent, 'id'>) => void;
-  onAddTodo: (text: string) => void;
+  onAddTodo: (text: string, isPinned: boolean, color?: string) => void;
   onDeleteEvent: (title: string) => boolean;
   onToggleTodo: (text: string) => boolean;
   theme: Theme;
@@ -22,6 +22,22 @@ interface Message {
   timestamp: Date;
 }
 
+const COLOR_MAP: {[key: string]: string} = {
+  'rosu': 'bg-red-500',
+  'roșu': 'bg-red-500',
+  'albastru': 'bg-blue-500',
+  'verde': 'bg-green-500',
+  'galben': 'bg-yellow-500',
+  'amber': 'bg-amber-500',
+  'portocaliu': 'bg-orange-500',
+  'mov': 'bg-purple-500',
+  'violet': 'bg-purple-500',
+  'roz': 'bg-pink-500',
+  'gri': 'bg-slate-500',
+  'turcoaz': 'bg-teal-500',
+  'indigo': 'bg-indigo-500'
+};
+
 export const ChatAssistant: React.FC<ChatAssistantProps> = ({ 
   events, 
   todos, 
@@ -34,6 +50,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   lastCompletedTask
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [hasNotification, setHasNotification] = useState(false); // New state for badge
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -83,7 +100,8 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
         timestamp: new Date()
       };
       setMessages(prev => [...prev, newMessage]);
-      setIsOpen(true);
+      // Do not auto-open, just notify
+      setHasNotification(true);
     }
   }, [incomingMessage]);
 
@@ -112,7 +130,8 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
         };
         
         setMessages(prev => [...prev, botMsg]);
-        setIsOpen(true); // Pop up chat to show praise
+        // Do not auto-open, just notify
+        setHasNotification(true);
     }
   }, [lastCompletedTask]);
 
@@ -123,6 +142,14 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   useEffect(() => {
     if (isOpen) scrollToBottom();
   }, [messages, isOpen]);
+
+  // Handle opening/closing
+  const toggleChat = () => {
+    if (!isOpen) {
+        setHasNotification(false); // Clear notification when opening
+    }
+    setIsOpen(!isOpen);
+  };
 
   // --- DATE PARSING UTILS ---
 
@@ -221,7 +248,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
     }
 
     if (lowerText.startsWith('task') || lowerText.startsWith('to-do') || lowerText.startsWith('todo')) {
-        const content = lowerText.replace(/task|to-do|todo/g, '').trim();
+        let content = lowerText.replace(/task|to-do|todo/g, '').trim();
         
         if (!content || content.startsWith('ce') || content === 'uri') {
             const pending = todos.filter(t => !t.completed);
@@ -229,8 +256,34 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
             return `Ai ${pending.length} task-uri:\n${pending.map(t => `▫️ ${t.text}`).join('\n')}`;
         }
 
-        onAddTodo(content);
-        return `Am adăugat la to-do: "${content}". 📝`;
+        // --- NEW TASK PARSING (PIN/COLOR) ---
+        let isPinned = false;
+        let selectedColor = undefined;
+
+        // Check Priority
+        if (content.match(/\b(urgent|important|pin|fixeaza)\b/i)) {
+            isPinned = true;
+            content = content.replace(/\b(urgent|important|pin|fixeaza)\b/gi, '').trim();
+        }
+
+        // Check Color
+        for (const [colorName, colorClass] of Object.entries(COLOR_MAP)) {
+            const colorRegex = new RegExp(`\\b(cu|culoare|color)?\\s*${colorName}\\b`, 'i');
+            if (colorRegex.test(content)) {
+                selectedColor = colorClass;
+                // Remove color words from task text
+                content = content.replace(new RegExp(`\\b(cu|culoare|color)?\\s*${colorName}\\b`, 'gi'), '').trim();
+                break;
+            }
+        }
+        
+        onAddTodo(content, isPinned, selectedColor);
+        
+        let extras = "";
+        if (isPinned) extras += " 📌";
+        if (selectedColor) extras += " 🎨";
+
+        return `Am adăugat la to-do: "${content}"${extras}.`;
     }
 
     // ---------------------------------------------------------
@@ -249,31 +302,89 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
         let title = '';
         let datePart = '';
         let timePart = '';
+        let endTimePart = '';
         let formattedDate: string | null = null;
+        let selectedColor: string | undefined = undefined;
 
-        if (onIndex !== -1) {
-            title = cleanText.substring(0, onIndex).trim();
-            if (atIndex > onIndex) {
-                datePart = cleanText.substring(onIndex + 4, atIndex).trim();
-                timePart = cleanText.substring(atIndex + 4).trim();
-            } else {
-                datePart = cleanText.substring(onIndex + 4).trim();
+        // --- DETECT COLOR IN COMMAND ---
+        // Iterate color map to see if present
+        for (const [colorName, colorClass] of Object.entries(COLOR_MAP)) {
+            // Regex to match "cu rosu", "culoare rosu", or just "rosu" if it's safe?
+            // Safer: match word boundary
+            const colorRegex = new RegExp(`\\b(cu|culoare|color)?\\s*${colorName}\\b`, 'i');
+            if (colorRegex.test(cleanText)) {
+                selectedColor = colorClass;
+                // Don't remove it yet as it might mess up other parsing steps if not careful,
+                // but ideally we should clean the title.
+                break;
             }
-            formattedDate = parseDate(datePart);
-        } else if (isOCR) {
-            const words = cleanText.split(' ');
-            for (let i = words.length - 1; i >= 0; i--) {
-                const testDate = parseDate(words[i]);
-                if (testDate) {
-                    formattedDate = testDate;
-                    title = words.slice(0, i).join(' ');
-                    const nextWord = words[i + 1];
-                    if (nextWord && nextWord.match(/\d{1,2}:?\d{2}?/)) {
-                        timePart = nextWord;
+        }
+
+        // --- NEW TIME RANGE PARSING LOGIC ---
+        const timeRangeRegex = /(\d{1,2}(?:[:.]\d{2})?)\s*(?:-|–|to|pana la|până la)\s*(\d{1,2}(?:[:.]\d{2})?)/i;
+        const rangeMatch = cleanText.match(timeRangeRegex);
+
+        if (rangeMatch) {
+            let t1 = rangeMatch[1].replace('.', ':');
+            let t2 = rangeMatch[2].replace('.', ':');
+            if (!t1.includes(':')) t1 += ":00";
+            if (!t2.includes(':')) t2 += ":00";
+            const formatTime = (t: string) => {
+                const [h, m] = t.split(':');
+                return `${h.padStart(2, '0')}:${m.padEnd(2, '0').slice(0, 2)}`;
+            };
+            timePart = formatTime(t1);
+            endTimePart = formatTime(t2);
+
+            const textWithoutTime = cleanText.replace(rangeMatch[0], '').trim();
+            const dateFound = parseDate(textWithoutTime);
+            if (dateFound) {
+                formattedDate = dateFound;
+                title = textWithoutTime.replace(/(\bazi\b|\bmaine\b|\bluni\b|\bmarti\b|\bmiercuri\b|\bjoi\b|\bvineri\b|\bsambata\b|\bduminica\b)/gi, '')
+                                       .replace(/\b(pe|in|la)\b/gi, '')
+                                       .trim();
+            }
+        } 
+        
+        if (!formattedDate) {
+            if (onIndex !== -1) {
+                title = cleanText.substring(0, onIndex).trim();
+                if (atIndex > onIndex) {
+                    datePart = cleanText.substring(onIndex + 4, atIndex).trim();
+                    const rest = cleanText.substring(atIndex + 4).trim();
+                    const localRange = rest.match(timeRangeRegex);
+                     if (localRange) {
+                        // handled above usually, but fallback
+                    } else {
+                         timePart = rest.substring(0, 5); 
                     }
-                    break;
+                } else {
+                    datePart = cleanText.substring(onIndex + 4).trim();
+                }
+                formattedDate = parseDate(datePart);
+            } else if (isOCR) {
+                const words = cleanText.split(' ');
+                for (let i = words.length - 1; i >= 0; i--) {
+                    const testDate = parseDate(words[i]);
+                    if (testDate) {
+                        formattedDate = testDate;
+                        title = words.slice(0, i).join(' ');
+                        const nextWord = words[i + 1];
+                        if (nextWord && nextWord.match(/\d{1,2}:?\d{2}?/)) {
+                            timePart = nextWord;
+                        }
+                        break;
+                    }
                 }
             }
+        }
+
+        // Clean title of color words if found
+        if (selectedColor && title) {
+             for (const colorName of Object.keys(COLOR_MAP)) {
+                 const regex = new RegExp(`\\b(cu|culoare|color)?\\s*${colorName}\\b`, 'gi');
+                 title = title.replace(regex, '').trim();
+             }
         }
 
         if (!title && !formattedDate) {
@@ -288,12 +399,19 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
         onAddEvent({
             title,
             date: formattedDate,
-            time: timePart.substring(0, 5),
-            color: isNeon ? 'bg-cyan-500' : (isPastel ? 'bg-orange-400' : 'bg-indigo-500'),
+            time: timePart || undefined,
+            endTime: endTimePart || undefined,
+            color: selectedColor || undefined, // Use detected color or fallback to default in logic
             type: 'work'
         });
 
-        return `Rezolvat! 📅 ${title} pe ${formattedDate}${timePart ? ` la ${timePart}` : ''}.`;
+        const timeMsg = timePart 
+            ? (endTimePart ? ` între ${timePart} și ${endTimePart}` : ` la ${timePart}`) 
+            : '';
+            
+        const colorMsg = selectedColor ? " 🎨" : "";
+
+        return `Rezolvat! 📅 ${title} pe ${formattedDate}${timeMsg}${colorMsg}.`;
     }
 
     // ---------------------------------------------------------
@@ -315,7 +433,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
         const found = events.filter(e => e.date === dateQuery);
         setLastFoundEvents(found);
         if (found.length === 0) return `Nu ai nimic planificat pe ${dateQuery}. Relaxează-te! 😎`;
-        return `Pe ${dateQuery} ai:\n${found.map(e => `👉 ${e.title} (${e.time || 'toată ziua'})`).join('\n')}`;
+        return `Pe ${dateQuery} ai:\n${found.map(e => `👉 ${e.title} (${e.time ? `${e.time}${e.endTime ? `-${e.endTime}` : ''}` : 'toată ziua'})`).join('\n')}`;
     }
 
     if (lowerText.includes('ce am') || lowerText.includes('gaseste') || lowerText.includes('cauta')) {
@@ -617,8 +735,18 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
                 onChange={handleFileUpload}
             />
 
-            <button onClick={() => setIsOpen(!isOpen)} className={`pointer-events-auto w-14 h-14 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95 group ${buttonClass}`}>
-                {isOpen ? <X size={28} /> : <div className="relative"><MessageCircle size={28} className="transition-transform group-hover:rotate-12" /></div>}
+            <button onClick={toggleChat} className={`pointer-events-auto w-14 h-14 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95 group ${buttonClass}`}>
+                {isOpen ? <X size={28} /> : (
+                    <div className="relative">
+                        <MessageCircle size={28} className="transition-transform group-hover:rotate-12" />
+                        {hasNotification && !isOpen && (
+                            <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500 border-2 border-white"></span>
+                            </span>
+                        )}
+                    </div>
+                )}
             </button>
         </div>
     </>
