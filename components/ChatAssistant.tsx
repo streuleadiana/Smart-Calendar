@@ -16,6 +16,7 @@ interface ChatAssistantProps {
   onAccentChange: (color: string) => void;
   incomingMessage: { text: string; id: string } | null;
   lastCompletedTask: string | null;
+  onUpdateUserName: (name: string) => void;
 }
 
 interface Message {
@@ -64,7 +65,8 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   accentColor,
   onAccentChange,
   incomingMessage,
-  lastCompletedTask
+  lastCompletedTask,
+  onUpdateUserName
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hasNotification, setHasNotification] = useState(false);
@@ -76,6 +78,9 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   const [assistantName, setAssistantName] = useState(() => localStorage.getItem('assistant_name') || "Olli");
   const [assistantAvatar, setAssistantAvatar] = useState(() => localStorage.getItem('assistant_avatar') || "🦉");
   const [showSettings, setShowSettings] = useState(false);
+  
+  // Local state for user name editing
+  const [localUserName, setLocalUserName] = useState(userName);
 
   // Dragging State
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -93,6 +98,11 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
         });
     }
   }, []);
+
+  // Sync localUserName with prop if it changes externally
+  useEffect(() => {
+    setLocalUserName(userName);
+  }, [userName]);
 
   // --- SHORT TERM MEMORY ---
   const [lastFoundEvents, setLastFoundEvents] = useState<CalendarEvent[]>([]);
@@ -139,6 +149,13 @@ Cu ce începem?`,
         sender: 'bot',
         timestamp: new Date()
     }]);
+  };
+
+  const handleUserNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value;
+    setLocalUserName(newName);
+    onUpdateUserName(newName);
+    localStorage.setItem('app_username', newName);
   };
 
   // Handle proactive messages (General)
@@ -765,8 +782,22 @@ Cu ce începem?`,
                     <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${isNeon ? 'bg-slate-950 text-white' : 'bg-white/50 text-slate-800'}`}>
                         <h4 className="font-bold text-sm text-center mb-4">Personalizează Asistentul</h4>
                         
+                        {/* USER NAME EDIT */}
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold opacity-70">Nume</label>
+                            <label className="text-xs font-semibold opacity-70">Numele Tău</label>
+                            <input 
+                                type="text" 
+                                value={localUserName} 
+                                onChange={handleUserNameChange}
+                                className={`w-full p-2 rounded-lg text-sm border focus:ring-2 outline-none ${
+                                    isNeon ? 'bg-slate-800 border-slate-700 focus:ring-cyan-500' : 'bg-white border-slate-200 focus:ring-indigo-500'
+                                }`}
+                                placeholder="ex: Alex"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold opacity-70">Nume Asistent</label>
                             <input 
                                 type="text" 
                                 value={assistantName} 

@@ -9,12 +9,16 @@ import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { SettingsModal } from './components/SettingsModal';
 import { User, CalendarEvent, Todo, Theme } from './types';
 import * as storage from './utils/storage';
-import { LogOut, Layout, Settings, ArrowRight, Sparkles } from 'lucide-react';
+import { LogOut, Layout, Settings, ArrowRight, Sparkles, Pencil } from 'lucide-react';
 
 const App: React.FC = () => {
   // Simple User State
   const [userName, setUserName] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState('');
+  
+  // Name Editing State
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempName, setTempName] = useState('');
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -69,6 +73,18 @@ const App: React.FC = () => {
     const name = nameInput.trim();
     localStorage.setItem('app_username', name);
     setUserName(name);
+  };
+
+  const handleUpdateUserName = (name: string) => {
+    setUserName(name);
+    localStorage.setItem('app_username', name);
+  };
+  
+  const saveNameEdit = () => {
+    if (tempName.trim()) {
+        handleUpdateUserName(tempName.trim());
+    }
+    setIsEditingName(false);
   };
 
   const handleLogout = () => {
@@ -390,11 +406,38 @@ const App: React.FC = () => {
                     <Settings size={20} />
                 </button>
 
-                <div className="hidden md:flex flex-col items-end">
-                  <span className={`text-sm font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>
-                    {userName}
-                  </span>
+                <div className="hidden md:flex flex-col items-end mr-3">
+                    {isEditingName ? (
+                        <input 
+                            autoFocus
+                            type="text"
+                            value={tempName}
+                            onChange={(e) => setTempName(e.target.value)}
+                            onBlur={saveNameEdit}
+                            onKeyDown={(e) => e.key === 'Enter' && saveNameEdit()}
+                            className={`text-sm font-bold text-right bg-transparent border-b-2 outline-none py-0.5 px-1 w-32 ${
+                                theme === 'neon' 
+                                ? 'text-white border-cyan-500' 
+                                : 'text-slate-800 border-indigo-500'
+                            }`}
+                        />
+                    ) : (
+                        <button
+                            onClick={() => {
+                                setTempName(userName || '');
+                                setIsEditingName(true);
+                            }}
+                            className={`text-sm font-bold flex items-center gap-2 group transition-colors ${
+                                theme === 'neon' ? 'text-white hover:text-cyan-400' : 'text-slate-800 hover:text-primary'
+                            }`}
+                            title="Click to edit name"
+                        >
+                            {userName}
+                            <Pencil size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                    )}
                 </div>
+
                 <button
                   onClick={handleLogout}
                   className={`p-2 rounded-lg transition-colors ${
@@ -504,6 +547,7 @@ const App: React.FC = () => {
         onAccentChange={handleAccentChange}
         incomingMessage={aiMessage}
         lastCompletedTask={lastCompletedTask}
+        onUpdateUserName={handleUpdateUserName}
       />
     </div>
   );
