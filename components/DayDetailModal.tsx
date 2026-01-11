@@ -10,6 +10,7 @@ interface DayDetailModalProps {
   events: CalendarEvent[];
   onAddEvent: () => void;
   onDeleteEvent: (id: string) => void;
+  onEditEvent: (event: CalendarEvent) => void;
   theme: Theme;
 }
 
@@ -20,6 +21,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   events, 
   onAddEvent, 
   onDeleteEvent,
+  onEditEvent,
   theme 
 }) => {
   if (!isOpen || !date) return null;
@@ -119,7 +121,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
               return (
                 <div 
                     key={event.id} 
-                    className={`p-4 rounded-2xl border transition-all hover:scale-[1.01] group relative ${getEventBg(event)}`}
+                    onClick={() => onEditEvent(event)}
+                    className={`cursor-pointer p-4 rounded-2xl border transition-all hover:scale-[1.01] group relative ${getEventBg(event)}`}
+                    title="Click to Edit"
                 >
                     <div className="flex gap-4">
                     {/* Time Column */}

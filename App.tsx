@@ -4,6 +4,7 @@ import { Auth } from './components/Auth';
 import { Calendar } from './components/Calendar';
 import { TodoList } from './components/TodoList';
 import { EventModal } from './components/EventModal';
+import { EditEventModal } from './components/EditEventModal';
 import { ChatAssistant } from './components/ChatAssistant';
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { SettingsModal } from './components/SettingsModal';
@@ -28,6 +29,10 @@ const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  
+  // Edit Event State
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const triggerAiMessage = (text: string) => {
     setAiMessage({ text, id: crypto.randomUUID() });
@@ -134,6 +139,24 @@ const App: React.FC = () => {
     const updatedEvents = [...events, newEvent];
     setEvents(updatedEvents);
     storage.saveEvents(updatedEvents);
+  };
+
+  const handleUpdateEvent = (id: string, title: string, time?: string, endTime?: string) => {
+    const updatedEvents = events.map(e => {
+        if (e.id === id) {
+            return { ...e, title, time, endTime };
+        }
+        return e;
+    });
+    setEvents(updatedEvents);
+    storage.saveEvents(updatedEvents);
+    setIsEditModalOpen(false);
+    triggerAiMessage(`Eveniment actualizat: ${title} ✏️`);
+  };
+
+  const openEditModal = (event: CalendarEvent) => {
+      setEditingEvent(event);
+      setIsEditModalOpen(true);
   };
 
   const handleDeleteEvent = (id: string) => {
@@ -342,6 +365,7 @@ const App: React.FC = () => {
               events={events} 
               onDateSelect={handleOpenModal}
               onDeleteEvent={handleDeleteEvent}
+              onEditEvent={openEditModal}
               theme={theme}
             />
           </div>
@@ -377,6 +401,14 @@ const App: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveEvent}
         initialDate={selectedDate}
+      />
+
+      <EditEventModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleUpdateEvent}
+        event={editingEvent}
+        theme={theme}
       />
 
       <SettingsModal 

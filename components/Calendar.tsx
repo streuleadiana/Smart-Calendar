@@ -8,6 +8,7 @@ interface CalendarProps {
   events: CalendarEvent[];
   onDateSelect: (date: Date) => void;
   onDeleteEvent: (id: string) => void;
+  onEditEvent: (event: CalendarEvent) => void;
   theme: Theme;
 }
 
@@ -17,7 +18,7 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDeleteEvent, theme }) => {
+export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDeleteEvent, onEditEvent, theme }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
 
@@ -209,6 +210,7 @@ export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDele
         events={selectedDay ? getEventsForDateObj(selectedDay) : []}
         onAddEvent={handleAddEventFromDetail}
         onDeleteEvent={onDeleteEvent}
+        onEditEvent={onEditEvent}
         theme={theme}
       />
     </div>
