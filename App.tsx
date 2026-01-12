@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar } from './components/Calendar';
 import { TodoList } from './components/TodoList';
@@ -528,9 +529,27 @@ const App: React.FC = () => {
                         <ThemeSwitcher currentTheme={theme} onThemeChange={handleThemeChange} />
                     </div>
 
-                    <p className={`text-sm ${theme === 'neon' ? 'text-slate-500' : 'text-slate-400'}`}>
-                        * Culoarea de accent se poate schimba acum din bara de sus!
-                    </p>
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <span className={`font-medium ${theme === 'neon' ? 'text-slate-300' : 'text-slate-700'}`}>
+                            Culoare Accent
+                        </span>
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs text-slate-400">
+                                {accentColor}
+                            </span>
+                            <div 
+                                className="relative flex items-center justify-center w-10 h-10 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm transition-transform hover:scale-105"
+                                style={{ borderColor: theme === 'neon' ? '#334155' : '#e2e8f0' }}
+                            >
+                                <input
+                                    type="color"
+                                    value={accentColor}
+                                    onChange={(e) => handleAccentChange(e.target.value)}
+                                    className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] p-0 m-0 cursor-pointer border-none"
+                                />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Data Card */}
@@ -642,7 +661,7 @@ const App: React.FC = () => {
                         <Layout size={20} />
                     </div>
                     <span className={`text-lg font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>
-                        SmartCal
+                        Smart Calendar
                     </span>
                 </div>
               )}

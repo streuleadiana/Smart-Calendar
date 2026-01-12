@@ -16,11 +16,12 @@ interface TodoListProps {
   searchQuery?: string;
 }
 
+// Updated to use Hex values for text coloring
 const TODO_COLORS = [
-  { class: '', label: 'Default', bg: 'bg-transparent' },
-  { class: 'bg-red-500', label: 'Urgent', bg: 'bg-red-500' },
-  { class: 'bg-orange-500', label: 'Medium', bg: 'bg-orange-500' },
-  { class: 'bg-blue-500', label: 'Low', bg: 'bg-blue-500' },
+  { value: '', label: 'Default', bg: 'bg-slate-200' },
+  { value: '#ef4444', label: 'Urgent', bg: 'bg-red-500' },
+  { value: '#f97316', label: 'Medium', bg: 'bg-orange-500' },
+  { value: '#3b82f6', label: 'Low', bg: 'bg-blue-500' },
 ];
 
 export const TodoList: React.FC<TodoListProps> = ({ 
@@ -71,9 +72,10 @@ export const TodoList: React.FC<TodoListProps> = ({
   };
 
   const handleCycleColor = (todo: Todo) => {
-    const currentIndex = TODO_COLORS.findIndex(c => c.class === (todo.color || ''));
+    // Determine current index based on value match
+    const currentIndex = TODO_COLORS.findIndex(c => c.value === (todo.color || ''));
     const nextIndex = (currentIndex + 1) % TODO_COLORS.length;
-    onChangeColor(todo.id, TODO_COLORS[nextIndex].class);
+    onChangeColor(todo.id, TODO_COLORS[nextIndex].value);
   };
 
   return (
@@ -81,7 +83,7 @@ export const TodoList: React.FC<TodoListProps> = ({
       <div className={`p-4 border-b flex items-center gap-2 ${headerClass}`}>
         <div 
             className={`p-1.5 rounded-md text-white`}
-            style={{ backgroundColor: `${accentColor}80` }} // Semi-transparent
+            style={{ backgroundColor: `${accentColor}80` }}
         >
           <ListTodo size={20} />
         </div>
@@ -130,8 +132,8 @@ export const TodoList: React.FC<TodoListProps> = ({
                     <button
                         key={color.label}
                         type="button"
-                        onClick={() => setSelectedColor(selectedColor === color.class ? '' : color.class)}
-                        className={`w-4 h-4 rounded-full transition-transform ${color.bg} ${selectedColor === color.class ? 'ring-2 ring-offset-1 ring-slate-400 scale-110' : 'opacity-40 hover:opacity-100'}`}
+                        onClick={() => setSelectedColor(selectedColor === color.value ? '' : color.value)}
+                        className={`w-4 h-4 rounded-full transition-transform ${color.bg} ${selectedColor === color.value ? 'ring-2 ring-offset-1 ring-slate-400 scale-110' : 'opacity-40 hover:opacity-100'}`}
                         title={color.label}
                     />
                 ))}
@@ -148,19 +150,34 @@ export const TodoList: React.FC<TodoListProps> = ({
         ) : (
           todos.map((todo) => {
             const isHighlighted = !!searchQuery;
+            
+            // Dynamic Styles
+            const itemStyle: React.CSSProperties = {
+                // Pinned Logic: Background Tint + Left Border
+                backgroundColor: todo.isPinned ? `${accentColor}1A` : undefined, // 10-15% opacity hex (1A = ~10%)
+                borderLeft: todo.isPinned ? `4px solid ${accentColor}` : '4px solid transparent',
+                
+                // Pop Effect Logic
+                boxShadow: isHighlighted ? `0 0 0 2px ${accentColor}` : undefined,
+                zIndex: isHighlighted ? 10 : undefined,
+            };
+
+            // Text Color Logic
+            const textStyle: React.CSSProperties = {
+                color: (!todo.completed && todo.color) ? todo.color : 'inherit'
+            };
+
             return (
             <div
               key={todo.id}
               className={`group flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                todo.isPinned 
-                    ? isNeon ? 'border-amber-500/20 bg-amber-900/10' : 'border-amber-200 bg-amber-50' 
-                    : 'border-transparent'
+                isNeon ? 'border-slate-800' : 'border-transparent' // removed specific pinned classes, handled in style
               } ${
                 todo.completed
                   ? `opacity-60 ${isNeon ? 'bg-slate-800/50' : 'bg-slate-50'}`
                   : `${isNeon ? 'bg-slate-900 hover:border-cyan-500/30' : 'bg-white hover:border-slate-300'} hover:shadow-sm`
               }`}
-              style={isHighlighted ? { boxShadow: `0 0 0 2px ${accentColor}`, zIndex: 10 } : {}}
+              style={itemStyle}
             >
               <button
                 onClick={() => onToggleTodo(todo.id)}
@@ -175,7 +192,10 @@ export const TodoList: React.FC<TodoListProps> = ({
               </button>
               
               <div className="flex-1 min-w-0">
-                  <span className={`block text-sm truncate ${todo.completed ? `line-through ${completedText}` : textClass}`}>
+                  <span 
+                    className={`block text-sm truncate ${todo.completed ? `line-through ${completedText}` : textClass}`}
+                    style={textStyle}
+                  >
                     <HighlightText text={todo.text} highlight={searchQuery} />
                   </span>
               </div>
@@ -185,7 +205,8 @@ export const TodoList: React.FC<TodoListProps> = ({
                  {/* Color Indicator/Cycler */}
                  <button
                     onClick={() => handleCycleColor(todo)}
-                    className={`w-3 h-3 rounded-full mx-1 ${todo.color ? todo.color : 'bg-slate-300'}`}
+                    className={`w-3 h-3 rounded-full mx-1`}
+                    style={{ backgroundColor: todo.color || '#cbd5e1' }}
                     title="Cycle Priority Color"
                  />
                  
@@ -211,14 +232,11 @@ export const TodoList: React.FC<TodoListProps> = ({
                  </button>
               </div>
               
-              {/* Always visible indicators if pinned/colored but hover not active */}
+              {/* Always visible indicators */}
               {todo.isPinned && (
-                 <div className="block group-hover:hidden text-amber-500">
+                 <div className="block group-hover:hidden text-amber-500" style={{ color: accentColor }}>
                     <Pin size={12} className="fill-current" />
                  </div>
-              )}
-               {todo.color && (
-                 <div className={`block group-hover:hidden w-2 h-2 rounded-full ${todo.color}`}></div>
               )}
             </div>
           )})
