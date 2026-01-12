@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { CalendarEvent, Theme } from '../types';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { DayDetailModal } from './DayDetailModal';
+import { HighlightText } from './HighlightText';
 
 interface CalendarProps {
   events: CalendarEvent[];
@@ -11,6 +12,7 @@ interface CalendarProps {
   onEditEvent: (event: CalendarEvent) => void;
   theme: Theme;
   accentColor?: string;
+  searchQuery?: string;
 }
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -19,7 +21,15 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDeleteEvent, onEditEvent, theme, accentColor = 'blue' }) => {
+export const Calendar: React.FC<CalendarProps> = ({ 
+  events, 
+  onDateSelect, 
+  onDeleteEvent, 
+  onEditEvent, 
+  theme, 
+  accentColor = '#4F46E5',
+  searchQuery = ''
+}) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
 
@@ -35,17 +45,6 @@ export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDele
       case 'personal': return 'bg-emerald-500';
       case 'study': return 'bg-amber-500';
       default: return 'bg-slate-500';
-    }
-  };
-
-  const getAccentBadgeClass = () => {
-     switch(accentColor) {
-        case 'purple': return 'bg-purple-600 text-white';
-        case 'pink': return 'bg-pink-500 text-white';
-        case 'orange': return 'bg-orange-500 text-white';
-        case 'green': return 'bg-emerald-500 text-white';
-        case 'teal': return 'bg-teal-500 text-white';
-        default: return 'bg-indigo-600 text-white'; // Default/Blue
     }
   };
 
@@ -104,7 +103,6 @@ export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDele
     const textMuted = isNeon ? 'text-slate-400' : 'text-slate-400';
     const dayHeaderBg = isNeon ? 'bg-slate-950 text-cyan-500' : isPastel ? 'bg-stone-100 text-stone-500' : 'bg-slate-50 text-slate-400';
     const todayHighlight = isNeon ? 'bg-cyan-900/30' : 'bg-indigo-50/40';
-    const todayBadge = isNeon ? 'bg-cyan-500 text-black shadow-cyan-500/50' : isPastel ? 'bg-orange-400 text-white' : getAccentBadgeClass();
 
     return (
       <div className={`grid grid-cols-7 gap-px rounded-2xl overflow-hidden border shadow-sm ${gridBg} ${isNeon ? 'border-slate-800' : 'border-slate-200'}`}>
@@ -131,11 +129,15 @@ export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDele
               className={`${cellBg} min-h-[120px] p-2 transition-all cursor-pointer group relative flex flex-col gap-1 active:scale-[0.98] ${isToday ? todayHighlight : ''}`}
             >
               <div className="flex justify-between items-start mb-1">
-                <span className={`text-sm font-semibold w-7 h-7 flex items-center justify-center rounded-full transition-all ${isToday ? `${todayBadge} shadow-md scale-110` : `${textBase} group-hover:scale-110`}`}>
+                <span 
+                    className={`text-sm font-semibold w-7 h-7 flex items-center justify-center rounded-full transition-all ${isToday ? 'text-white shadow-md scale-110' : `${textBase} group-hover:scale-110`}`}
+                    style={isToday ? { backgroundColor: accentColor } : {}}
+                >
                   {day}
                 </span>
                 <div 
-                  className={`opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110 ${isNeon ? 'text-cyan-400' : 'text-slate-400 hover:text-primary'}`}
+                  className={`opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110 ${isNeon ? 'text-cyan-400' : 'text-slate-400'}`}
+                  style={!isNeon ? { color: accentColor } : {}}
                 >
                   <Plus size={16} />
                 </div>
@@ -144,12 +146,14 @@ export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDele
               <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1">
                 {dayEvents.map(event => {
                   const colorClass = getEventColor(event);
+                  const isHighlighted = !!searchQuery;
                   return (
                     <div 
                         key={event.id}
                         className={`text-xs p-1.5 rounded-md border-l-2 shadow-sm transition-all cursor-pointer flex items-center gap-1 ${
                             isNeon ? 'bg-slate-800 text-cyan-50 hover:brightness-110' : 'bg-white hover:brightness-95'
                         } ${colorClass.replace('bg-', 'border-')}`}
+                        style={isHighlighted ? { boxShadow: `0 0 0 2px ${accentColor}`, zIndex: 10 } : {}}
                         title={`${event.title}${event.time ? ` (${event.time}${event.endTime ? ` - ${event.endTime}` : ''})` : ''}`}
                     >
                         <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${colorClass}`}></div>
@@ -159,7 +163,7 @@ export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDele
                                     {event.time}{event.endTime ? `-${event.endTime}` : ''}
                                 </span>
                             )}
-                            {event.title}
+                            <HighlightText text={event.title} highlight={searchQuery} />
                         </div>
                     </div>
                   );
@@ -200,6 +204,7 @@ export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDele
                 ? 'text-cyan-400 hover:bg-slate-800 border-slate-700' 
                 : 'text-slate-600 hover:bg-slate-50 border-slate-100'
             }`}
+            style={{ color: accentColor }}
           >
             Today
           </button>
@@ -224,6 +229,8 @@ export const Calendar: React.FC<CalendarProps> = ({ events, onDateSelect, onDele
         onDeleteEvent={onDeleteEvent}
         onEditEvent={onEditEvent}
         theme={theme}
+        accentColor={accentColor}
+        searchQuery={searchQuery}
       />
     </div>
   );

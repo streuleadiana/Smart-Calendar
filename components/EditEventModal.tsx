@@ -9,9 +9,10 @@ interface EditEventModalProps {
   onSave: (id: string, title: string, time?: string, endTime?: string) => void;
   event: CalendarEvent | null;
   theme: Theme;
+  accentColor?: string;
 }
 
-export const EditEventModal: React.FC<EditEventModalProps> = ({ isOpen, onClose, onSave, event, theme }) => {
+export const EditEventModal: React.FC<EditEventModalProps> = ({ isOpen, onClose, onSave, event, theme, accentColor = '#4F46E5' }) => {
   const [title, setTitle] = useState('');
   const [time, setTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -34,10 +35,7 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({ isOpen, onClose,
   const inputClass = isNeon
     ? 'bg-slate-800 border-slate-700 text-white focus:ring-cyan-500'
     : 'bg-white border-slate-300 text-slate-900 focus:ring-primary';
-  const btnPrimary = isNeon
-    ? 'bg-cyan-600 hover:bg-cyan-500 text-white'
-    : 'bg-primary hover:bg-indigo-600 text-white';
-
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave(event.id, title, time || undefined, endTime || undefined);
@@ -103,7 +101,8 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({ isOpen, onClose,
             </button>
             <button
               type="submit"
-              className={`flex-1 py-2 rounded-lg font-bold shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 ${btnPrimary}`}
+              className={`flex-1 py-2 rounded-lg font-bold shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 text-white hover:opacity-90`}
+              style={{ backgroundColor: accentColor }}
             >
               <Save size={18} />
               Save Changes

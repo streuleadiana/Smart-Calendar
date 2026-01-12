@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { Todo, Theme } from '../types';
-import { CheckSquare, Square, Trash2, Plus, ListTodo, Pin, Palette, Check } from 'lucide-react';
+import { CheckSquare, Square, Trash2, Plus, ListTodo, Pin } from 'lucide-react';
+import { HighlightText } from './HighlightText';
 
 interface TodoListProps {
   todos: Todo[];
@@ -12,6 +13,7 @@ interface TodoListProps {
   onChangeColor: (id: string, color: string) => void;
   theme: Theme;
   accentColor?: string;
+  searchQuery?: string;
 }
 
 const TODO_COLORS = [
@@ -29,7 +31,8 @@ export const TodoList: React.FC<TodoListProps> = ({
   onTogglePin,
   onChangeColor,
   theme,
-  accentColor = 'blue'
+  accentColor = '#4F46E5',
+  searchQuery = ''
 }) => {
   const [newTodo, setNewTodo] = useState('');
   const [isPinned, setIsPinned] = useState(false);
@@ -52,56 +55,11 @@ export const TodoList: React.FC<TodoListProps> = ({
 
   const inputClass = isNeon
     ? 'bg-slate-800 border-slate-700 text-white focus:ring-cyan-500/50 focus:border-cyan-500'
-    : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-secondary/50 focus:border-secondary';
+    : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-indigo-500/50';
 
   const textClass = isNeon ? 'text-slate-300' : 'text-slate-700';
   const completedText = isNeon ? 'text-slate-600' : 'text-slate-400';
-
-  const getAccentBtnClass = () => {
-    if (isNeon) return 'bg-cyan-600 hover:bg-cyan-500';
-    if (isPastel) return 'bg-orange-400 hover:bg-orange-500';
-
-    switch(accentColor) {
-        case 'purple': return 'bg-purple-600 hover:bg-purple-700';
-        case 'pink': return 'bg-pink-500 hover:bg-pink-600';
-        case 'orange': return 'bg-orange-500 hover:bg-orange-600';
-        case 'green': return 'bg-emerald-500 hover:bg-emerald-600';
-        case 'teal': return 'bg-teal-500 hover:bg-teal-600';
-        default: return 'bg-indigo-600 hover:bg-indigo-700';
-    }
-  };
-
-  const getAccentTextClass = () => {
-    if (isNeon) return 'text-cyan-400';
-    if (isPastel) return 'text-orange-500';
-
-    switch(accentColor) {
-        case 'purple': return 'text-purple-600';
-        case 'pink': return 'text-pink-500';
-        case 'orange': return 'text-orange-500';
-        case 'green': return 'text-emerald-500';
-        case 'teal': return 'text-teal-500';
-        default: return 'text-indigo-600';
-    }
-  };
   
-  const getAccentBgLight = () => {
-      if (isNeon) return 'bg-cyan-900/50';
-      if (isPastel) return 'bg-orange-100/50';
-
-      switch(accentColor) {
-        case 'purple': return 'bg-purple-50 text-purple-600';
-        case 'pink': return 'bg-pink-50 text-pink-500';
-        case 'orange': return 'bg-orange-50 text-orange-500';
-        case 'green': return 'bg-emerald-50 text-emerald-500';
-        case 'teal': return 'bg-teal-50 text-teal-500';
-        default: return 'bg-indigo-50 text-indigo-600';
-    }
-  }
-
-  const iconClass = getAccentTextClass();
-  const headerIconBg = getAccentBgLight();
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (newTodo.trim()) {
@@ -121,7 +79,10 @@ export const TodoList: React.FC<TodoListProps> = ({
   return (
     <div className={`rounded-2xl shadow-sm border h-full flex flex-col overflow-hidden ${containerClass}`}>
       <div className={`p-4 border-b flex items-center gap-2 ${headerClass}`}>
-        <div className={`p-1.5 rounded-md ${headerIconBg}`}>
+        <div 
+            className={`p-1.5 rounded-md text-white`}
+            style={{ backgroundColor: `${accentColor}80` }} // Semi-transparent
+        >
           <ListTodo size={20} />
         </div>
         <h3 className="font-bold">My Tasks</h3>
@@ -142,7 +103,8 @@ export const TodoList: React.FC<TodoListProps> = ({
           <button
             type="submit"
             disabled={!newTodo.trim()}
-            className={`absolute right-1.5 top-1.5 p-1.5 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${getAccentBtnClass()}`}
+            className={`absolute right-1.5 top-1.5 p-1.5 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors hover:opacity-90`}
+            style={{ backgroundColor: accentColor }}
           >
             <Plus size={16} />
           </button>
@@ -184,7 +146,9 @@ export const TodoList: React.FC<TodoListProps> = ({
             <p className="text-xs mt-1">Add one above to get started!</p>
           </div>
         ) : (
-          todos.map((todo) => (
+          todos.map((todo) => {
+            const isHighlighted = !!searchQuery;
+            return (
             <div
               key={todo.id}
               className={`group flex items-center gap-3 p-3 rounded-lg border transition-all ${
@@ -194,23 +158,25 @@ export const TodoList: React.FC<TodoListProps> = ({
               } ${
                 todo.completed
                   ? `opacity-60 ${isNeon ? 'bg-slate-800/50' : 'bg-slate-50'}`
-                  : `${isNeon ? 'bg-slate-900 hover:border-cyan-500/30' : 'bg-white hover:border-secondary/30'} hover:shadow-sm`
+                  : `${isNeon ? 'bg-slate-900 hover:border-cyan-500/30' : 'bg-white hover:border-slate-300'} hover:shadow-sm`
               }`}
+              style={isHighlighted ? { boxShadow: `0 0 0 2px ${accentColor}`, zIndex: 10 } : {}}
             >
               <button
                 onClick={() => onToggleTodo(todo.id)}
                 className={`flex-shrink-0 transition-colors ${
                   todo.completed 
-                    ? iconClass 
-                    : isNeon ? 'text-slate-600 hover:text-cyan-400' : `text-slate-300 hover:${iconClass.replace('text-', 'text-')}`
+                    ? '' 
+                    : isNeon ? 'text-slate-600' : 'text-slate-300'
                 }`}
+                style={todo.completed ? { color: accentColor } : {}}
               >
                 {todo.completed ? <CheckSquare size={20} /> : <Square size={20} />}
               </button>
               
               <div className="flex-1 min-w-0">
                   <span className={`block text-sm truncate ${todo.completed ? `line-through ${completedText}` : textClass}`}>
-                    {todo.text}
+                    <HighlightText text={todo.text} highlight={searchQuery} />
                   </span>
               </div>
               
@@ -255,7 +221,7 @@ export const TodoList: React.FC<TodoListProps> = ({
                  <div className={`block group-hover:hidden w-2 h-2 rounded-full ${todo.color}`}></div>
               )}
             </div>
-          ))
+          )})
         )}
       </div>
     </div>

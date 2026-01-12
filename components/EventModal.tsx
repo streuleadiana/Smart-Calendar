@@ -8,6 +8,7 @@ interface EventModalProps {
   onClose: () => void;
   onSave: (event: Omit<CalendarEvent, 'id'>) => void;
   initialDate: Date;
+  accentColor?: string;
 }
 
 const CATEGORIES = [
@@ -32,7 +33,7 @@ const CUSTOM_COLORS = [
   { name: 'Slate', class: 'bg-slate-500' },
 ];
 
-export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, onSave, initialDate }) => {
+export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, onSave, initialDate, accentColor = '#4F46E5' }) => {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
@@ -225,7 +226,8 @@ export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, onSave,
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 rounded-lg bg-primary hover:bg-indigo-600 text-white font-medium shadow-lg shadow-primary/25 transition-all"
+              className="flex-1 px-4 py-2.5 rounded-lg text-white font-medium shadow-lg transition-all hover:opacity-90"
+              style={{ backgroundColor: accentColor }}
             >
               Save Event
             </button>

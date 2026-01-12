@@ -2,6 +2,7 @@
 import React from 'react';
 import { CalendarEvent, Theme } from '../types';
 import { X, Clock, Plus, Trash2, Calendar as CalendarIcon, MapPin } from 'lucide-react';
+import { HighlightText } from './HighlightText';
 
 interface DayDetailModalProps {
   isOpen: boolean;
@@ -12,6 +13,8 @@ interface DayDetailModalProps {
   onDeleteEvent: (id: string) => void;
   onEditEvent: (event: CalendarEvent) => void;
   theme: Theme;
+  accentColor?: string;
+  searchQuery?: string;
 }
 
 export const DayDetailModal: React.FC<DayDetailModalProps> = ({ 
@@ -22,7 +25,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   onAddEvent, 
   onDeleteEvent,
   onEditEvent,
-  theme 
+  theme,
+  accentColor = '#4F46E5',
+  searchQuery = ''
 }) => {
   if (!isOpen || !date) return null;
 
@@ -118,11 +123,13 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           ) : (
             sortedEvents.map(event => {
               const colorClass = getEventColor(event);
+              const isHighlighted = !!searchQuery;
               return (
                 <div 
                     key={event.id} 
                     onClick={() => onEditEvent(event)}
                     className={`cursor-pointer p-4 rounded-2xl border transition-all hover:scale-[1.01] group relative ${getEventBg(event)}`}
+                    style={isHighlighted ? { boxShadow: `0 0 0 2px ${accentColor}` } : {}}
                     title="Click to Edit"
                 >
                     <div className="flex gap-4">
@@ -142,7 +149,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                     {/* Content Column */}
                     <div className="flex-1 pb-1">
                         <div className="flex justify-between items-start">
-                            <h3 className={`font-bold text-lg leading-tight mb-1 ${textPrimary}`}>{event.title}</h3>
+                            <h3 className={`font-bold text-lg leading-tight mb-1 ${textPrimary}`}>
+                                <HighlightText text={event.title} highlight={searchQuery} />
+                            </h3>
                             <button 
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -179,13 +188,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 onClose();
                 onAddEvent();
             }}
-            className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 ${
-                isNeon 
-                ? 'bg-cyan-600 hover:bg-cyan-500 shadow-cyan-900/20' 
-                : isPastel
-                  ? 'bg-orange-400 hover:bg-orange-500 shadow-orange-200'
-                  : 'bg-primary hover:bg-indigo-600 shadow-indigo-200'
-            }`}
+            className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 hover:opacity-90`}
+            style={{ backgroundColor: accentColor }}
           >
             <Plus size={20} />
             Add New Event
