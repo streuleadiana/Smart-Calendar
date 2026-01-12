@@ -26,20 +26,31 @@ interface Message {
   timestamp: Date;
 }
 
-const COLOR_MAP: {[key: string]: string} = {
-  'rosu': 'bg-red-500',
-  'roșu': 'bg-red-500',
+// Maps for Natural Language Processing
+const EVENT_COLORS: {[key: string]: string} = {
+  'rosu': 'bg-red-500', 'roșu': 'bg-red-500',
   'albastru': 'bg-blue-500',
   'verde': 'bg-green-500',
-  'galben': 'bg-yellow-500',
-  'amber': 'bg-amber-500',
+  'galben': 'bg-yellow-500', 'amber': 'bg-amber-500',
   'portocaliu': 'bg-orange-500',
-  'mov': 'bg-purple-500',
-  'violet': 'bg-purple-500',
+  'mov': 'bg-purple-500', 'violet': 'bg-purple-500',
   'roz': 'bg-pink-500',
   'gri': 'bg-slate-500',
   'turcoaz': 'bg-teal-500',
   'indigo': 'bg-indigo-500'
+};
+
+const TASK_COLORS: {[key: string]: string} = {
+  'rosu': '#ef4444', 'roșu': '#ef4444',
+  'albastru': '#3b82f6',
+  'verde': '#22c55e',
+  'galben': '#eab308', 'amber': '#f59e0b',
+  'portocaliu': '#f97316',
+  'mov': '#a855f7', 'violet': '#a855f7',
+  'roz': '#ec4899',
+  'gri': '#64748b',
+  'turcoaz': '#14b8a6',
+  'indigo': '#6366f1'
 };
 
 const AVATARS = ["🦉", "🤖", "👽", "🦊", "🐱", "🦁", "🦄", "🧙‍♂️", "🧠", "💼", "👨‍💻", "👩‍💻"];
@@ -65,7 +76,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   const [isListening, setIsListening] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
-  // Identity State (Lazy init from localStorage)
+  // Identity State
   const [assistantName, setAssistantName] = useState(() => localStorage.getItem('assistant_name') || "Olli");
   const [assistantAvatar, setAssistantAvatar] = useState(() => localStorage.getItem('assistant_avatar') || "🦉");
   const [showSettings, setShowSettings] = useState(false);
@@ -80,7 +91,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize position to bottom-right on mount
+  // Initialize position
   useEffect(() => {
     if (typeof window !== 'undefined') {
         setPosition({
@@ -90,12 +101,12 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
     }
   }, []);
 
-  // Sync localUserName with prop if it changes externally
+  // Sync localUserName
   useEffect(() => {
     setLocalUserName(userName);
   }, [userName]);
 
-  // --- SHORT TERM MEMORY ---
+  // Short Term Memory
   const [lastFoundEvents, setLastFoundEvents] = useState<CalendarEvent[]>([]);
   
   const isNeon = theme === 'neon';
@@ -105,23 +116,12 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
     {
       id: '1',
       text: `Salut, ${userName || 'prietene'}! 👋 
-Eu sunt ${assistantName} 🦉 (dar mă poți redenumi oricând din setări ⚙️).
+Eu sunt ${assistantName} ${assistantAvatar}.
 
-Iată cum te pot ajuta să te organizezi:
-
-📅 *Calendar & Programări:*
-'Adaugă [nume] în [ziua] la [ora]'
-
-❓ *Întrebări despre program:*
-'Ce am azi?' sau 'Ce am mâine?'
-
-📝 *Task-uri Inteligente:*
-'Task [nume]' (opțional: 'URGENT' sau culoare)
-
-🗑️ *Ștergere:*
-'Șterge [numele activității]'
-
-Cu ce începem?`,
+Poți să-mi vorbești liber! Încearcă:
+📅 "Pune ședință luni la 10 cu roșu"
+📝 "Task cumpărături urgent"
+❓ "Ce am mâine?"`,
       sender: 'bot',
       timestamp: new Date()
     }
@@ -133,7 +133,6 @@ Cu ce începem?`,
     localStorage.setItem('assistant_avatar', assistantAvatar);
     setShowSettings(false);
     
-    // Add a confirmation message
     setMessages(prev => [...prev, {
         id: crypto.randomUUID(),
         text: `Identitate actualizată! Acum sunt ${assistantName} ${assistantAvatar}. Cu ce te pot ajuta?`,
@@ -149,17 +148,15 @@ Cu ce începem?`,
     localStorage.setItem('app_username', newName);
   };
 
-  // Handle proactive messages (General)
+  // Handle proactive messages
   useEffect(() => {
     if (incomingMessage) {
-      const newMessage: Message = {
+      setMessages(prev => [...prev, {
         id: incomingMessage.id,
         text: incomingMessage.text,
         sender: 'bot',
         timestamp: new Date()
-      };
-      setMessages(prev => [...prev, newMessage]);
-      // Do not auto-open, just notify
+      }]);
       setHasNotification(true);
     }
   }, [incomingMessage]);
@@ -167,29 +164,21 @@ Cu ce începem?`,
   // Handle Task Celebration
   useEffect(() => {
     if (lastCompletedTask) {
-        // Extract task name from "TaskName::Timestamp" format
         const taskName = lastCompletedTask.split('::')[0];
-        
         const celebrations = [
             "Bravo! 🎉 Încă un task tăiat de pe listă!",
             "Ești pe val! 🌊",
             "Productivitate maximă! 🚀",
             "Excelent! Continuă tot așa! 💪",
             `Ai terminat "${taskName}". Super! ⭐`,
-            "One down, more to go! 🎯"
         ];
         
-        const randomMsg = celebrations[Math.floor(Math.random() * celebrations.length)];
-        
-        const botMsg: Message = {
+        setMessages(prev => [...prev, {
             id: crypto.randomUUID(),
-            text: randomMsg,
+            text: celebrations[Math.floor(Math.random() * celebrations.length)],
             sender: 'bot',
             timestamp: new Date()
-        };
-        
-        setMessages(prev => [...prev, botMsg]);
-        // Do not auto-open, just notify
+        }]);
         setHasNotification(true);
     }
   }, [lastCompletedTask]);
@@ -202,270 +191,241 @@ Cu ce începem?`,
     if (isOpen && !showSettings) scrollToBottom();
   }, [messages, isOpen, showSettings]);
 
-  // Handle opening/closing
   const toggleChat = () => {
-    if (!isOpen) {
-        setHasNotification(false); // Clear notification when opening
-    }
+    if (!isOpen) setHasNotification(false);
     setIsOpen(!isOpen);
   };
 
-  // --- DATE PARSING UTILS ---
+  // --- NLP LOGIC ---
 
-  const getFormattedDate = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const parseDate = (text: string): string | null => {
-    const today = new Date();
-    const lower = text.toLowerCase();
+  const parseNaturalLanguage = (input: string) => {
+    const text = input.toLowerCase().trim();
     
-    if (lower.includes('azi')) return getFormattedDate(today);
-    
-    if (lower.includes('maine') || lower.includes('mâine')) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + 1);
-      return getFormattedDate(d);
-    }
-
-    const days: {[key: string]: number} = {
-      'duminica': 0, 'duminică': 0, 'luni': 1, 'marti': 2, 'marți': 2, 
-      'miercuri': 3, 'joi': 4, 'vineri': 5, 'sambata': 6, 'sâmbătă': 6
+    let result = {
+      intent: 'unknown',
+      title: '',
+      date: undefined as string | undefined,
+      time: undefined as string | undefined,
+      color: undefined as string | undefined,
+      type: 'task' as 'event' | 'task',
+      isPinned: false,
     };
+
+    // 1. Detect Explicit Intent (Delete/Query)
+    if (text.match(/^(sterge|șterge|anuleaza|delete)/)) {
+        result.intent = 'delete';
+        result.title = text.replace(/^(sterge|șterge|anuleaza|delete)/, '').trim();
+        return result;
+    }
     
-    for (const [dayName, idx] of Object.entries(days)) {
-        if (lower.includes(dayName)) {
-             const currentDayIndex = today.getDay();
-             let daysUntil = idx - currentDayIndex;
-             if (daysUntil <= 0) daysUntil += 7;
-             const targetDate = new Date(today);
-             targetDate.setDate(today.getDate() + daysUntil);
-             return getFormattedDate(targetDate);
+    if (text.match(/^(ce am|gaseste|cauta|arata)/)) {
+        result.intent = 'query';
+        result.title = text.replace(/^(ce am|gaseste|cauta|arata)/, '').trim();
+        return result;
+    }
+
+    // 2. Add Logic
+    let processedText = text;
+    const now = new Date();
+
+    // Remove filler verbs
+    processedText = processedText.replace(/^(adauga|pune|creeaza|baga|noteaza|set)\s+/, '');
+    
+    // A. Detect "Task" keyword -> Force task
+    if (processedText.includes('task') || processedText.includes('to-do')) {
+        result.type = 'task';
+        result.intent = 'add_task';
+        processedText = processedText.replace(/task|to-do/g, '');
+    } else {
+        // Default to task, upgrade to event if date/time found
+        result.intent = 'add_task';
+    }
+
+    // B. Detect Date
+    let dateFound: Date | null = null;
+    
+    // Relative days
+    if (processedText.match(/\b(azi|astazi)\b/)) {
+        dateFound = new Date();
+        processedText = processedText.replace(/\b(azi|astazi)\b/, '');
+    } else if (processedText.match(/\b(maine|mâine)\b/)) {
+        dateFound = new Date();
+        dateFound.setDate(now.getDate() + 1);
+        processedText = processedText.replace(/\b(maine|mâine)\b/, '');
+    } else if (processedText.match(/\b(poimaine|poimâine)\b/)) {
+        dateFound = new Date();
+        dateFound.setDate(now.getDate() + 2);
+        processedText = processedText.replace(/\b(poimaine|poimâine)\b/, '');
+    } else {
+        // Weekdays
+        const daysMap: {[key: string]: number} = {
+            'duminica': 0, 'duminică': 0,
+            'luni': 1, 
+            'marti': 2, 'marți': 2,
+            'miercuri': 3, 
+            'joi': 4, 
+            'vineri': 5, 
+            'sambata': 6, 'sâmbătă': 6
+        };
+        
+        for (const [dayName, dayIndex] of Object.entries(daysMap)) {
+            if (processedText.includes(dayName)) {
+                const currentDay = now.getDay();
+                let diff = dayIndex - currentDay;
+                if (diff < 0) diff += 7; // Next occurrence
+                // If diff is 0 (today), assume today (or user can say "lunea viitoare", but keep simple)
+                
+                dateFound = new Date();
+                dateFound.setDate(now.getDate() + diff);
+                processedText = processedText.replace(new RegExp(`\\b${dayName}\\b`), '');
+                break; 
+            }
+        }
+    }
+    
+    // Specific Date (e.g., "pe 25")
+    const dateMatch = processedText.match(/\bpe\s+(\d{1,2})\b/);
+    if (!dateFound && dateMatch) {
+         const day = parseInt(dateMatch[1]);
+         dateFound = new Date();
+         dateFound.setDate(day);
+         if (day < now.getDate()) {
+             dateFound.setMonth(now.getMonth() + 1); // Next month
+         }
+         processedText = processedText.replace(dateMatch[0], '');
+    }
+
+    if (dateFound) {
+        const year = dateFound.getFullYear();
+        const month = String(dateFound.getMonth() + 1).padStart(2, '0');
+        const day = String(dateFound.getDate()).padStart(2, '0');
+        result.date = `${year}-${month}-${day}`;
+        result.intent = 'add_event'; // Found a date -> likely event
+        result.type = 'event';
+    }
+
+    // C. Detect Time
+    const timeMatch = processedText.match(/\b(?:la|ora)\s*(\d{1,2}(?:[:.]\d{2})?)\b/);
+    if (timeMatch) {
+        let t = timeMatch[1].replace('.', ':');
+        if (!t.includes(':')) t += ":00";
+        if (t.length === 4) t = "0" + t; // 9:00 -> 09:00
+        result.time = t;
+        result.intent = 'add_event';
+        result.type = 'event';
+        processedText = processedText.replace(timeMatch[0], '');
+    }
+
+    // D. Detect Color
+    const colorMap = result.type === 'event' ? EVENT_COLORS : TASK_COLORS;
+    for (const [name, val] of Object.entries(colorMap)) {
+        if (processedText.includes(name)) {
+            result.color = val;
+            processedText = processedText.replace(new RegExp(`\\b(cu|culoare)?\\s*${name}\\b`), '');
+            break;
         }
     }
 
-    const match = text.match(/\b(\d{1,2})\b/);
-    if (match) {
-        const day = parseInt(match[1]);
-        if (day > 0 && day <= 31) {
-            const d = new Date(today.getFullYear(), today.getMonth(), day);
-            return getFormattedDate(d);
-        }
+    // E. Detect "Urgent" / Pin
+    if (processedText.match(/\b(urgent|important|pin)\b/)) {
+        result.isPinned = true;
+        processedText = processedText.replace(/\b(urgent|important|pin)\b/, '');
     }
 
-    return null;
+    // F. Cleanup Prepositions and Clean Title
+    processedText = processedText.replace(/\b(pe|la|cu)\b/g, '');
+    result.title = processedText.replace(/\s+/g, ' ').trim();
+    
+    if (!result.title) result.title = result.type === 'event' ? 'Eveniment' : 'Task nou';
+
+    return result;
   };
 
-  // --- MAIN LOGIC ENGINE ---
+  // --- HANDLERS ---
 
-  const processQuery = (text: string, isOCR: boolean = false): string => {
-    // ... [Logic remains identical to original for processing]
-    // Skipping redundant code block for brevity in response, 
-    // assuming existing logic is preserved and we just update styles.
-    
-    // Re-implementing concise version of processQuery for correctness in full file replacement
-    let lowerText = text.toLowerCase().trim();
+  const handleSend = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
 
-    if (isOCR) {
-        const addVerbs = ['adauga', 'adaugă', 'pune', 'creeaza', 'creează', 'set', 'add'];
-        const hasVerb = addVerbs.some(v => lowerText.startsWith(v));
-        if (!hasVerb) {
-            const potentialDate = parseDate(lowerText);
-            if (potentialDate) {
-                lowerText = `adauga ${lowerText}`;
-                text = `Adauga ${text}`;
-            }
-        }
-    }
+    const userMsg: Message = {
+      id: crypto.randomUUID(),
+      text: input,
+      sender: 'user',
+      timestamp: new Date()
+    };
 
-    if (lowerText.startsWith('sterge') || lowerText.startsWith('șterge') || lowerText.startsWith('anuleaza')) {
-        const target = lowerText.replace(/sterge|șterge|anuleaza/g, '').trim();
-        if (!target) return "Ce anume vrei să șterg? (ex: 'Sterge sedinta')";
-        const success = onDeleteEvent(target);
-        if (success) return `Am șters evenimentul "${target}" din calendar. 🗑️`;
-        const taskSuccess = onToggleTodo(target);
-        if(taskSuccess) return `Nu am găsit eveniment, dar am bifat task-ul "${target}".`;
-        return `Nu găsesc "${target}" nici la evenimente, nici la task-uri.`;
-    }
+    setMessages(prev => [...prev, userMsg]);
+    setInput('');
+    setIsAnalyzing(true);
 
-    if (['gata', 'bifeaza', 'terminat', 'check'].some(k => lowerText.startsWith(k))) {
-        const target = lowerText.replace(/gata|bifeaza|terminat|check/g, '').replace('cu', '').trim();
-        const success = onToggleTodo(target);
-        return success ? `Bravo! Am marcat "${target}" ca rezolvat. ✅` : `Nu găsesc task-ul "${target}".`;
-    }
+    setTimeout(() => {
+        const parsed = parseNaturalLanguage(userMsg.text);
+        let responseText = '';
 
-    if (lowerText.startsWith('task') || lowerText.startsWith('to-do') || lowerText.startsWith('todo')) {
-        let content = lowerText.replace(/task|to-do|todo/g, '').trim();
-        if (!content || content.startsWith('ce') || content === 'uri') {
-            const pending = todos.filter(t => !t.completed);
-            if (pending.length === 0) return "Nu ai niciun task activ. Liber ca pasărea cerului! 🕊️";
-            return `Ai ${pending.length} task-uri:\n${pending.map(t => `▫️ ${t.text}`).join('\n')}`;
-        }
-        let isPinned = false;
-        let selectedColor = undefined;
-        if (content.match(/\b(urgent|important|pin|fixeaza)\b/i)) {
-            isPinned = true;
-            content = content.replace(/\b(urgent|important|pin|fixeaza)\b/gi, '').trim();
-        }
-        for (const [colorName, colorClass] of Object.entries(COLOR_MAP)) {
-            const colorRegex = new RegExp(`\\b(cu|culoare|color)?\\s*${colorName}\\b`, 'i');
-            if (colorRegex.test(content)) {
-                selectedColor = colorClass;
-                content = content.replace(new RegExp(`\\b(cu|culoare|color)?\\s*${colorName}\\b`, 'gi'), '').trim();
-                break;
-            }
-        }
-        onAddTodo(content, isPinned, selectedColor);
-        let extras = "";
-        if (isPinned) extras += " 📌";
-        if (selectedColor) extras += " 🎨";
-        return `Am adăugat la to-do: "${content}"${extras}.`;
-    }
-
-    const addVerbs = ['adauga', 'adaugă', 'pune', 'creeaza', 'creează', 'set', 'add'];
-    const isAddCommand = addVerbs.some(v => lowerText.startsWith(v));
-
-    if (isAddCommand) {
-        const verb = addVerbs.find(v => lowerText.startsWith(v)) || '';
-        const cleanText = text.substring(verb.length).trim();
-        const onIndex = cleanText.toLowerCase().indexOf(' pe ');
-        const atIndex = cleanText.toLowerCase().lastIndexOf(' la ');
-        let title = '';
-        let datePart = '';
-        let timePart = '';
-        let endTimePart = '';
-        let formattedDate: string | null = null;
-        let selectedColor: string | undefined = undefined;
-
-        for (const [colorName, colorClass] of Object.entries(COLOR_MAP)) {
-            const colorRegex = new RegExp(`\\b(cu|culoare|color)?\\s*${colorName}\\b`, 'i');
-            if (colorRegex.test(cleanText)) {
-                selectedColor = colorClass;
-                break;
-            }
-        }
-
-        const timeRangeRegex = /(\d{1,2}(?:[:.]\d{2})?)\s*(?:-|–|to|pana la|până la)\s*(\d{1,2}(?:[:.]\d{2})?)/i;
-        const rangeMatch = cleanText.match(timeRangeRegex);
-
-        if (rangeMatch) {
-            let t1 = rangeMatch[1].replace('.', ':');
-            let t2 = rangeMatch[2].replace('.', ':');
-            if (!t1.includes(':')) t1 += ":00";
-            if (!t2.includes(':')) t2 += ":00";
-            const formatTime = (t: string) => { const [h, m] = t.split(':'); return `${h.padStart(2, '0')}:${m.padEnd(2, '0').slice(0, 2)}`; };
-            timePart = formatTime(t1);
-            endTimePart = formatTime(t2);
-            const textWithoutTime = cleanText.replace(rangeMatch[0], '').trim();
-            const dateFound = parseDate(textWithoutTime);
-            if (dateFound) {
-                formattedDate = dateFound;
-                title = textWithoutTime.replace(/(\bazi\b|\bmaine\b|\bluni\b|\bmarti\b|\bmiercuri\b|\bjoi\b|\bvineri\b|\bsambata\b|\bduminica\b)/gi, '').replace(/\b(pe|in|la)\b/gi, '').trim();
+        if (parsed.intent === 'delete') {
+            const success = onDeleteEvent(parsed.title);
+            if (success) {
+                responseText = `Am șters evenimentul "${parsed.title}". 🗑️`;
+            } else {
+                const taskSuccess = onToggleTodo(parsed.title);
+                responseText = taskSuccess 
+                    ? `Nu am găsit eveniment, dar am bifat task-ul "${parsed.title}".` 
+                    : `Nu găsesc "${parsed.title}" să-l șterg.`;
             }
         } 
-        
-        if (!formattedDate) {
-            if (onIndex !== -1) {
-                title = cleanText.substring(0, onIndex).trim();
-                if (atIndex > onIndex) {
-                    datePart = cleanText.substring(onIndex + 4, atIndex).trim();
-                    const rest = cleanText.substring(atIndex + 4).trim();
-                    const localRange = rest.match(timeRangeRegex);
-                    if (!localRange) timePart = rest.substring(0, 5); 
-                } else {
-                    datePart = cleanText.substring(onIndex + 4).trim();
-                }
-                formattedDate = parseDate(datePart);
-            }
-        }
-
-        if (selectedColor && title) {
-             for (const colorName of Object.keys(COLOR_MAP)) {
-                 const regex = new RegExp(`\\b(cu|culoare|color)?\\s*${colorName}\\b`, 'gi');
-                 title = title.replace(regex, '').trim();
-             }
-        }
-
-        if (!title) title = "Eveniment nou";
-        if (!formattedDate) return "Nu am putut identifica data.";
-
-        onAddEvent({
-            title,
-            date: formattedDate,
-            time: timePart || undefined,
-            endTime: endTimePart || undefined,
-            color: selectedColor || undefined,
-            type: 'work'
-        });
-
-        const timeMsg = timePart ? (endTimePart ? ` între ${timePart} și ${endTimePart}` : ` la ${timePart}`) : '';
-        const colorMsg = selectedColor ? " 🎨" : "";
-        return `Rezolvat! 📅 ${title} pe ${formattedDate}${timeMsg}${colorMsg}.`;
-    }
-
-    if (lastFoundEvents.length > 0) {
-        if (lowerText.includes('ora') || lowerText.includes('timp') || lowerText.includes('cand')) {
-            if (lastFoundEvents.length === 1) {
-                const e = lastFoundEvents[0];
-                return `Evenimentul "${e.title}" este la ora ${e.time || 'nespecificată'}.`;
-            } else {
-                return `Iată orele:\n${lastFoundEvents.map(e => `${e.title}: ${e.time || 'all-day'}`).join('\n')}`;
-            }
-        }
-    }
-
-    const dateQuery = parseDate(lowerText);
-    if (dateQuery) {
-        const found = events.filter(e => e.date === dateQuery);
-        setLastFoundEvents(found);
-        if (found.length === 0) return `Nu ai nimic planificat pe ${dateQuery}. Relaxează-te! 😎`;
-        return `Pe ${dateQuery} ai:\n${found.map(e => `👉 ${e.title} (${e.time ? `${e.time}${e.endTime ? `-${e.endTime}` : ''}` : 'toată ziua'})`).join('\n')}`;
-    }
-
-    if (lowerText.includes('ce am') || lowerText.includes('gaseste') || lowerText.includes('cauta')) {
-        const searchTerm = lowerText.replace(/ce am|gaseste|cauta/g, '').replace('azi', '').replace('maine', '').trim();
-        if (searchTerm.length > 2) {
-            const found = events.filter(e => e.title.toLowerCase().includes(searchTerm));
+        else if (parsed.intent === 'query') {
+            // Simplified Query Logic
+            const searchTerm = parsed.title.replace('azi', '').replace('maine', '').trim();
+            const found = events.filter(e => e.title.toLowerCase().includes(searchTerm) || e.date === parsed.date);
             setLastFoundEvents(found);
-            if (found.length === 0) return `Nu am găsit nimic cu "${searchTerm}".`;
-            return `Am găsit ${found.length} evenimente:\n${found.map(e => `🔹 ${e.title} (${e.date})`).join('\n')}`;
+            
+            if (found.length > 0) {
+                responseText = `Am găsit ${found.length} evenimente:\n${found.map(e => `🔹 ${e.title} (${e.date} ${e.time || ''})`).join('\n')}`;
+            } else {
+                const pendingTodos = todos.filter(t => !t.completed && t.text.toLowerCase().includes(searchTerm));
+                if (pendingTodos.length > 0) {
+                     responseText = `Ai ${pendingTodos.length} task-uri:\n${pendingTodos.map(t => `▫️ ${t.text}`).join('\n')}`;
+                } else {
+                    responseText = `Nu am găsit nimic relevant pentru "${parsed.title}".`;
+                }
+            }
         }
-    }
+        else if (parsed.intent === 'add_event') {
+            if (!parsed.date) {
+                // Fallback date if logic missed it (shouldn't happen often)
+                const d = new Date();
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                parsed.date = `${year}-${month}-${day}`;
+            }
 
-    return isOCR ? `Am citit textul, dar nu pare a fi o comandă clară.` : "Scuze, nu am înțeles.";
+            onAddEvent({
+                title: parsed.title,
+                date: parsed.date!,
+                time: parsed.time,
+                type: 'personal', // Default type
+                color: parsed.color
+            });
+            responseText = `Rezolvat! 📅 "${parsed.title}" pe ${parsed.date}${parsed.time ? ` la ${parsed.time}` : ''}.`;
+        }
+        else if (parsed.intent === 'add_task') {
+            onAddTodo(parsed.title, parsed.isPinned, parsed.color);
+            responseText = `Am adăugat la to-do: "${parsed.title}"${parsed.isPinned ? ' 📌' : ''}${parsed.color ? ' 🎨' : ''}.`;
+        } else {
+            responseText = "Scuze, nu am înțeles. Poți încerca altfel?";
+        }
+
+        const botMsg: Message = {
+            id: crypto.randomUUID(),
+            text: responseText,
+            sender: 'bot',
+            timestamp: new Date()
+        };
+        setMessages(prev => [...prev, botMsg]);
+        setIsAnalyzing(false);
+    }, 400);
   };
-
-  // --- DRAG HANDLERS ---
-  const handleMouseDown = (e: React.MouseEvent) => {
-    isDragging.current = true;
-    dragOffset.current = {
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
-    };
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (!isDragging.current) return;
-      setPosition({
-        x: moveEvent.clientX - dragOffset.current.x,
-        y: moveEvent.clientY - dragOffset.current.y
-      });
-    };
-
-    const handleMouseUp = () => {
-      isDragging.current = false;
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
-
-
-  // --- UI HANDLERS ---
 
   const handleVoiceInput = () => {
     if (isListening || isAnalyzing) return;
@@ -494,38 +454,32 @@ Cu ce începem?`,
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // ... [File upload logic preserved]
-    // Shortened for brevity
-  };
-
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-
-    const userMsg: Message = {
-      id: crypto.randomUUID(),
-      text: input,
-      sender: 'user',
-      timestamp: new Date()
+  const handleMouseDown = (e: React.MouseEvent) => {
+    isDragging.current = true;
+    dragOffset.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
     };
 
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isDragging.current) return;
+      setPosition({
+        x: moveEvent.clientX - dragOffset.current.x,
+        y: moveEvent.clientY - dragOffset.current.y
+      });
+    };
 
-    setTimeout(() => {
-      const responseText = processQuery(userMsg.text);
-      const botMsg: Message = {
-        id: crypto.randomUUID(),
-        text: responseText,
-        sender: 'bot',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, botMsg]);
-    }, 600);
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
   };
 
-  // Container & Bot Msg Styles (mostly static/theme based)
+  // Styles
   const containerClass = isNeon 
     ? 'bg-slate-900 border-slate-800 shadow-cyan-500/20' 
     : isPastel 
@@ -712,7 +666,7 @@ Cu ce începem?`,
                 accept="image/*" 
                 ref={fileInputRef} 
                 className="hidden" 
-                onChange={handleFileUpload}
+                onChange={() => {}} // Placeholder for now
             />
 
             <button 

@@ -18,7 +18,7 @@ import {
 const App: React.FC = () => {
   // --- STATE ---
   const [activeTab, setActiveTab] = useState<'home' | 'calendar' | 'todo' | 'settings'>('home');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // User & Identity
   const [userName, setUserName] = useState<string | null>(null);
