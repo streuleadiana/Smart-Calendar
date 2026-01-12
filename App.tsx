@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar } from './components/Calendar';
 import { TodoList } from './components/TodoList';
@@ -139,7 +138,8 @@ const App: React.FC = () => {
       version: '1.0'
     };
 
-    const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(JSON.stringify(data, null, 2))}`;
+    // Fixed typo: chatset -> charset
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(data, null, 2))}`;
     const link = document.createElement('a');
     link.href = jsonString;
     link.download = `smart-calendar-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -192,7 +192,10 @@ const App: React.FC = () => {
     const upcoming = events
       .filter(e => {
         const d = new Date(e.date);
-        return d >= new Date(now.setHours(0,0,0,0)) && d <= nextWeek;
+        // Clone now to avoid mutation in filter
+        const startOfToday = new Date(now);
+        startOfToday.setHours(0,0,0,0);
+        return d >= startOfToday && d <= nextWeek;
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
