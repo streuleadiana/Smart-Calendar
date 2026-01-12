@@ -84,6 +84,10 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   // Local state for user name editing
   const [localUserName, setLocalUserName] = useState(userName);
 
+  // Dimensions & Resizing
+  const [dimensions, setDimensions] = useState({ width: 400, height: 500 });
+  const isResizing = useRef(false);
+
   // Dragging State
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const isDragging = useRef(false);
@@ -95,8 +99,8 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   useEffect(() => {
     if (typeof window !== 'undefined') {
         setPosition({
-            x: window.innerWidth - 360,
-            y: window.innerHeight - 500
+            x: window.innerWidth - dimensions.width - 20,
+            y: window.innerHeight - dimensions.height - 80
         });
     }
   }, []);
@@ -454,7 +458,56 @@ Poți să-mi vorbești liber! Încearcă:
     }
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // --- MOUSE HANDLERS (RESIZE & DRAG) ---
+
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    isResizing.current = true;
+    
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startW = dimensions.width;
+    const startH = dimensions.height;
+    const startXPos = position.x;
+    const startYPos = position.y;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+        if (!isResizing.current) return;
+        
+        const deltaX = moveEvent.clientX - startX;
+        const deltaY = moveEvent.clientY - startY;
+
+        let newW = startW - deltaX;
+        let newH = startH - deltaY;
+
+        // Constraints
+        if (newW < 300) newW = 300;
+        if (newH < 400) newH = 400;
+        if (newW > 800) newW = 800;
+        if (newH > 800) newH = 800;
+
+        // Since resizing from Top-Left, we move the X/Y position to keep Bottom-Right anchored visually (relative to the window)
+        // New Pos = Old Pos + (Old Size - New Size)
+        // Example: If width shrinks by 10px (deltaX +10), position must move RIGHT by 10px.
+        const newX = startXPos + (startW - newW);
+        const newY = startYPos + (startH - newH);
+
+        setDimensions({ width: newW, height: newH });
+        setPosition({ x: newX, y: newY });
+    };
+
+    const onMouseUp = () => {
+        isResizing.current = false;
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  const handleDragMouseDown = (e: React.MouseEvent) => {
     isDragging.current = true;
     dragOffset.current = {
       x: e.clientX - position.x,
@@ -499,15 +552,29 @@ Poți să-mi vorbești liber! Încearcă:
         {/* Chat Window */}
         {isOpen && (
             <div 
-                style={{ left: position.x, top: position.y }}
-                className={`fixed z-[9999] w-[340px] h-[450px] rounded-2xl shadow-2xl border flex flex-col mb-4 overflow-hidden animate-in zoom-in-95 duration-200 ${containerClass}`}
+                style={{ 
+                    left: position.x, 
+                    top: position.y,
+                    width: dimensions.width,
+                    height: dimensions.height 
+                }}
+                className={`fixed z-[9999] rounded-2xl shadow-2xl border flex flex-col mb-4 overflow-hidden animate-in zoom-in-95 duration-200 ${containerClass}`}
             >
+                {/* Resize Handle (Top-Left) */}
+                <div
+                    onMouseDown={handleResizeMouseDown}
+                    className="absolute top-0 left-0 w-8 h-8 z-50 cursor-nwse-resize flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity"
+                    title="Resize"
+                >
+                    <div className={`w-3 h-3 border-t-2 border-l-2 ml-1 mt-1 ${isNeon ? 'border-cyan-500' : 'border-slate-400'}`}></div>
+                </div>
+
                 {/* Header (Draggable) */}
                 <div 
-                    onMouseDown={handleMouseDown}
+                    onMouseDown={handleDragMouseDown}
                     className={`p-4 border-b flex justify-between items-center cursor-move select-none transition-colors duration-300 ${headerBg}`}
                 >
-                    <div className="flex items-center gap-2 pointer-events-none">
+                    <div className="flex items-center gap-2 pointer-events-none pl-4">
                         <div className="text-2xl animate-bounce">
                             {assistantAvatar}
                         </div>
