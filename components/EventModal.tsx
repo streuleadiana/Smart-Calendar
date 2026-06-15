@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { CalendarEvent, EventType } from '../types';
+import { CalendarEvent, Category } from '../types';
 import { X, Clock, Calendar as CalendarIcon, Type, Palette, Check } from 'lucide-react';
 
 interface EventModalProps {
@@ -9,56 +9,37 @@ interface EventModalProps {
   onSave: (event: Omit<CalendarEvent, 'id'>) => void;
   initialDate: Date;
   accentColor?: string;
+  categories: Category[];
 }
 
-const CATEGORIES = [
-  { type: 'urgent', label: 'Urgent', class: 'bg-red-500' },
-  { type: 'work', label: 'Work', class: 'bg-blue-500' },
-  { type: 'personal', label: 'Personal', class: 'bg-emerald-500' },
-  { type: 'study', label: 'Study', class: 'bg-amber-500' },
-];
-
-const CUSTOM_COLORS = [
-  { name: 'Red', class: 'bg-red-500' },
-  { name: 'Orange', class: 'bg-orange-500' },
-  { name: 'Amber', class: 'bg-amber-500' },
-  { name: 'Green', class: 'bg-green-500' },
-  { name: 'Emerald', class: 'bg-emerald-500' },
-  { name: 'Teal', class: 'bg-teal-500' },
-  { name: 'Blue', class: 'bg-blue-500' },
-  { name: 'Indigo', class: 'bg-indigo-500' },
-  { name: 'Purple', class: 'bg-purple-500' },
-  { name: 'Pink', class: 'bg-pink-500' },
-  { name: 'Rose', class: 'bg-rose-500' },
-  { name: 'Slate', class: 'bg-slate-500' },
-];
-
-export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, onSave, initialDate, accentColor = '#4F46E5' }) => {
+export const EventModal: React.FC<EventModalProps> = ({ 
+  isOpen, onClose, onSave, initialDate, accentColor = '#4F46E5', categories 
+}) => {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [selectedType, setSelectedType] = useState<EventType>('personal');
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string>(accentColor);
+  const [useCustomColor, setUseCustomColor] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      // Reset form when opening
       setTitle('');
       setTime('');
       setEndTime('');
-      setSelectedType('personal');
-      setSelectedColor(null);
+      setSelectedCategoryId(categories.length > 0 ? categories[0].id : null);
+      setSelectedColor(accentColor);
+      setUseCustomColor(false);
       setError(null);
       
-      // Format initialDate to YYYY-MM-DD
       const year = initialDate.getFullYear();
       const month = String(initialDate.getMonth() + 1).padStart(2, '0');
       const day = String(initialDate.getDate()).padStart(2, '0');
       setDate(`${year}-${month}-${day}`);
     }
-  }, [isOpen, initialDate]);
+  }, [isOpen, initialDate, categories, accentColor]);
 
   if (!isOpen) return null;
 
@@ -67,7 +48,6 @@ export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, onSave,
     setError(null);
     if (!title || !date) return;
 
-    // Time Validation
     if (time && endTime) {
         if (endTime <= time) {
             setError("End time must be after start time.");
@@ -80,8 +60,8 @@ export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, onSave,
       date,
       time: time || undefined,
       endTime: endTime || undefined,
-      type: selectedType,
-      color: selectedColor || undefined, // Pass custom color if selected
+      categoryId: selectedCategoryId || undefined,
+      color: useCustomColor ? selectedColor : undefined,
     });
     onClose();
   };
@@ -166,21 +146,21 @@ export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, onSave,
               <Type size={14} /> Category
             </label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {CATEGORIES.map((opt) => (
+              {categories.map((cat) => (
                 <button
-                  key={opt.type}
+                  key={cat.id}
                   type="button"
                   onClick={() => {
-                      setSelectedType(opt.type as EventType);
-                      setSelectedColor(null); // Reset custom color when category changes
+                      setSelectedCategoryId(cat.id);
                   }}
                   className={`px-2 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
-                    selectedType === opt.type && !selectedColor
-                      ? `border-${opt.class.replace('bg-', '')} ${opt.class} text-white`
+                    selectedCategoryId === cat.id && !useCustomColor
+                      ? 'text-white'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                   }`}
+                  style={selectedCategoryId === cat.id && !useCustomColor ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
                 >
-                  {opt.label}
+                  {cat.name}
                 </button>
               ))}
             </div>
@@ -188,31 +168,36 @@ export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, onSave,
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-1">
-              <Palette size={14} /> Color (Optional Override)
+              <Palette size={14} /> Culoare Personalizată
             </label>
-            <div className="flex flex-wrap gap-3">
-              {CUSTOM_COLORS.map((c) => (
-                <button
-                  key={c.name}
-                  type="button"
-                  onClick={() => setSelectedColor(c.class)}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 ${c.class} ${
-                    selectedColor === c.class ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : ''
-                  }`}
-                  title={c.name}
-                >
-                  {selectedColor === c.class && <Check size={14} className="text-white" />}
-                </button>
-              ))}
-              {selectedColor && (
-                <button 
-                    type="button" 
-                    onClick={() => setSelectedColor(null)}
-                    className="text-xs text-slate-400 underline ml-2"
-                >
-                    Reset
-                </button>
-              )}
+            <div className="flex items-center gap-3">
+               <div 
+                   className="relative flex items-center justify-center w-10 h-10 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm transition-transform hover:scale-105"
+                   style={{ borderColor: useCustomColor ? selectedColor : '#e2e8f0' }}
+               >
+                   <input
+                       type="color"
+                       value={selectedColor}
+                       onChange={(e) => {
+                           setSelectedColor(e.target.value);
+                           setUseCustomColor(true);
+                       }}
+                       className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] p-0 m-0 cursor-pointer border-none"
+                   />
+               </div>
+               <span className="text-sm font-medium text-slate-600">Alege o culoare...</span>
+               {useCustomColor && (
+                 <button 
+                     type="button" 
+                     onClick={() => {
+                         setUseCustomColor(false);
+                         setSelectedColor(accentColor);
+                     }}
+                     className="text-xs text-slate-400 underline ml-auto"
+                 >
+                     Reset
+                 </button>
+               )}
             </div>
           </div>
 

@@ -1,11 +1,30 @@
 
-import { CalendarEvent, User, Todo, Theme } from '../types';
+import { CalendarEvent, User, Todo, Theme, Category } from '../types';
 
 const STORAGE_KEYS = {
   USER: 'smart_calendar_user',
   EVENTS: 'smart_calendar_events',
   TODOS: 'smart_calendar_todos',
   THEME: 'smart_calendar_theme',
+  CATEGORIES: 'smart_calendar_categories',
+};
+
+export const saveCategories = (categories: Category[]): void => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
+  } catch (error) {
+    console.error('Failed to save categories:', error);
+  }
+};
+
+export const getCategories = (): Category[] => {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Failed to load categories:', error);
+    return [];
+  }
 };
 
 export const saveUser = (user: User): void => {

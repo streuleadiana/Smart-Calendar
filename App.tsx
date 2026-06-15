@@ -6,14 +6,183 @@ import { EventModal } from './components/EventModal';
 import { EditEventModal } from './components/EditEventModal';
 import { ChatAssistant } from './components/ChatAssistant';
 import { ThemeSwitcher } from './components/ThemeSwitcher';
-import { CalendarEvent, Todo, Theme } from './types';
+import { CalendarEvent, Todo, Theme, Category } from './types';
 import * as storage from './utils/storage';
 import { 
   LogOut, Layout, Settings, ArrowRight, Sparkles, 
   Calendar as CalendarIcon, CheckSquare, MessageCircle, 
   Download, Upload, Share2, Check, User as UserIcon, AlertCircle,
-  Menu, Home, Search, Pencil
+  Menu, Home, Search, Pencil, X, Globe
 } from 'lucide-react';
+
+type LanguageOption = 'ro' | 'en' | 'es' | 'fr';
+
+const translations = {
+  ro: {
+    tabs: {
+      home: 'Acasă',
+      calendar: 'Calendar',
+      tasks: 'Task-uri',
+      settings: 'Setări'
+    },
+    settings: {
+        title: 'Setări',
+        subtitle: 'Personalizează experiența ta',
+        profile: 'Profil',
+        profileDesc: 'Gestionează numele tău',
+        yourName: 'Numele Tău',
+        languageTitle: 'Limbă / Language',
+        languageDesc: 'Schimbă limba interfeței',
+        appearance: 'Aspect',
+        appearanceDesc: 'Teme și moduri de afișare',
+        theme: 'Temă Generală',
+        accentColor: 'Culoare Accent',
+        categoriesTitle: 'Manager Categorii',
+        categoriesDesc: 'Adaugă sau șterge categorii',
+        categoryPlaceholder: 'Nume categorie nouă...',
+        addBtn: 'Adaugă',
+        dataTitle: 'Date & Export',
+        dataDesc: 'Datele sunt salvate local',
+        events: 'Evenimente',
+        tasks: 'Task-uri',
+        backupBtn: 'Backup',
+        restoreBtn: 'Restore',
+        shareBtn: 'Share Program Săptămânal',
+        copied: 'Copiat!',
+        logout: 'Deconectare',
+        cannotDeleteLast: 'Nu poți șterge ultima categorie',
+        deleteCategory: 'Șterge categorie'
+    },
+    header: {
+        greeting: 'Salut,',
+        shareTooltip: 'Alege o culoare',
+        searchPlaceholder: 'Caută...'
+    }
+  },
+  en: {
+    tabs: {
+      home: 'Home',
+      calendar: 'Calendar',
+      tasks: 'Tasks',
+      settings: 'Settings'
+    },
+    settings: {
+        title: 'Settings',
+        subtitle: 'Customize your experience',
+        profile: 'Profile',
+        profileDesc: 'Manage your name',
+        yourName: 'Your Name',
+        languageTitle: 'Language',
+        languageDesc: 'Change interface language',
+        appearance: 'Appearance',
+        appearanceDesc: 'Themes and display modes',
+        theme: 'General Theme',
+        accentColor: 'Accent Color',
+        categoriesTitle: 'Categories Manager',
+        categoriesDesc: 'Add or remove categories',
+        categoryPlaceholder: 'New category name...',
+        addBtn: 'Add',
+        dataTitle: 'Data & Export',
+        dataDesc: 'Data is saved locally',
+        events: 'Events',
+        tasks: 'Tasks',
+        backupBtn: 'Backup',
+        restoreBtn: 'Restore',
+        shareBtn: 'Share Weekly Schedule',
+        copied: 'Copied!',
+        logout: 'Logout',
+        cannotDeleteLast: 'Cannot delete last category',
+        deleteCategory: 'Delete category'
+    },
+    header: {
+        greeting: 'Hello,',
+        shareTooltip: 'Choose a color',
+        searchPlaceholder: 'Search...'
+    }
+  },
+  es: {
+    tabs: {
+      home: 'Inicio',
+      calendar: 'Calendario',
+      tasks: 'Tareas',
+      settings: 'Ajustes'
+    },
+    settings: {
+        title: 'Ajustes',
+        subtitle: 'Personaliza tu experiencia',
+        profile: 'Perfil',
+        profileDesc: 'Gestiona tu nombre',
+        yourName: 'Tu Nombre',
+        languageTitle: 'Idioma / Language',
+        languageDesc: 'Cambiar idioma de la interfaz',
+        appearance: 'Apariencia',
+        appearanceDesc: 'Temas y modos de visualización',
+        theme: 'Tema General',
+        accentColor: 'Color de Acento',
+        categoriesTitle: 'Gestor de Categorías',
+        categoriesDesc: 'Añadir o eliminar categorías',
+        categoryPlaceholder: 'Nombre de nueva categoría...',
+        addBtn: 'Añadir',
+        dataTitle: 'Datos y Exportación',
+        dataDesc: 'Los datos se guardan localmente',
+        events: 'Eventos',
+        tasks: 'Tareas',
+        backupBtn: 'Copia de seguridad',
+        restoreBtn: 'Restaurar',
+        shareBtn: 'Compartir Horario Semanal',
+        copied: '¡Copiado!',
+        logout: 'Cerrar Sesión',
+        cannotDeleteLast: 'No se puede eliminar la última categoría',
+        deleteCategory: 'Eliminar categoría'
+    },
+    header: {
+        greeting: 'Hola,',
+        shareTooltip: 'Elige un color',
+        searchPlaceholder: 'Buscar...'
+    }
+  },
+  fr: {
+    tabs: {
+      home: 'Accueil',
+      calendar: 'Calendrier',
+      tasks: 'Tâches',
+      settings: 'Paramètres'
+    },
+    settings: {
+        title: 'Paramètres',
+        subtitle: 'Personnalisez votre expérience',
+        profile: 'Profil',
+        profileDesc: 'Gérez votre nom',
+        yourName: 'Votre Nom',
+        languageTitle: 'Langue / Language',
+        languageDesc: 'Changer la langue de l\'interface',
+        appearance: 'Apparence',
+        appearanceDesc: 'Thèmes et modes d\'affichage',
+        theme: 'Thème Général',
+        accentColor: 'Couleur d\'Accent',
+        categoriesTitle: 'Gestionnaire de Catégories',
+        categoriesDesc: 'Ajouter ou supprimer des catégories',
+        categoryPlaceholder: 'Nom de la nouvelle catégorie...',
+        addBtn: 'Ajouter',
+        dataTitle: 'Données et Export',
+        dataDesc: 'Les données sont sauvegardées localement',
+        events: 'Événements',
+        tasks: 'Tâches',
+        backupBtn: 'Sauvegarde',
+        restoreBtn: 'Restaurer',
+        shareBtn: 'Partager le programme hebdomadaire',
+        copied: 'Copié !',
+        logout: 'Déconnexion',
+        cannotDeleteLast: 'Impossible de supprimer la dernière catégorie',
+        deleteCategory: 'Supprimer la catégorie'
+    },
+    header: {
+        greeting: 'Bonjour,',
+        shareTooltip: 'Choisissez une couleur',
+        searchPlaceholder: 'Rechercher...'
+    }
+  }
+};
 
 const App: React.FC = () => {
   // --- STATE ---
@@ -31,11 +200,18 @@ const App: React.FC = () => {
   // Search
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Language
+  const [lang, setLang] = useState<LanguageOption>('ro');
+  const t = translations[lang];
+
+  // Identity & Themes
+  const [theme, setTheme] = useState<Theme>('modern');
+  const [accentColor, setAccentColor] = useState<string>('#4F46E5'); // Default Indigo Hex
+  
   // Data
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [theme, setTheme] = useState<Theme>('modern');
-  const [accentColor, setAccentColor] = useState<string>('#4F46E5'); // Default Indigo Hex
+  const [categories, setCategories] = useState<Category[]>([]);
   const [initializing, setInitializing] = useState(true);
 
   // AI & Gamification State
@@ -53,6 +229,8 @@ const App: React.FC = () => {
   // Settings State (for Import/Export feedback)
   const [importError, setImportError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryColor, setNewCategoryColor] = useState('#10B981');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const triggerAiMessage = (text: string) => {
@@ -65,17 +243,44 @@ const App: React.FC = () => {
     if (storedName) {
         setUserName(storedName);
     }
+    
+    const storedLang = localStorage.getItem('app_lang') as LanguageOption | null;
+    if (storedLang && translations[storedLang]) {
+        setLang(storedLang);
+    }
 
     // 2. Load other data from local storage
     const storedEvents = storage.getEvents();
     const storedTodos = storage.getTodos();
     const storedTheme = storage.getTheme();
     const storedAccent = localStorage.getItem('app_accent_color');
+    const storedCategories = storage.getCategories();
     
     if (storedEvents) setEvents(storedEvents);
     if (storedTodos) setTodos(storedTodos);
-    if (storedTheme) setTheme(storedTheme);
+    if (storedTheme) {
+        setTheme(storedTheme);
+    } else {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const initialTheme: Theme = prefersDark ? 'neon' : 'modern';
+        setTheme(initialTheme);
+        storage.saveTheme(initialTheme);
+    }
     if (storedAccent) setAccentColor(storedAccent);
+    
+    if (storedCategories && storedCategories.length > 0) {
+      setCategories(storedCategories);
+    } else {
+      // Default Categories
+      const defaults = [
+        { id: crypto.randomUUID(), name: 'Work', color: '#4F46E5' },
+        { id: crypto.randomUUID(), name: 'Personal', color: '#10B981' },
+        { id: crypto.randomUUID(), name: 'Study', color: '#F59E0B' },
+        { id: crypto.randomUUID(), name: 'Urgent', color: '#EF4444' }
+      ];
+      setCategories(defaults);
+      storage.saveCategories(defaults);
+    }
     
     setInitializing(false);
   }, []);
@@ -113,16 +318,43 @@ const App: React.FC = () => {
     storage.saveTheme(newTheme);
   };
 
+  const handleLangChange = (newLang: LanguageOption) => {
+    setLang(newLang);
+    localStorage.setItem('app_lang', newLang);
+  };
+
   const handleAccentChange = (newColor: string) => {
     setAccentColor(newColor);
     localStorage.setItem('app_accent_color', newColor);
   };
 
+  // --- CATEGORY HANDLERS ---
+  const handleAddCategory = () => {
+    if (!newCategoryName.trim()) return;
+    const cat = {
+      id: crypto.randomUUID(),
+      name: newCategoryName.trim(),
+      color: newCategoryColor
+    };
+    const updated = [...categories, cat];
+    setCategories(updated);
+    storage.saveCategories(updated);
+    setNewCategoryName('');
+  };
+
+  const handleDeleteCategory = (id: string) => {
+    if (categories.length <= 1) return; // don't delete last one
+    const updated = categories.filter(c => c.id !== id);
+    setCategories(updated);
+    storage.saveCategories(updated);
+  };
+
   // --- SEARCH FILTERING ---
-  const filteredEvents = events.filter(e => 
-    e.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (e.type && e.type.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredEvents = events.filter(e => {
+    const q = searchQuery.toLowerCase();
+    const cat = categories.find(c => c.id === e.categoryId);
+    return e.title.toLowerCase().includes(q) || (cat && cat.name.toLowerCase().includes(q));
+  });
 
   const filteredTodos = todos.filter(t => 
     t.text.toLowerCase().includes(searchQuery.toLowerCase())
@@ -284,12 +516,13 @@ const App: React.FC = () => {
   };
 
   // --- TODO HANDLERS ---
-  const handleAddTodo = (text: string, isPinned: boolean = false, color?: string) => {
+  const handleAddTodo = (text: string, isPinned: boolean = false, categoryId?: string, color?: string) => {
     const newTodo: Todo = {
       id: crypto.randomUUID(),
       text,
       completed: false,
       isPinned,
+      categoryId,
       color
     };
     const newList = [newTodo, ...todos].sort((a, b) => {
@@ -410,7 +643,7 @@ const App: React.FC = () => {
     switch(activeTab) {
       case 'home':
         return (
-          <div className="flex flex-col lg:flex-row gap-6 p-4 md:p-6 animate-in fade-in duration-300 overflow-hidden min-h-full">
+          <div className="flex flex-col lg:flex-row gap-6 p-3 lg:p-6 animate-in fade-in duration-300 overflow-hidden min-h-full">
              {/* Left: Calendar (Flexible) */}
              <div className="flex-1 min-h-[500px] flex flex-col shadow-sm rounded-2xl overflow-hidden">
                 <Calendar 
@@ -421,6 +654,7 @@ const App: React.FC = () => {
                   theme={theme}
                   accentColor={accentColor}
                   searchQuery={searchQuery}
+                  categories={categories}
                 />
              </div>
              {/* Right: Todos (Fixed Width on Desktop) */}
@@ -435,13 +669,14 @@ const App: React.FC = () => {
                     theme={theme}
                     accentColor={accentColor}
                     searchQuery={searchQuery}
+                    categories={categories}
                 />
              </div>
           </div>
         );
       case 'calendar':
         return (
-          <div className="h-full flex flex-col p-4 md:p-6 animate-in fade-in duration-300">
+          <div className="h-full flex flex-col p-3 lg:p-6 animate-in fade-in duration-300">
              <Calendar 
               events={filteredEvents} 
               onDateSelect={handleOpenModal}
@@ -450,12 +685,13 @@ const App: React.FC = () => {
               theme={theme}
               accentColor={accentColor}
               searchQuery={searchQuery}
+              categories={categories}
             />
           </div>
         );
       case 'todo':
         return (
-          <div className="h-full p-4 md:p-6 overflow-y-auto animate-in fade-in duration-300">
+          <div className="h-full p-3 lg:p-6 overflow-y-auto animate-in fade-in duration-300">
              <div className="max-w-4xl mx-auto h-full flex flex-col">
                 <div className="mb-6">
                     <h2 className={`text-3xl font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>Task-uri</h2>
@@ -472,6 +708,7 @@ const App: React.FC = () => {
                         theme={theme}
                         accentColor={accentColor}
                         searchQuery={searchQuery}
+                        categories={categories}
                     />
                 </div>
              </div>
@@ -479,11 +716,11 @@ const App: React.FC = () => {
         );
       case 'settings':
         return (
-          <div className="h-full p-4 md:p-6 overflow-y-auto animate-in fade-in duration-300">
+          <div className="h-full p-3 lg:p-6 overflow-y-auto animate-in fade-in duration-300">
              <div className="max-w-3xl mx-auto space-y-6">
-                <div className="mb-6">
-                    <h2 className={`text-3xl font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>Setări</h2>
-                    <p className={`${theme === 'neon' ? 'text-slate-400' : 'text-slate-500'}`}>Personalizează experiența ta</p>
+                 <div className="mb-6">
+                    <h2 className={`text-3xl font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{t.settings.title}</h2>
+                    <p className={`${theme === 'neon' ? 'text-slate-400' : 'text-slate-500'}`}>{t.settings.subtitle}</p>
                 </div>
 
                 {/* Profile Card */}
@@ -493,12 +730,12 @@ const App: React.FC = () => {
                             <UserIcon size={24} />
                         </div>
                         <div>
-                            <h3 className={`font-bold text-lg ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>Profil</h3>
-                            <p className="text-sm text-slate-500">Gestionează numele tău</p>
+                            <h3 className={`font-bold text-lg ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{t.settings.profile}</h3>
+                            <p className="text-sm text-slate-500">{t.settings.profileDesc}</p>
                         </div>
                     </div>
                     <div className="space-y-3">
-                        <label className={`text-sm font-medium ${theme === 'neon' ? 'text-slate-400' : 'text-slate-700'}`}>Numele Tău</label>
+                        <label className={`text-sm font-medium ${theme === 'neon' ? 'text-slate-400' : 'text-slate-700'}`}>{t.settings.yourName}</label>
                         <input 
                              type="text"
                              value={userName}
@@ -512,6 +749,45 @@ const App: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Language Card */}
+                <div className={`p-6 rounded-2xl border ${theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className={`p-3 rounded-full bg-slate-100 text-slate-600`}>
+                            <Globe size={24} />
+                        </div>
+                        <div>
+                            <h3 className={`font-bold text-lg ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{t.settings.languageTitle}</h3>
+                            <p className="text-sm text-slate-500">{t.settings.languageDesc}</p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                        <span className={`font-medium ${theme === 'neon' ? 'text-slate-300' : 'text-slate-700'}`}>
+                            {t.settings.languageTitle.split(' /')[0]}
+                        </span>
+                        <div className="relative w-32">
+                            <select
+                                value={lang}
+                                onChange={(e) => handleLangChange(e.target.value as LanguageOption)}
+                                className={`w-full appearance-none bg-transparent border rounded-xl p-3 pr-10 focus:outline-none focus:ring-2 focus:ring-opacity-50 text-sm font-medium cursor-pointer transition-all ${
+                                    theme === 'neon' 
+                                    ? 'text-white border-slate-700 focus:ring-cyan-500 bg-slate-800' 
+                                    : 'text-slate-700 border-slate-200 focus:ring-indigo-500 bg-slate-50'
+                                }`}
+                                title="Language"
+                            >
+                                <option value="ro" className="text-slate-900">Română</option>
+                                <option value="en" className="text-slate-900">English</option>
+                                <option value="es" className="text-slate-900">Español</option>
+                                <option value="fr" className="text-slate-900">Français</option>
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                                <Globe size={16} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Appearance Card */}
                 <div className={`p-6 rounded-2xl border ${theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
                     <div className="flex items-center gap-4 mb-6">
@@ -519,19 +795,19 @@ const App: React.FC = () => {
                             <Sparkles size={24} />
                         </div>
                         <div>
-                            <h3 className={`font-bold text-lg ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>Aspect</h3>
-                            <p className="text-sm text-slate-500">Teme și moduri de afișare</p>
+                            <h3 className={`font-bold text-lg ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{t.settings.appearance}</h3>
+                            <p className="text-sm text-slate-500">{t.settings.appearanceDesc}</p>
                         </div>
                     </div>
                     
                     <div className="flex items-center justify-between mb-6">
-                        <span className={`font-medium ${theme === 'neon' ? 'text-slate-300' : 'text-slate-700'}`}>Temă Generală</span>
+                        <span className={`font-medium ${theme === 'neon' ? 'text-slate-300' : 'text-slate-700'}`}>{t.settings.theme}</span>
                         <ThemeSwitcher currentTheme={theme} onThemeChange={handleThemeChange} />
                     </div>
 
                     <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                         <span className={`font-medium ${theme === 'neon' ? 'text-slate-300' : 'text-slate-700'}`}>
-                            Culoare Accent
+                            {t.settings.accentColor}
                         </span>
                         <div className="flex items-center gap-3">
                             <span className="text-xs text-slate-400">
@@ -552,6 +828,76 @@ const App: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Categories Card */}
+                <div className={`p-6 rounded-2xl border ${theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className={`p-3 rounded-full bg-slate-100 text-slate-600`}>
+                            <Settings size={24} />
+                        </div>
+                        <div>
+                            <h3 className={`font-bold text-lg ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{t.settings.categoriesTitle}</h3>
+                            <p className="text-sm text-slate-500">{t.settings.categoriesDesc}</p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-3">
+                             <input 
+                                 type="text"
+                                 placeholder={t.settings.categoryPlaceholder}
+                                 value={newCategoryName}
+                                 onChange={(e) => setNewCategoryName(e.target.value)}
+                                 className={`flex-1 p-2.5 rounded-lg border text-sm transition-all ${
+                                     theme === 'neon' 
+                                     ? 'bg-slate-800 border-slate-700 text-white focus:ring-cyan-500 focus:border-cyan-500' 
+                                     : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-indigo-500 focus:border-indigo-500'
+                                 }`}
+                             />
+                             <div 
+                                className="relative flex items-center justify-center w-10 h-10 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm flex-shrink-0"
+                                style={{ borderColor: theme === 'neon' ? '#334155' : '#e2e8f0' }}
+                             >
+                                 <input
+                                     type="color"
+                                     value={newCategoryColor}
+                                     onChange={(e) => setNewCategoryColor(e.target.value)}
+                                     className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] p-0 m-0 cursor-pointer border-none"
+                                 />
+                             </div>
+                             <button
+                                type="button"
+                                onClick={handleAddCategory}
+                                disabled={!newCategoryName.trim()}
+                                className="px-4 py-2.5 rounded-lg text-white font-medium shadow-sm transition-all hover:opacity-90 disabled:opacity-50 flex-shrink-0"
+                                style={{ backgroundColor: accentColor }}
+                             >
+                                {t.settings.addBtn}
+                             </button>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mt-2">
+                             {categories.map(cat => (
+                                 <div 
+                                    key={cat.id}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm"
+                                    style={{ backgroundColor: `${cat.color}15`, borderColor: cat.color }}
+                                 >
+                                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                                     <span className="text-sm font-medium" style={{ color: theme === 'neon' ? 'white' : 'inherit' }}>{cat.name}</span>
+                                     <button 
+                                        onClick={() => handleDeleteCategory(cat.id)}
+                                        className="ml-1 text-slate-400 hover:text-red-500 transition-colors"
+                                        disabled={categories.length <= 1}
+                                        title={categories.length <= 1 ? t.settings.cannotDeleteLast : t.settings.deleteCategory}
+                                     >
+                                         <X size={14} />
+                                     </button>
+                                 </div>
+                             ))}
+                        </div>
+                    </div>
+                </div>
+
                 {/* Data Card */}
                 <div className={`p-6 rounded-2xl border ${theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
                     <div className="flex items-center gap-4 mb-6">
@@ -559,19 +905,19 @@ const App: React.FC = () => {
                             <Download size={24} />
                         </div>
                         <div>
-                            <h3 className={`font-bold text-lg ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>Date & Export</h3>
-                            <p className="text-sm text-slate-500">Datele sunt salvate local</p>
+                            <h3 className={`font-bold text-lg ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{t.settings.dataTitle}</h3>
+                            <p className="text-sm text-slate-500">{t.settings.dataDesc}</p>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                          <div className={`p-4 rounded-xl text-center border ${theme === 'neon' ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
                              <p className={`text-2xl font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{events.length}</p>
-                             <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Evenimente</p>
+                             <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">{t.settings.events}</p>
                          </div>
                          <div className={`p-4 rounded-xl text-center border ${theme === 'neon' ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
                              <p className={`text-2xl font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{todos.length}</p>
-                             <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Task-uri</p>
+                             <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">{t.settings.tasks}</p>
                          </div>
                     </div>
 
@@ -585,14 +931,14 @@ const App: React.FC = () => {
                                     : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
                                 }`}
                             >
-                                <Download size={18} /> Backup
+                                <Download size={18} /> {t.settings.backupBtn}
                             </button>
                             <button 
                                 onClick={() => fileInputRef.current?.click()}
                                 style={{ backgroundColor: accentColor }}
                                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all text-white shadow-lg hover:opacity-90`}
                             >
-                                <Upload size={18} /> Restore
+                                <Upload size={18} /> {t.settings.restoreBtn}
                             </button>
                             <input 
                                 type="file" 
@@ -617,7 +963,7 @@ const App: React.FC = () => {
                             }`}
                         >
                             {copied ? <Check size={20} /> : <Share2 size={20} />}
-                            {copied ? 'Copiat!' : 'Share Program Săptămânal'}
+                            {copied ? t.settings.copied : t.settings.shareBtn}
                         </button>
                     </div>
 
@@ -626,7 +972,7 @@ const App: React.FC = () => {
                           onClick={handleLogout}
                           className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium text-red-500 hover:bg-red-50 transition-colors"
                         >
-                          <LogOut size={20} /> Deconectare
+                          <LogOut size={20} /> {t.settings.logout}
                         </button>
                     </div>
                 </div>
@@ -639,7 +985,8 @@ const App: React.FC = () => {
 
   // --- SIDEBAR STYLES ---
   const sidebarClass = theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200';
-  const sidebarWidth = isSidebarOpen ? 'w-64' : 'w-20';
+  // On mobile always w-64, on desktop w-64 or w-20
+  const sidebarWidth = isSidebarOpen ? 'w-64' : 'w-64 lg:w-20';
   
   const headerBg = theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200';
   const searchBg = theme === 'neon' ? 'bg-slate-800 text-white placeholder:text-slate-500' : 'bg-slate-100 text-slate-800 placeholder:text-slate-400';
@@ -647,27 +994,40 @@ const App: React.FC = () => {
   return (
     <div className={`flex h-screen overflow-hidden transition-colors duration-300 ${getThemeBackground()}`}>
       
+      {/* Mobile Overlay */}
+      {isSidebarOpen && (
+         <div 
+           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+           onClick={() => setIsSidebarOpen(false)}
+         />
+      )}
+
       {/* SIDEBAR NAVIGATION */}
-      <aside className={`${sidebarWidth} flex-shrink-0 flex flex-col border-r z-20 transition-all duration-300 ${sidebarClass}`}>
-        <div className="p-4 flex flex-col h-full">
+      <aside className={`fixed inset-y-0 left-0 z-50 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 ${sidebarWidth} flex-shrink-0 flex flex-col border-r transition-all duration-300 ${sidebarClass}`}>
+        <div className="p-4 flex flex-col h-full overflow-y-auto">
             {/* Header / Toggle */}
-            <div className={`flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'} mb-8`}>
-              {isSidebarOpen && (
-                <div className="flex items-center gap-2 animate-in fade-in duration-300">
-                    <div 
-                        className={`p-1.5 rounded-lg text-white shadow-lg`}
-                        style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}dd)` }}
-                    >
-                        <Layout size={20} />
-                    </div>
-                    <span className={`text-lg font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>
-                        Smart Calendar
-                    </span>
-                </div>
-              )}
+            <div className={`flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-between lg:justify-center'} mb-8`}>
+              <div className={`flex items-center gap-2 animate-in fade-in duration-300 ${!isSidebarOpen ? 'lg:hidden' : ''}`}>
+                  <div 
+                      className={`p-1.5 rounded-lg text-white shadow-lg`}
+                      style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}dd)` }}
+                  >
+                      <Layout size={20} />
+                  </div>
+                  <span className={`text-lg font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>
+                      Smart Calendar
+                  </span>
+              </div>
               <button 
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className={`p-1.5 rounded-lg transition-colors ${theme === 'neon' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
+                className={`p-1.5 rounded-lg transition-colors hidden lg:block ${theme === 'neon' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
+              >
+                 <Menu size={20} />
+              </button>
+              {/* Close button for mobile inside sidebar */}
+              <button 
+                onClick={() => setIsSidebarOpen(false)}
+                className={`p-1.5 rounded-lg transition-colors lg:hidden ${theme === 'neon' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
               >
                  <Menu size={20} />
               </button>
@@ -676,10 +1036,10 @@ const App: React.FC = () => {
             {/* Nav Items */}
             <nav className="space-y-2 flex-1">
                 {[
-                    { id: 'home', icon: Home, label: 'Acasă' },
-                    { id: 'calendar', icon: CalendarIcon, label: 'Calendar' },
-                    { id: 'todo', icon: CheckSquare, label: 'Task-uri' },
-                    { id: 'settings', icon: Settings, label: 'Setări' }
+                    { id: 'home', icon: Home, label: t.tabs.home },
+                    { id: 'calendar', icon: CalendarIcon, label: t.tabs.calendar },
+                    { id: 'todo', icon: CheckSquare, label: t.tabs.tasks },
+                    { id: 'settings', icon: Settings, label: t.tabs.settings }
                 ].map(item => (
                     <button 
                         key={item.id}
@@ -695,7 +1055,7 @@ const App: React.FC = () => {
                         } : {}}
                         title={item.label}
                     >
-                        <item.icon size={22} /> {isSidebarOpen && <span>{item.label}</span>}
+                        <item.icon size={22} /> <span className={!isSidebarOpen ? 'lg:hidden' : ''}>{item.label}</span>
                     </button>
                 ))}
             </nav>
@@ -706,11 +1066,11 @@ const App: React.FC = () => {
                 href="https://www.buymeacoffee.com/dianastreulea" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className={`flex items-center gap-2 w-full bg-[#FFF6C3] hover:bg-[#FDE68A] border border-[#FDE68A] text-gray-900 font-bold rounded-xl transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 ${isSidebarOpen ? 'py-3 px-4 justify-center' : 'p-3 justify-center aspect-square'}`}
+                className={`flex items-center gap-2 w-full bg-[#FFF6C3] hover:bg-[#FDE68A] border border-[#FDE68A] text-gray-900 font-bold rounded-xl transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 ${isSidebarOpen ? 'py-3 px-4 justify-center' : 'p-3 py-3 px-4 lg:p-3 lg:aspect-square justify-center'}`}
                 title="Susține proiectul!"
                 >
                 <span className="text-xl">💖</span>
-                {isSidebarOpen && <span className="text-xs font-bold whitespace-nowrap">Susține proiectul!</span>}
+                <span className={`text-xs font-bold whitespace-nowrap ${!isSidebarOpen ? 'lg:hidden' : ''}`}>Susține proiectul!</span>
                 </a>
 
                 <a 
@@ -721,11 +1081,11 @@ const App: React.FC = () => {
                     theme === 'neon' 
                     ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white' 
                     : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900'
-                } ${isSidebarOpen ? 'py-3 px-4 justify-center' : 'p-3 justify-center aspect-square'}`}
+                } ${isSidebarOpen ? 'py-3 px-4 justify-center' : 'p-3 py-3 px-4 lg:p-3 lg:aspect-square justify-center'}`}
                 title="Feedback"
                 >
                 <span className="text-lg">💬</span>
-                {isSidebarOpen && <span className="text-xs">Feedback</span>}
+                <span className={`text-xs ${!isSidebarOpen ? 'lg:hidden' : ''}`}>Feedback</span>
                 </a>
             </div>
         </div>
@@ -735,10 +1095,16 @@ const App: React.FC = () => {
       <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
           
           {/* HEADER BAR (FIXED) */}
-          <header className={`h-16 flex items-center justify-between px-6 border-b shrink-0 z-10 ${headerBg}`}>
-            {/* Left: Greeting + Name Edit */}
-            <div className="flex items-center gap-3">
-                 <span className={`text-lg ${theme === 'neon' ? 'text-slate-300' : 'text-slate-500'}`}>Salut,</span>
+          <header className={`h-16 flex items-center justify-between px-4 lg:px-6 border-b shrink-0 z-10 ${headerBg}`}>
+            {/* Left: Hamburger + Greeting + Name Edit */}
+            <div className="flex items-center gap-2 sm:gap-3">
+                 <button 
+                   onClick={() => setIsSidebarOpen(true)}
+                   className={`lg:hidden p-1.5 rounded-lg transition-colors ${theme === 'neon' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
+                 >
+                    <Menu size={20} />
+                 </button>
+                 <span className={`hidden sm:inline text-lg ${theme === 'neon' ? 'text-slate-300' : 'text-slate-500'}`}>{t.header.greeting}</span>
                  {isEditingName ? (
                     <input 
                         autoFocus
@@ -747,7 +1113,7 @@ const App: React.FC = () => {
                         onChange={(e) => setTempName(e.target.value)}
                         onBlur={saveNameEdit}
                         onKeyDown={(e) => e.key === 'Enter' && saveNameEdit()}
-                        className={`text-lg font-bold bg-transparent border-b-2 outline-none py-0.5 px-1 w-32 ${
+                        className={`text-lg font-bold bg-transparent border-b-2 outline-none py-0.5 px-1 w-24 sm:w-32 ${
                             theme === 'neon' 
                             ? 'text-white border-cyan-500' 
                             : 'text-slate-800 border-indigo-500'
@@ -760,25 +1126,25 @@ const App: React.FC = () => {
                             setTempName(userName || '');
                             setIsEditingName(true);
                         }}
-                        className={`text-lg font-bold flex items-center gap-2 group transition-colors ${
+                        className={`text-base sm:text-lg font-bold flex items-center gap-2 group transition-colors ${
                             theme === 'neon' ? 'text-white' : 'text-slate-800'
                         }`}
                         style={{ color: isEditingName ? undefined : undefined }} // Reset
                         title="Click to edit name"
                     >
-                        <span className="group-hover:opacity-80 transition-opacity">{userName}</span>
-                        <Pencil size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <span className="group-hover:opacity-80 transition-opacity truncate max-w-[120px] sm:max-w-none">{userName}</span>
+                        <Pencil size={14} className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                     </button>
                 )}
             </div>
 
             {/* Middle: Search Bar */}
-            <div className="flex-1 max-w-md mx-4 hidden md:block">
+            <div className="flex-1 max-w-md mx-2 sm:mx-4 hidden sm:block">
                 <div className={`relative flex items-center rounded-xl overflow-hidden px-4 py-2 ${searchBg}`}>
-                    <Search size={18} className="opacity-50 mr-2" />
+                    <Search size={18} className="opacity-50 mr-2 shrink-0" />
                     <input 
                         type="text"
-                        placeholder="Caută evenimente, task-uri..."
+                        placeholder={t.header.searchPlaceholder}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="bg-transparent border-none outline-none text-sm w-full placeholder:text-opacity-70"
@@ -791,7 +1157,7 @@ const App: React.FC = () => {
                 <div 
                     className="relative flex items-center justify-center w-9 h-9 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm transition-transform hover:scale-105"
                     style={{ borderColor: theme === 'neon' ? '#334155' : '#e2e8f0' }}
-                    title="Change Accent Color"
+                    title={t.header.shareTooltip}
                 >
                    <input
                      type="color"
@@ -817,6 +1183,7 @@ const App: React.FC = () => {
         userName={userName || 'Prieten'}
         events={events}
         todos={todos}
+        categories={categories}
         onAddEvent={handleSaveEvent}
         onAddTodo={handleAddTodo}
         onDeleteEvent={handleDeleteEventByTitle}
@@ -836,6 +1203,7 @@ const App: React.FC = () => {
         onSave={handleSaveEvent}
         initialDate={selectedDate}
         accentColor={accentColor}
+        categories={categories}
       />
 
       <EditEventModal

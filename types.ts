@@ -1,5 +1,9 @@
 
-export type EventType = 'work' | 'personal' | 'study' | 'urgent' | 'other';
+export interface Category {
+  id: string;
+  name: string;
+  color: string;
+}
 
 export interface CalendarEvent {
   id: string;
@@ -7,8 +11,8 @@ export interface CalendarEvent {
   date: string; // ISO Date String YYYY-MM-DD
   time?: string; // HH:mm Start Time
   endTime?: string; // HH:mm End Time (Optional)
-  color?: string; // Tailwind class (e.g. bg-red-500) - Optional, overrides category default
-  type: EventType;
+  color?: string; // HEX color string
+  categoryId?: string; // matches Category id
 }
 
 export interface Todo {
@@ -16,7 +20,8 @@ export interface Todo {
   text: string;
   completed: boolean;
   isPinned?: boolean;
-  color?: string; // Tailwind bg class for priority/category
+  color?: string; // HEX color string
+  categoryId?: string; // matches Category id
 }
 
 export interface User {

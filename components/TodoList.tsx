@@ -1,12 +1,12 @@
 
 import React, { useState } from 'react';
-import { Todo, Theme } from '../types';
-import { CheckSquare, Square, Trash2, Plus, ListTodo, Pin } from 'lucide-react';
+import { Todo, Theme, Category } from '../types';
+import { CheckSquare, Square, Trash2, Plus, ListTodo, Pin, Palette } from 'lucide-react';
 import { HighlightText } from './HighlightText';
 
 interface TodoListProps {
   todos: Todo[];
-  onAddTodo: (text: string, isPinned: boolean, color?: string) => void;
+  onAddTodo: (text: string, isPinned: boolean, categoryId?: string, color?: string) => void;
   onToggleTodo: (id: string) => void;
   onDeleteTodo: (id: string) => void;
   onTogglePin: (id: string) => void;
@@ -14,15 +14,8 @@ interface TodoListProps {
   theme: Theme;
   accentColor?: string;
   searchQuery?: string;
+  categories: Category[];
 }
-
-// Updated to use Hex values for text coloring
-const TODO_COLORS = [
-  { value: '', label: 'Default', bg: 'bg-slate-200' },
-  { value: '#ef4444', label: 'Urgent', bg: 'bg-red-500' },
-  { value: '#f97316', label: 'Medium', bg: 'bg-orange-500' },
-  { value: '#3b82f6', label: 'Low', bg: 'bg-blue-500' },
-];
 
 export const TodoList: React.FC<TodoListProps> = ({ 
   todos, 
@@ -33,11 +26,14 @@ export const TodoList: React.FC<TodoListProps> = ({
   onChangeColor,
   theme,
   accentColor = '#4F46E5',
-  searchQuery = ''
+  searchQuery = '',
+  categories = []
 }) => {
   const [newTodo, setNewTodo] = useState('');
   const [isPinned, setIsPinned] = useState(false);
-  const [selectedColor, setSelectedColor] = useState<string>('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
+  const [selectedColor, setSelectedColor] = useState<string>(accentColor);
+  const [useCustomColor, setUseCustomColor] = useState(false);
   
   const isNeon = theme === 'neon';
   const isPastel = theme === 'pastel';
@@ -58,24 +54,19 @@ export const TodoList: React.FC<TodoListProps> = ({
     ? 'bg-slate-800 border-slate-700 text-white focus:ring-cyan-500/50 focus:border-cyan-500'
     : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-indigo-500/50';
 
-  const textClass = isNeon ? 'text-slate-300' : 'text-slate-700';
+  const textClass = isNeon ? 'text-slate-200' : 'text-slate-800';
   const completedText = isNeon ? 'text-slate-600' : 'text-slate-400';
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (newTodo.trim()) {
-      onAddTodo(newTodo.trim(), isPinned, selectedColor || undefined);
+      onAddTodo(newTodo.trim(), isPinned, selectedCategoryId, useCustomColor ? selectedColor : undefined);
       setNewTodo('');
       setIsPinned(false);
-      setSelectedColor('');
+      setSelectedColor(accentColor);
+      setUseCustomColor(false);
+      setSelectedCategoryId(undefined);
     }
-  };
-
-  const handleCycleColor = (todo: Todo) => {
-    // Determine current index based on value match
-    const currentIndex = TODO_COLORS.findIndex(c => c.value === (todo.color || ''));
-    const nextIndex = (currentIndex + 1) % TODO_COLORS.length;
-    onChangeColor(todo.id, TODO_COLORS[nextIndex].value);
   };
 
   return (
@@ -113,30 +104,69 @@ export const TodoList: React.FC<TodoListProps> = ({
         </form>
         
         {/* Input Tools */}
-        <div className="flex items-center gap-3">
-             <button
-                type="button"
-                onClick={() => setIsPinned(!isPinned)}
-                className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded transition-colors ${
-                    isPinned 
-                    ? 'bg-amber-100 text-amber-700' 
-                    : isNeon ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'
-                }`}
-             >
-                <Pin size={12} className={isPinned ? 'fill-current' : ''} />
-                Pin
-             </button>
+        <div className="flex flex-col gap-2">
+             <div className="flex items-center gap-3">
+                 <button
+                    type="button"
+                    onClick={() => setIsPinned(!isPinned)}
+                    className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded transition-colors ${
+                        isPinned 
+                        ? 'bg-amber-100 text-amber-700' 
+                        : isNeon ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'
+                    }`}
+                 >
+                    <Pin size={12} className={isPinned ? 'fill-current' : ''} />
+                    Pin
+                 </button>
 
-             <div className="flex items-center gap-1.5">
-                {TODO_COLORS.slice(1).map((color) => (
-                    <button
-                        key={color.label}
-                        type="button"
-                        onClick={() => setSelectedColor(selectedColor === color.value ? '' : color.value)}
-                        className={`w-4 h-4 rounded-full transition-transform ${color.bg} ${selectedColor === color.value ? 'ring-2 ring-offset-1 ring-slate-400 scale-110' : 'opacity-40 hover:opacity-100'}`}
-                        title={color.label}
-                    />
-                ))}
+                 <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar flex-1 pb-1">
+                    {categories.map((cat) => (
+                        <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => setSelectedCategoryId(selectedCategoryId === cat.id ? undefined : cat.id)}
+                            className={`text-[10px] sm:text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap transition-all border ${
+                                selectedCategoryId === cat.id && !useCustomColor
+                                    ? 'text-white'
+                                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                            }`}
+                            style={selectedCategoryId === cat.id && !useCustomColor ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
+                            title={cat.name}
+                        >
+                            {cat.name}
+                        </button>
+                    ))}
+                 </div>
+             </div>
+
+             <div className="flex items-center gap-2">
+                 <div 
+                     className="relative flex items-center justify-center w-6 h-6 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm transition-transform hover:scale-110"
+                     style={{ borderColor: useCustomColor ? selectedColor : '#e2e8f0' }}
+                     title="Alege o Culoare Personalizată"
+                 >
+                     <input
+                         type="color"
+                         value={selectedColor}
+                         onChange={(e) => {
+                             setSelectedColor(e.target.value);
+                             setUseCustomColor(true);
+                         }}
+                         className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] p-0 m-0 cursor-pointer border-none"
+                     />
+                 </div>
+                 {useCustomColor && (
+                     <button 
+                         type="button" 
+                         onClick={() => {
+                             setUseCustomColor(false);
+                             setSelectedColor(accentColor);
+                         }}
+                         className="text-[10px] text-slate-400 underline"
+                     >
+                         Reset Culoare
+                     </button>
+                 )}
              </div>
         </div>
       </div>
@@ -163,9 +193,19 @@ export const TodoList: React.FC<TodoListProps> = ({
             };
 
             // Text Color Logic
-            const textStyle: React.CSSProperties = {
-                color: (!todo.completed && todo.color) ? todo.color : 'inherit'
-            };
+            const textStyle: React.CSSProperties = {};
+            if (!todo.completed) {
+                if (todo.color) {
+                    textStyle.color = todo.color;
+                    if (isNeon) {
+                        // Ensure dark colors pop on dark backgrounds
+                        textStyle.filter = 'brightness(1.5) saturate(1.2)';
+                    }
+                } else if (todo.isPinned) {
+                    // Pinned task text specifically
+                    textStyle.color = isNeon ? '#f8fafc' : '#0f172a';
+                }
+            }
 
             return (
             <div
@@ -202,13 +242,14 @@ export const TodoList: React.FC<TodoListProps> = ({
               
               {/* Task Controls */}
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                 {/* Color Indicator/Cycler */}
-                 <button
-                    onClick={() => handleCycleColor(todo)}
-                    className={`w-3 h-3 rounded-full mx-1`}
-                    style={{ backgroundColor: todo.color || '#cbd5e1' }}
-                    title="Cycle Priority Color"
-                 />
+                 {/* Color Indicator */}
+                 {(todo.color || todo.categoryId) && (
+                     <div
+                        className="w-3 h-3 rounded-full mx-1 flex-shrink-0"
+                        style={{ backgroundColor: todo.color || categories.find(c => c.id === todo.categoryId)?.color || '#cbd5e1' }}
+                        title="Task Category/Color"
+                     />
+                 )}
                  
                  {/* Pin Toggle */}
                  <button

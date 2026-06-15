@@ -7,8 +7,9 @@ interface ChatAssistantProps {
   userName: string;
   events: CalendarEvent[];
   todos: Todo[];
+  categories?: { id: string; name: string; color: string }[];
   onAddEvent: (event: Omit<CalendarEvent, 'id'>) => void;
-  onAddTodo: (text: string, isPinned: boolean, color?: string) => void;
+  onAddTodo: (text: string, isPinned: boolean, categoryId?: string, color?: string) => void;
   onDeleteEvent: (title: string) => boolean;
   onToggleTodo: (text: string) => boolean;
   theme: Theme;
@@ -27,20 +28,7 @@ interface Message {
 }
 
 // Maps for Natural Language Processing
-const EVENT_COLORS: {[key: string]: string} = {
-  'rosu': 'bg-red-500', 'roșu': 'bg-red-500',
-  'albastru': 'bg-blue-500',
-  'verde': 'bg-green-500',
-  'galben': 'bg-yellow-500', 'amber': 'bg-amber-500',
-  'portocaliu': 'bg-orange-500',
-  'mov': 'bg-purple-500', 'violet': 'bg-purple-500',
-  'roz': 'bg-pink-500',
-  'gri': 'bg-slate-500',
-  'turcoaz': 'bg-teal-500',
-  'indigo': 'bg-indigo-500'
-};
-
-const TASK_COLORS: {[key: string]: string} = {
+const COLOR_MAP: {[key: string]: string} = {
   'rosu': '#ef4444', 'roșu': '#ef4444',
   'albastru': '#3b82f6',
   'verde': '#22c55e',
@@ -75,6 +63,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
   // Identity State
   const [assistantName, setAssistantName] = useState(() => localStorage.getItem('assistant_name') || "Olli");
@@ -98,10 +87,16 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   // Initialize position
   useEffect(() => {
     if (typeof window !== 'undefined') {
+        const checkMobile = () => setIsMobile(window.innerWidth < 640);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+
         setPosition({
-            x: window.innerWidth - dimensions.width - 20,
-            y: window.innerHeight - dimensions.height - 80
+            x: Math.max(16, window.innerWidth - dimensions.width - 24),
+            y: Math.max(16, window.innerHeight - dimensions.height - 80)
         });
+
+        return () => window.removeEventListener('resize', checkMobile);
     }
   }, []);
 
@@ -222,9 +217,21 @@ Poți să-mi vorbești liber! Încearcă:
         return result;
     }
     
-    if (text.match(/^(ce am|gaseste|cauta|arata)/)) {
+    if (text.match(/^(ce am|gaseste|găsește|cauta|căuta|arata|arată|cand am|când am)/)) {
         result.intent = 'query';
-        result.title = text.replace(/^(ce am|gaseste|cauta|arata)/, '').trim();
+        result.title = text.replace(/^(ce am|gaseste|găsește|cauta|căuta|arata|arată|cand am|când am)/, '').trim();
+        
+        // Check for specific date queries within search
+        if (result.title.match(/(azi|mâine|maine)/)) {
+            if (result.title.includes('azi')) result.date = new Date().toISOString().split('T')[0];
+            else {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                result.date = tomorrow.toISOString().split('T')[0];
+            }
+            result.title = result.title.replace(/(azi|mâine|maine|-|pe)/g, '').trim();
+        }
+        
         return result;
     }
 
@@ -321,8 +328,7 @@ Poți să-mi vorbești liber! Încearcă:
     }
 
     // D. Detect Color
-    const colorMap = result.type === 'event' ? EVENT_COLORS : TASK_COLORS;
-    for (const [name, val] of Object.entries(colorMap)) {
+    for (const [name, val] of Object.entries(COLOR_MAP)) {
         if (processedText.includes(name)) {
             result.color = val;
             processedText = processedText.replace(new RegExp(`\\b(cu|culoare)?\\s*${name}\\b`), '');
@@ -378,20 +384,45 @@ Poți să-mi vorbești liber! Încearcă:
             }
         } 
         else if (parsed.intent === 'query') {
-            // Simplified Query Logic
-            const searchTerm = parsed.title.replace('azi', '').replace('maine', '').trim();
-            const found = events.filter(e => e.title.toLowerCase().includes(searchTerm) || e.date === parsed.date);
-            setLastFoundEvents(found);
+            const searchTerm = parsed.title.toLowerCase();
             
-            if (found.length > 0) {
-                responseText = `Am găsit ${found.length} evenimente:\n${found.map(e => `🔹 ${e.title} (${e.date} ${e.time || ''})`).join('\n')}`;
-            } else {
-                const pendingTodos = todos.filter(t => !t.completed && t.text.toLowerCase().includes(searchTerm));
-                if (pendingTodos.length > 0) {
-                     responseText = `Ai ${pendingTodos.length} task-uri:\n${pendingTodos.map(t => `▫️ ${t.text}`).join('\n')}`;
-                } else {
-                    responseText = `Nu am găsit nimic relevant pentru "${parsed.title}".`;
+            // Search in Events
+            const foundEvents = events.filter(e => {
+                if (parsed.date && e.date === parsed.date && !searchTerm) return true;
+                if (!searchTerm) return false;
+                
+                const titleMatch = e.title.toLowerCase().includes(searchTerm);
+                const catMatch = categories?.find(c => c.id === e.categoryId)?.name.toLowerCase().includes(searchTerm);
+                
+                if (parsed.date) {
+                    return e.date === parsed.date && (titleMatch || catMatch);
                 }
+                return titleMatch || catMatch;
+            });
+
+            // Search in Todos
+            const foundTodos = todos.filter(t => {
+                if (!searchTerm || t.completed) return false;
+                const textMatch = t.text.toLowerCase().includes(searchTerm);
+                const catMatch = categories?.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(searchTerm);
+                return textMatch || catMatch;
+            });
+            
+            setLastFoundEvents(foundEvents);
+            
+            const totalFound = foundEvents.length + foundTodos.length;
+            
+            if (totalFound > 0) {
+                let text = `Am găsit ${totalFound} potriviri pentru "${parsed.title || 'perioadă'}":\n`;
+                if (foundEvents.length > 0) {
+                    text += `\n**📅 Evenimente (${foundEvents.length}):**\n` + foundEvents.map(e => `🔹 ${e.title} (${e.date} ${e.time || ''})`).join('\n');
+                }
+                if (foundTodos.length > 0) {
+                    text += `\n\n**✅ Task-uri active (${foundTodos.length}):**\n` + foundTodos.map(t => `▫️ ${t.text}`).join('\n');
+                }
+                responseText = text;
+            } else {
+                responseText = `Nu am găsit niciun eveniment sau o sarcină care să se potrivească cu "${parsed.title || 'criteriile tale'}". 🤷‍♂️`;
             }
         }
         else if (parsed.intent === 'add_event') {
@@ -404,17 +435,32 @@ Poți să-mi vorbești liber! Încearcă:
                 parsed.date = `${year}-${month}-${day}`;
             }
 
+            // Try to match color hex back to categoryId, if any
+            let catId: string | undefined = undefined;
+            if (categories && parsed.color) {
+                const cat = categories.find(c => c.color === parsed.color);
+                if (cat) catId = cat.id;
+            } else if (categories && categories.length > 0) {
+                catId = categories[0].id; // Default category
+            }
+
             onAddEvent({
                 title: parsed.title,
                 date: parsed.date!,
                 time: parsed.time,
-                type: 'personal', // Default type
-                color: parsed.color
+                categoryId: catId,
+                color: (!catId && parsed.color) ? parsed.color : undefined
             });
             responseText = `Rezolvat! 📅 "${parsed.title}" pe ${parsed.date}${parsed.time ? ` la ${parsed.time}` : ''}.`;
         }
         else if (parsed.intent === 'add_task') {
-            onAddTodo(parsed.title, parsed.isPinned, parsed.color);
+            let catId: string | undefined = undefined;
+            if (categories && parsed.color) {
+                const cat = categories.find(c => c.color === parsed.color);
+                if (cat) catId = cat.id;
+            }
+
+            onAddTodo(parsed.title, parsed.isPinned, catId, (!catId && parsed.color) ? parsed.color : undefined);
             responseText = `Am adăugat la to-do: "${parsed.title}"${parsed.isPinned ? ' 📌' : ''}${parsed.color ? ' 🎨' : ''}.`;
         } else {
             responseText = "Scuze, nu am înțeles. Poți încerca altfel?";
@@ -552,18 +598,18 @@ Poți să-mi vorbești liber! Încearcă:
         {/* Chat Window */}
         {isOpen && (
             <div 
-                style={{ 
+                style={isMobile ? {} : { 
                     left: position.x, 
                     top: position.y,
                     width: dimensions.width,
                     height: dimensions.height 
                 }}
-                className={`fixed z-[9999] rounded-2xl shadow-2xl border flex flex-col mb-4 overflow-hidden animate-in zoom-in-95 duration-200 ${containerClass}`}
+                className={`fixed z-[9999] rounded-2xl shadow-2xl border flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 ${containerClass} bottom-20 right-4 sm:bottom-6 sm:right-6 w-[calc(100vw-2rem)] sm:w-80 md:w-96 max-h-[80vh] sm:h-[500px] sm:bottom-auto sm:right-auto`}
             >
                 {/* Resize Handle (Top-Left) */}
                 <div
                     onMouseDown={handleResizeMouseDown}
-                    className="absolute top-0 left-0 w-8 h-8 z-50 cursor-nwse-resize flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity"
+                    className="absolute top-0 left-0 w-8 h-8 z-50 cursor-nwse-resize hidden sm:flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity"
                     title="Resize"
                 >
                     <div className={`w-3 h-3 border-t-2 border-l-2 ml-1 mt-1 ${isNeon ? 'border-cyan-500' : 'border-slate-400'}`}></div>
@@ -571,8 +617,8 @@ Poți să-mi vorbești liber! Încearcă:
 
                 {/* Header (Draggable) */}
                 <div 
-                    onMouseDown={handleDragMouseDown}
-                    className={`p-4 border-b flex justify-between items-center cursor-move select-none transition-colors duration-300 ${headerBg}`}
+                    onMouseDown={isMobile ? undefined : handleDragMouseDown}
+                    className={`p-4 border-b flex justify-between items-center select-none transition-colors duration-300 ${headerBg} ${isMobile ? 'cursor-default' : 'cursor-move'}`}
                 >
                     <div className="flex items-center gap-2 pointer-events-none pl-4">
                         <div className="text-2xl animate-bounce">
