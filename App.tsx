@@ -94,7 +94,7 @@ const App: React.FC = () => {
   const [newCategoryColor, setNewCategoryColor] = useState('#10B981');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+    useEffect(() => {
     const initData = async () => {
         // 1. Check for logged in user name
         const storedName = localStorage.getItem('app_username');
@@ -107,10 +107,42 @@ const App: React.FC = () => {
             setLang(storedLang);
         }
 
-        // 2. Load other data from Firebase
-        const storedEvents = await storage.getEvents();
-        const storedTodos = await storage.getTodos();
-        const storedCategories = await storage.getCategories();
+        // 2. Load other data from Firebase / localStorage
+        let storedEvents = [];
+        let storedTodos = [];
+        let storedCategories = [];
+
+        try {
+            // Fetch everything in parallel
+            const fetchPromise = Promise.all([
+                storage.getEvents(),
+                storage.getTodos(),
+                storage.getCategories()
+            ]);
+
+            // Add a 5 second timeout to prevent infinite hanging
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('offline')), 5000)
+            );
+
+            const [eventsData, todosData, categoriesData] = await Promise.race([fetchPromise, timeoutPromise]) as any;
+            
+            storedEvents = eventsData;
+            storedTodos = todosData;
+            storedCategories = categoriesData;
+        } catch (error) {
+            console.warn("Offline or timeout reached. Using localStorage as backup.");
+            // We use directly localStorage here as a reliable backup
+            const localEvents = localStorage.getItem('smart_calendar_events');
+            const localTodos = localStorage.getItem('smart_calendar_todos');
+            const localCats = localStorage.getItem('smart_calendar_categories');
+            
+            if (localEvents) storedEvents = JSON.parse(localEvents);
+            if (localTodos) storedTodos = JSON.parse(localTodos);
+            if (localCats) storedCategories = JSON.parse(localCats);
+
+            triggerAiMessage("Eroare de conexiune (offline). Folosesc datele locale! 📡");
+        }
         
         if (storedEvents && storedEvents.length > 0) setEvents(storedEvents);
         if (storedTodos && storedTodos.length > 0) setTodos(storedTodos);
