@@ -2,6 +2,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import 'virtual:pwa-register';
 
 // Debug logs to verify script execution
 console.log('Application starting...');
