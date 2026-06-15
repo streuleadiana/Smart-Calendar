@@ -19,6 +19,7 @@ export const EventModal: React.FC<EventModalProps> = ({
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [details, setDetails] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>(accentColor);
   const [useCustomColor, setUseCustomColor] = useState(false);
@@ -27,6 +28,7 @@ export const EventModal: React.FC<EventModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setTitle('');
+      setDetails('');
       setTime('');
       setEndTime('');
       setSelectedCategoryId(categories.length > 0 ? categories[0].id : null);
@@ -57,6 +59,7 @@ export const EventModal: React.FC<EventModalProps> = ({
 
     onSave({
       title,
+      description: details || undefined,
       date,
       time: time || undefined,
       endTime: endTime || undefined,
@@ -100,7 +103,7 @@ export const EventModal: React.FC<EventModalProps> = ({
             <input
               type="date"
               required
-              className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />
@@ -113,7 +116,7 @@ export const EventModal: React.FC<EventModalProps> = ({
               </label>
               <input
                 type="time"
-                className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
                 value={time}
                 onChange={(e) => {
                     setTime(e.target.value);
@@ -127,7 +130,7 @@ export const EventModal: React.FC<EventModalProps> = ({
               </label>
               <input
                 type="time"
-                className={`w-full px-4 py-2 rounded-lg border focus:ring-2 outline-none transition-all ${error ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-slate-300 focus:ring-primary focus:border-primary'}`}
+                className={`w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-800 appearance-none cursor-pointer border focus:ring-2 transition-all ${error ? 'border-red-300 focus:border-red-500 focus:ring-red-200 dark:border-red-700' : 'border-slate-200 dark:border-slate-700 focus:ring-indigo-500'}`}
                 value={endTime}
                 onChange={(e) => {
                     setEndTime(e.target.value);
@@ -140,6 +143,16 @@ export const EventModal: React.FC<EventModalProps> = ({
           {error && (
             <p className="text-xs text-red-500 mt-1">{error}</p>
           )}
+
+          <div>
+             <label className="block text-sm font-medium text-slate-700 mb-1">Detalii (opțional)</label>
+             <textarea
+                 className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-y"
+                 rows={3}
+                 value={details}
+                 onChange={(e) => setDetails(e.target.value)}
+             />
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-1">

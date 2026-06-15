@@ -16,6 +16,7 @@ interface DayDetailModalProps {
   accentColor?: string;
   searchQuery?: string;
   categories: Category[];
+  lang?: string;
 }
 
 export const DayDetailModal: React.FC<DayDetailModalProps> = ({ 
@@ -29,7 +30,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   theme,
   accentColor = '#4F46E5',
   searchQuery = '',
-  categories
+  categories,
+  lang = 'ro'
 }) => {
   if (!isOpen || !date) return null;
 
@@ -54,8 +56,20 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   });
 
   // Formatting
-  const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
-  const fullDate = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const localeMap: Record<string, string> = { ro: 'ro-RO', en: 'en-US', es: 'es-ES', fr: 'fr-FR' };
+  const locale = localeMap[lang] || 'en-US';
+  const rawDayName = date.toLocaleDateString(locale, { weekday: 'long' });
+  const dayName = rawDayName.charAt(0).toUpperCase() + rawDayName.slice(1);
+  const fullDate = date.toLocaleDateString(locale, { month: 'long', day: 'numeric', year: 'numeric' });
+
+  // Translations
+  const tStrings: Record<string, {allDay: string, empty: string, sub: string, add: string}> = {
+    ro: { allDay: 'Toată ziua', empty: 'Niciun eveniment planificat', sub: 'Timp să te relaxezi sau să planifici ceva nou! ☕', add: 'Adaugă Misiune' },
+    en: { allDay: 'All Day', empty: 'Nothing scheduled', sub: 'Time to relax or plan something new! ☕', add: 'Add New Event' },
+    es: { allDay: 'Todo el día', empty: 'Nada programado', sub: '¡Tiempo para relajarte o planear algo nuevo! ☕', add: 'Agregar Evento' },
+    fr: { allDay: 'Toute la journée', empty: 'Rien de prévu', sub: 'Le temps de se détendre ou de planifier quelque chose de nouveau ! ☕', add: 'Ajouter un événement' }
+  };
+  const t = tStrings[lang] || tStrings['en'];
 
   // Styles
   const modalBg = isNeon ? 'bg-slate-900 border-slate-700' : isPastel ? 'bg-[#fffbf0] border-orange-100' : 'bg-white border-slate-200';
@@ -97,8 +111,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                <div className={`p-4 rounded-full mb-3 ${isNeon ? 'bg-slate-800 text-slate-500' : 'bg-slate-100 text-slate-400'}`}>
                   <Clock size={32} />
                </div>
-               <p className={`font-medium ${textPrimary}`}>Nothing scheduled</p>
-               <p className={`text-sm ${textSecondary}`}>Time to relax or plan something new! ☕</p>
+               <p className={`font-medium ${textPrimary}`}>{t.empty}</p>
+               <p className={`text-sm ${textSecondary}`}>{t.sub}</p>
             </div>
           ) : (
             sortedEvents.map(event => {
@@ -116,7 +130,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                     {/* Time Column */}
                     <div className="flex flex-col items-center pt-1 min-w-[60px]">
                         <span className={`text-sm font-bold ${isNeon ? 'text-cyan-400' : 'text-slate-900'}`}>
-                        {event.time || 'All Day'}
+                        {event.time || t.allDay}
                         </span>
                         {event.endTime && (
                         <span className={`text-xs opacity-60 ${isNeon ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -177,7 +191,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
             style={{ backgroundColor: accentColor }}
           >
             <Plus size={20} />
-            Add New Event
+            {t.add}
           </button>
         </div>
       </div>

@@ -655,6 +655,7 @@ const App: React.FC = () => {
                   accentColor={accentColor}
                   searchQuery={searchQuery}
                   categories={categories}
+                  lang={lang}
                 />
              </div>
              {/* Right: Todos (Fixed Width on Desktop) */}
@@ -686,6 +687,7 @@ const App: React.FC = () => {
               accentColor={accentColor}
               searchQuery={searchQuery}
               categories={categories}
+              lang={lang}
             />
           </div>
         );

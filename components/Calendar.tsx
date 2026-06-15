@@ -14,13 +14,15 @@ interface CalendarProps {
   accentColor?: string;
   searchQuery?: string;
   categories: Category[];
+  lang: string;
 }
 
-const DAYS_OF_WEEK = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm'];
-const MONTH_NAMES = [
-  'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
-  'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'
-];
+const WEEKDAYS: Record<string, string[]> = {
+  ro: ['L', 'M', 'M', 'J', 'V', 'S', 'D'],
+  en: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+  es: ['L', 'M', 'X', 'J', 'V', 'S', 'D'],
+  fr: ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+};
 
 export const Calendar: React.FC<CalendarProps> = ({ 
   events, 
@@ -30,7 +32,8 @@ export const Calendar: React.FC<CalendarProps> = ({
   theme, 
   accentColor = '#4F46E5',
   searchQuery = '',
-  categories
+  categories,
+  lang = 'ro'
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
@@ -38,6 +41,8 @@ export const Calendar: React.FC<CalendarProps> = ({
 
   const isNeon = theme === 'neon';
   const isPastel = theme === 'pastel';
+
+  const daysOfWeek = WEEKDAYS[lang] || WEEKDAYS['en'];
 
   // Helper to resolve color
   const getEventColor = (event: CalendarEvent) => {
@@ -53,8 +58,10 @@ export const Calendar: React.FC<CalendarProps> = ({
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   };
 
+  // Adjust for Monday start
   const getFirstDayOfMonth = (date: Date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    const day = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    return day === 0 ? 6 : day - 1; // 0 (Sun) -> 6 (Sunday offset), 1 (Mon) -> 0, etc.
   };
 
   const changeMonth = (offset: number) => {
@@ -119,10 +126,9 @@ export const Calendar: React.FC<CalendarProps> = ({
 
     return (
       <div className={`grid grid-cols-7 gap-px rounded-xl sm:rounded-2xl overflow-hidden border shadow-sm ${gridBg} ${isNeon ? 'border-slate-800' : 'border-slate-200'}`}>
-        {DAYS_OF_WEEK.map(day => (
-          <div key={day} className={`py-2 sm:py-3 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-center ${dayHeaderBg}`}>
-            <span className="hidden sm:inline">{day}</span>
-            <span className="sm:hidden">{day.charAt(0)}</span>
+        {daysOfWeek.map((day, index) => (
+          <div key={`header-${index}`} className={`py-2 sm:py-3 text-center text-xs font-bold uppercase tracking-wider flex items-center justify-center ${dayHeaderBg}`}>
+            <span>{day}</span>
           </div>
         ))}
         {allCells.map((day, index) => {
@@ -203,14 +209,28 @@ export const Calendar: React.FC<CalendarProps> = ({
   const buttonNav = isNeon ? 'text-cyan-400 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-50';
   const navContainer = isNeon ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200';
 
+  const localeMap: Record<string, string> = { ro: 'ro-RO', en: 'en-US', es: 'es-ES', fr: 'fr-FR' };
+  const locale = localeMap[lang] || 'en-US';
+  
+  const rawMonthStr = currentDate.toLocaleString(locale, { month: 'long', year: 'numeric' });
+  const formattedMonth = rawMonthStr.charAt(0).toUpperCase() + rawMonthStr.slice(1);
+
+  const tStrings: Record<string, {today: string, subtitle: string, aspect: string}> = {
+    ro: { today: 'Azi', subtitle: 'Planifică-ți succesul', aspect: 'Aspect' },
+    en: { today: 'Today', subtitle: 'Plan your success', aspect: 'Aspect Ratio' },
+    es: { today: 'Hoy', subtitle: 'Planea tu éxito', aspect: 'Aspecto' },
+    fr: { today: "Aujourd'hui", subtitle: 'Planifiez votre succès', aspect: 'Aspect' },
+  };
+  const t = tStrings[lang] || tStrings['en'];
+
   return (
     <div className="w-full h-full flex flex-col">
       <div className="flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 px-1 gap-2">
         <div className="text-center sm:text-left">
-          <h2 className={`text-xl sm:text-2xl font-bold tracking-tight ${textHeader}`}>
-            {MONTH_NAMES[currentDate.getMonth()]} {currentDate.getFullYear()}
+          <h2 className={`text-xl sm:text-2xl font-bold tracking-tight capitalize ${textHeader}`}>
+            {formattedMonth}
           </h2>
-          <p className={`${subHeader} text-xs sm:text-sm mt-0.5`}>Plan your success</p>
+          <p className={`${subHeader} text-xs sm:text-sm mt-0.5`}>{t.subtitle}</p>
         </div>
         <div className="flex items-center gap-4">
             {/* Zoom Controls (Mobile Friendly) */}
@@ -245,7 +265,7 @@ export const Calendar: React.FC<CalendarProps> = ({
                 }`}
                 style={{ color: accentColor }}
               >
-                Today
+                {t.today}
               </button>
               <button 
                 onClick={() => changeMonth(1)}
@@ -259,7 +279,7 @@ export const Calendar: React.FC<CalendarProps> = ({
       
       {/* Mobile Zoom Controls (Visible only on small screens) */}
       <div className={`sm:hidden flex items-center justify-between gap-2 p-2 mb-4 rounded-lg border bg-opacity-50 ${navContainer}`}>
-           <span className={`text-xs font-medium ${subHeader}`}>Aspect Ratio</span>
+           <span className={`text-xs font-medium ${subHeader}`}>{t.aspect}</span>
            <div className="flex items-center gap-2">
                 <button 
                     onClick={() => setZoomLevel(Math.max(1, zoomLevel - 1))}
@@ -298,6 +318,7 @@ export const Calendar: React.FC<CalendarProps> = ({
         accentColor={accentColor}
         searchQuery={searchQuery}
         categories={categories}
+        lang={lang}
       />
     </div>
   );

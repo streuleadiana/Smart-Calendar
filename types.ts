@@ -13,6 +13,7 @@ export interface CalendarEvent {
   endTime?: string; // HH:mm End Time (Optional)
   color?: string; // HEX color string
   categoryId?: string; // matches Category id
+  description?: string; // Event description
 }
 
 export interface Todo {
