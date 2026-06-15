@@ -157,6 +157,12 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                             </button>
                         </div>
                         
+                        {event.description && (
+                            <p className={`text-sm mt-1 mb-2 ${textSecondary} whitespace-pre-wrap break-words leading-snug`}>
+                                {event.description}
+                            </p>
+                        )}
+                        
                         <div className="flex items-center gap-2 mt-1">
                              {/* Category Badge / Indicator */}
                             {event.categoryId ? (() => {

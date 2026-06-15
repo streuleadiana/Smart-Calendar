@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
 import { Todo, Theme, Category } from '../types';
-import { CheckSquare, Square, Trash2, Plus, ListTodo, Pin, Palette } from 'lucide-react';
+import { CheckSquare, Square, Trash2, Plus, ListTodo, Pin, Palette, Pencil, Check, X } from 'lucide-react';
 import { HighlightText } from './HighlightText';
 
 interface TodoListProps {
   todos: Todo[];
   onAddTodo: (text: string, isPinned: boolean, categoryId?: string, color?: string) => void;
+  onEditTodo: (id: string, text: string, categoryId?: string, color?: string) => void;
   onToggleTodo: (id: string) => void;
   onDeleteTodo: (id: string) => void;
   onTogglePin: (id: string) => void;
@@ -20,6 +21,7 @@ interface TodoListProps {
 export const TodoList: React.FC<TodoListProps> = ({ 
   todos, 
   onAddTodo, 
+  onEditTodo,
   onToggleTodo, 
   onDeleteTodo, 
   onTogglePin,
@@ -34,6 +36,9 @@ export const TodoList: React.FC<TodoListProps> = ({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
   const [selectedColor, setSelectedColor] = useState<string>(accentColor);
   const [useCustomColor, setUseCustomColor] = useState(false);
+  
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editParams, setEditParams] = useState<{ text: string, categoryId?: string, color?: string, useCustomColor: boolean }>({ text: '', useCustomColor: false });
   
   const isNeon = theme === 'neon';
   const isPastel = theme === 'pastel';
@@ -207,6 +212,84 @@ export const TodoList: React.FC<TodoListProps> = ({
                 }
             }
 
+            const isEditing = editingTaskId === todo.id;
+
+            if (isEditing) {
+                return (
+                    <div
+                        key={todo.id}
+                        className={`p-3 rounded-lg border transition-all shadow-lg ${isNeon ? 'bg-slate-900 border-cyan-500' : 'bg-white border-indigo-500'}`}
+                        style={{ ...itemStyle, zIndex: 20 }}
+                    >
+                         <form onSubmit={(e) => {
+                             e.preventDefault();
+                             if (editParams.text.trim()) {
+                                 onEditTodo(todo.id, editParams.text.trim(), editParams.categoryId, editParams.useCustomColor ? editParams.color : undefined);
+                                 setEditingTaskId(null);
+                             }
+                         }} className="space-y-3">
+                              <div className="flex items-center gap-2">
+                                  <input 
+                                      type="text"
+                                      autoFocus
+                                      className={`flex-1 px-3 py-1.5 rounded text-sm focus:outline-none focus:ring-2 ${inputClass}`}
+                                      value={editParams.text}
+                                      onChange={(e) => setEditParams({...editParams, text: e.target.value})}
+                                  />
+                                  <button type="submit" className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors" title="Save changes"><Check size={16} /></button>
+                                  <button type="button" onClick={() => setEditingTaskId(null)} className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title="Cancel edit"><X size={16} /></button>
+                              </div>
+                              
+                              {/* Category and Color pickers for edit */}
+                              <div className="flex flex-col gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                   <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar flex-1 pb-1">
+                                      {categories.map((cat) => (
+                                          <button
+                                              key={cat.id}
+                                              type="button"
+                                              onClick={() => setEditParams({...editParams, categoryId: editParams.categoryId === cat.id ? undefined : cat.id, useCustomColor: false})}
+                                              className={`text-[10px] sm:text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap transition-all border ${
+                                                  editParams.categoryId === cat.id && !editParams.useCustomColor
+                                                      ? 'text-white'
+                                                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
+                                              }`}
+                                              style={editParams.categoryId === cat.id && !editParams.useCustomColor ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
+                                              title={cat.name}
+                                          >
+                                              {cat.name}
+                                          </button>
+                                      ))}
+                                   </div>
+
+                                   <div className="flex items-center gap-2">
+                                       <div 
+                                           className="relative flex items-center justify-center w-6 h-6 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm transition-transform hover:scale-110"
+                                           style={{ borderColor: editParams.useCustomColor ? editParams.color : '#e2e8f0' }}
+                                           title="Alege o Culoare Personalizată"
+                                       >
+                                           <input
+                                               type="color"
+                                               value={editParams.useCustomColor && editParams.color ? editParams.color : accentColor}
+                                               onChange={(e) => setEditParams({...editParams, color: e.target.value, useCustomColor: true, categoryId: undefined})}
+                                               className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] p-0 m-0 cursor-pointer border-none"
+                                           />
+                                       </div>
+                                       {editParams.useCustomColor && (
+                                           <button 
+                                               type="button" 
+                                               onClick={() => setEditParams({...editParams, useCustomColor: false, color: accentColor})}
+                                               className="text-[10px] text-slate-400 underline"
+                                           >
+                                               Reset Culoare
+                                           </button>
+                                       )}
+                                   </div>
+                              </div>
+                         </form>
+                    </div>
+                );
+            }
+
             return (
             <div
               key={todo.id}
@@ -251,6 +334,23 @@ export const TodoList: React.FC<TodoListProps> = ({
                      />
                  )}
                  
+                 {/* Edit Task */}
+                 <button
+                    onClick={() => {
+                        setEditingTaskId(todo.id);
+                        setEditParams({
+                            text: todo.text,
+                            categoryId: todo.categoryId,
+                            color: todo.color || accentColor,
+                            useCustomColor: !!todo.color && !todo.categoryId
+                        });
+                    }}
+                    className="p-1 text-slate-300 hover:text-indigo-500 dark:hover:text-cyan-400 transition-colors"
+                    title="Edit task"
+                 >
+                    <Pencil size={14} />
+                 </button>
+
                  {/* Pin Toggle */}
                  <button
                     onClick={() => onTogglePin(todo.id)}

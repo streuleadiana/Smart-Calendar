@@ -481,17 +481,19 @@ const App: React.FC = () => {
     storage.saveEvents(updatedEvents);
   };
 
-  const handleUpdateEvent = (id: string, title: string, time?: string, endTime?: string) => {
+  const handleUpdateEvent = (id: string, eventData: Partial<CalendarEvent>) => {
     const updatedEvents = events.map(e => {
         if (e.id === id) {
-            return { ...e, title, time, endTime };
+            return { ...e, ...eventData };
         }
         return e;
     });
     setEvents(updatedEvents);
     storage.saveEvents(updatedEvents);
     setIsEditModalOpen(false);
-    triggerAiMessage(`Eveniment actualizat: ${title} ✏️`);
+    if (eventData.title) {
+        triggerAiMessage(`Eveniment actualizat: ${eventData.title} ✏️`);
+    }
   };
 
   const openEditModal = (event: CalendarEvent) => {
@@ -531,6 +533,12 @@ const App: React.FC = () => {
     });
     setTodos(newList);
     storage.saveTodos(newList);
+  };
+
+  const handleEditTodo = (id: string, text: string, categoryId?: string, color?: string) => {
+    const updated = todos.map(t => t.id === id ? { ...t, text, categoryId, color } : t);
+    setTodos(updated);
+    storage.saveTodos(updated);
   };
 
   const handleToggleTodo = (id: string) => {
@@ -663,6 +671,7 @@ const App: React.FC = () => {
                 <TodoList 
                     todos={filteredTodos}
                     onAddTodo={handleAddTodo}
+                    onEditTodo={handleEditTodo}
                     onToggleTodo={handleToggleTodo}
                     onDeleteTodo={handleDeleteTodo}
                     onTogglePin={handleTogglePin}
@@ -703,6 +712,7 @@ const App: React.FC = () => {
                     <TodoList 
                         todos={filteredTodos}
                         onAddTodo={handleAddTodo}
+                        onEditTodo={handleEditTodo}
                         onToggleTodo={handleToggleTodo}
                         onDeleteTodo={handleDeleteTodo}
                         onTogglePin={handleTogglePin}
@@ -1213,8 +1223,8 @@ const App: React.FC = () => {
         onClose={() => setIsEditModalOpen(false)}
         onSave={handleUpdateEvent}
         event={editingEvent}
-        theme={theme}
         accentColor={accentColor}
+        categories={categories}
       />
     </div>
   );
