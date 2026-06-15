@@ -285,6 +285,20 @@ const App: React.FC = () => {
     setInitializing(false);
   }, []);
 
+  useEffect(() => {
+    const isDark = theme === 'neon';
+    
+    // Toggle Tailwind's dark class
+    document.documentElement.classList.toggle('dark', isDark);
+    
+    // CRITICAL FIX FOR iOS DATE/TIME INPUTS:
+    // This forces native inputs to obey the app's theme, not the OS theme.
+    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+    
+    // Save to localStorage
+    storage.saveTheme(theme);
+  }, [theme]);
+
   const handleStartApp = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nameInput.trim()) return;
@@ -371,12 +385,13 @@ const App: React.FC = () => {
       version: '1.0'
     };
 
-    // Fixed typo: chatset -> charset
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(data, null, 2))}`;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = jsonString;
-    link.download = `smart-calendar-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    link.href = url;
+    link.download = `smart-calendar-backup.json`;
     link.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -389,8 +404,10 @@ const App: React.FC = () => {
       try {
         const json = JSON.parse(event.target?.result as string);
         handleImportData(json);
+        alert('Backup restaurat cu succes!');
+        window.location.reload();
       } catch (err) {
-        setImportError("Fișier invalid! Te rog încarcă un backup .json valid.");
+        alert('Eroare: Fișier invalid sau corupt.');
       }
     };
     reader.readAsText(file);
@@ -955,7 +972,7 @@ const App: React.FC = () => {
                             <input 
                                 type="file" 
                                 ref={fileInputRef} 
-                                accept=".json" 
+                                accept=".json,application/json,text/plain,*/*" 
                                 className="hidden" 
                                 onChange={handleFileChange}
                             />
