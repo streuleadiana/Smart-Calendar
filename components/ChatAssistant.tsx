@@ -604,7 +604,7 @@ Poți să-mi vorbești liber! Încearcă:
                     width: dimensions.width,
                     height: dimensions.height 
                 }}
-                className={`fixed z-[9999] rounded-2xl shadow-2xl border flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 ${containerClass} bottom-20 right-4 sm:bottom-6 sm:right-6 w-[calc(100vw-2rem)] sm:w-80 md:w-96 max-h-[80vh] sm:h-[500px] sm:bottom-auto sm:right-auto`}
+                className={`fixed z-[9999] rounded-2xl shadow-2xl border flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 ${containerClass} bottom-40 right-4 sm:bottom-24 sm:right-6 w-[calc(100vw-2rem)] sm:w-80 md:w-96 max-h-[70vh] sm:h-[500px] sm:bottom-auto sm:right-auto`}
             >
                 {/* Resize Handle (Top-Left) */}
                 <div

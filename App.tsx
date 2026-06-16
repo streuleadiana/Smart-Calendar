@@ -5,6 +5,7 @@ import { TodoList } from './components/TodoList';
 import { EventModal } from './components/EventModal';
 import { EditEventModal } from './components/EditEventModal';
 import { TaskModal } from './components/TaskModal';
+import { FeedbackModal } from './components/FeedbackModal';
 import { ChatAssistant } from './components/ChatAssistant';
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { Sidebar } from './components/Sidebar';
@@ -96,6 +97,9 @@ const App: React.FC = () => {
   // Task Modal State
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Todo | null>(null);
+
+  // Feedback Modal State
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   // Settings State (for Import/Export feedback)
   const [importError, setImportError] = useState<string | null>(null);
@@ -857,7 +861,7 @@ const App: React.FC = () => {
                         </button>
                         
                         <a 
-                          href="https://ko-fi.com/alex1999" target="_blank" rel="noreferrer"
+                          href="https://buymeacoffee.com/dianastreulea" target="_blank" rel="noreferrer"
                           className={`flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl font-semibold border transition-all shadow-sm ${
                               theme === 'neon' 
                               ? 'bg-slate-800 border-slate-700 text-yellow-400 hover:bg-slate-700' 
@@ -868,8 +872,8 @@ const App: React.FC = () => {
                           Buy me a coffee
                         </a>
 
-                        <a 
-                          href="mailto:contact@example.com"
+                        <button 
+                          onClick={() => setIsFeedbackModalOpen(true)}
                           className={`flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl font-semibold border transition-all shadow-sm ${
                               theme === 'neon' 
                               ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white' 
@@ -878,7 +882,7 @@ const App: React.FC = () => {
                         >
                           <span className="text-lg">💬</span>
                           Feedback
-                        </a>
+                        </button>
 
                         <button
                           onClick={handleLogout}
@@ -1015,6 +1019,12 @@ const App: React.FC = () => {
         categories={categories}
         lang={lang}
         initialTask={editingTask || undefined}
+      />
+
+      <FeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => setIsFeedbackModalOpen(false)}
+        theme={theme}
       />
     </div>
   );
