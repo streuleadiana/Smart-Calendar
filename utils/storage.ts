@@ -20,7 +20,6 @@ const getUserDocRef = () => {
 };
 
 export const saveCategories = async (categories: Category[]): Promise<void> => {
-  // Always save to localStorage as a robust fallback
   localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
   try {
     await setDoc(getUserDocRef(), { categories }, { merge: true });
@@ -38,8 +37,6 @@ export const getCategories = async (): Promise<Category[]> => {
   } catch (error) {
     console.warn('Failed to load categories from Firestore (offline?):', error);
   }
-  
-  // Fallback to local storage
   const local = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
   return local ? JSON.parse(local) : [];
 };
@@ -64,54 +61,6 @@ export const getUser = (): User | null => {
 
 export const clearUser = (): void => {
   localStorage.removeItem(STORAGE_KEYS.USER);
-};
-
-export const saveEvents = async (events: CalendarEvent[]): Promise<void> => {
-  localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(events));
-  try {
-    await setDoc(getUserDocRef(), { events }, { merge: true });
-  } catch (error) {
-    console.warn('Failed to save events to Firestore (offline?):', error);
-  }
-};
-
-export const getEvents = async (): Promise<CalendarEvent[]> => {
-  try {
-    const docSnap = await getDoc(getUserDocRef());
-    if (docSnap.exists() && docSnap.data().events) {
-        return docSnap.data().events;
-    }
-  } catch (error) {
-    console.warn('Failed to load events from Firestore (offline?):', error);
-  }
-  
-  // Fallback to local storage
-  const local = localStorage.getItem(STORAGE_KEYS.EVENTS);
-  return local ? JSON.parse(local) : [];
-};
-
-export const saveTodos = async (todos: Todo[]): Promise<void> => {
-  localStorage.setItem(STORAGE_KEYS.TODOS, JSON.stringify(todos));
-  try {
-    await setDoc(getUserDocRef(), { todos }, { merge: true });
-  } catch (error) {
-    console.warn('Failed to save todos to Firestore (offline?):', error);
-  }
-};
-
-export const getTodos = async (): Promise<Todo[]> => {
-  try {
-    const docSnap = await getDoc(getUserDocRef());
-    if (docSnap.exists() && docSnap.data().todos) {
-        return docSnap.data().todos;
-    }
-  } catch (error) {
-    console.warn('Failed to load todos from Firestore (offline?):', error);
-  }
-  
-  // Fallback to local storage
-  const local = localStorage.getItem(STORAGE_KEYS.TODOS);
-  return local ? JSON.parse(local) : [];
 };
 
 export const saveTheme = (theme: Theme): void => {

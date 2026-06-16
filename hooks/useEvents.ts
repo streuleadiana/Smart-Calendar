@@ -1,12 +1,13 @@
 import { CalendarEvent } from '../types';
-import * as storage from '../utils/storage';
+import { db, auth } from '../lib/firebase';
+import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
 export const useEvents = (
   events: CalendarEvent[],
   setEvents: React.Dispatch<React.SetStateAction<CalendarEvent[]>>,
   triggerAiMessage: (msg: string) => void
 ) => {
-  const handleSaveEvent = (eventData: Omit<CalendarEvent, 'id'>) => {
+  const handleSaveEvent = async (eventData: Omit<CalendarEvent, 'id'>) => {
     if (eventData.time) {
       const conflict = events.find(e => 
         e.date === eventData.date && 
@@ -17,33 +18,34 @@ export const useEvents = (
       }
     }
 
-    const newEvent: CalendarEvent = {
-        id: crypto.randomUUID(),
-        ...eventData
-    };
-    const updatedEvents = [...events, newEvent];
-    setEvents(updatedEvents);
-    storage.saveEvents(updatedEvents);
-  };
-
-  const handleUpdateEvent = (id: string, eventData: Partial<CalendarEvent>) => {
-    const updatedEvents = events.map(e => {
-        if (e.id === id) {
-            return { ...e, ...eventData };
-        }
-        return e;
-    });
-    setEvents(updatedEvents);
-    storage.saveEvents(updatedEvents);
-    if (eventData.title) {
-        triggerAiMessage(`Eveniment actualizat: ${eventData.title} ✏️`);
+    try {
+        await addDoc(collection(db, 'events'), {
+            ...eventData,
+            userId: auth.currentUser?.uid
+        });
+    } catch (error) {
+        console.error("Error adding event:", error);
     }
   };
 
-  const handleDeleteEvent = (id: string) => {
-    const updatedEvents = events.filter(e => e.id !== id);
-    setEvents(updatedEvents);
-    storage.saveEvents(updatedEvents);
+  const handleUpdateEvent = async (id: string, eventData: Partial<CalendarEvent>) => {
+    try {
+        const eventRef = doc(db, 'events', id);
+        await updateDoc(eventRef, eventData);
+        if (eventData.title) {
+            triggerAiMessage(`Eveniment actualizat: ${eventData.title} ✏️`);
+        }
+    } catch (error) {
+        console.error("Error updating event:", error);
+    }
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    try {
+        await deleteDoc(doc(db, 'events', id));
+    } catch (error) {
+        console.error("Error deleting event:", error);
+    }
   };
 
   const handleDeleteEventByTitle = (titleFragment: string): boolean => {

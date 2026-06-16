@@ -11,8 +11,9 @@ import { Header } from './components/Header';
 import { CalendarEvent, Todo, Theme, Category } from './types';
 import * as storage from './utils/storage';
 import { LanguageOption, translations } from './utils/translations';
-import { requestNotificationPermission, auth, googleProvider } from './lib/firebase';
+import { requestNotificationPermission, auth, googleProvider, db } from './lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseAuthUser } from 'firebase/auth';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useNotifications } from './hooks/useNotifications';
 import { useEvents } from './hooks/useEvents';
 import { useTodos } from './hooks/useTodos';
@@ -96,17 +97,51 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    let unsubscribeEvents: () => void;
+    let unsubscribeTodos: () => void;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
         if (user) {
             setUserName(user.displayName || 'Utilizator');
+            
+            // Subscriptions per user
+            const eventsQuery = query(collection(db, 'events'), where('userId', '==', user.uid));
+            unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
+                const loadedEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as CalendarEvent[];
+                setEvents(loadedEvents);
+            }, (error) => {
+                console.error("Events sync failed", error);
+            });
+
+            const todosQuery = query(collection(db, 'todos'), where('userId', '==', user.uid));
+            unsubscribeTodos = onSnapshot(todosQuery, (snapshot) => {
+                const loadedTodos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Todo[];
+                // Sort pinned first
+                loadedTodos.sort((a, b) => {
+                    if (a.isPinned === b.isPinned) return 0;
+                    return a.isPinned ? -1 : 1;
+                });
+                setTodos(loadedTodos);
+            }, (error) => {
+                console.error("Todos sync failed", error);
+            });
+
             await loadUserData();
         } else {
             setUserName(null);
+            setEvents([]);
+            setTodos([]);
             setInitializing(false);
+            if (unsubscribeEvents) unsubscribeEvents();
+            if (unsubscribeTodos) unsubscribeTodos();
         }
     });
 
-    return () => unsubscribe();
+    return () => {
+        unsubscribeAuth();
+        if (unsubscribeEvents) unsubscribeEvents();
+        if (unsubscribeTodos) unsubscribeTodos();
+    };
   }, []);
 
   const loadUserData = async () => {
@@ -115,45 +150,25 @@ const App: React.FC = () => {
             setLang(storedLang);
         }
 
-        // 2. Load other data from Firebase / localStorage
-        let storedEvents = [];
-        let storedTodos = [];
-        let storedCategories = [];
-
         try {
-            // Fetch everything in parallel
-            const fetchPromise = Promise.all([
-                storage.getEvents(),
-                storage.getTodos(),
-                storage.getCategories()
-            ]);
-
-            // Add a 5 second timeout to prevent infinite hanging
-            const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('offline')), 5000)
-            );
-
-            const [eventsData, todosData, categoriesData] = await Promise.race([fetchPromise, timeoutPromise]) as any;
-            
-            storedEvents = eventsData;
-            storedTodos = todosData;
-            storedCategories = categoriesData;
+            const categoriesData = await storage.getCategories();
+            if (categoriesData && categoriesData.length > 0) {
+              setCategories(categoriesData);
+            } else {
+              const defaults = [
+                { id: crypto.randomUUID(), name: 'Work', color: '#4F46E5' },
+                { id: crypto.randomUUID(), name: 'Personal', color: '#10B981' },
+                { id: crypto.randomUUID(), name: 'Study', color: '#F59E0B' },
+                { id: crypto.randomUUID(), name: 'Urgent', color: '#EF4444' }
+              ];
+              setCategories(defaults);
+              storage.saveCategories(defaults);
+            }
         } catch (error) {
-            console.warn("Offline or timeout reached. Using localStorage as backup.");
-            // We use directly localStorage here as a reliable backup
-            const localEvents = localStorage.getItem('smart_calendar_events');
-            const localTodos = localStorage.getItem('smart_calendar_todos');
+            console.warn("Offline or timeout reached loading categories.");
             const localCats = localStorage.getItem('smart_calendar_categories');
-            
-            if (localEvents) storedEvents = JSON.parse(localEvents);
-            if (localTodos) storedTodos = JSON.parse(localTodos);
-            if (localCats) storedCategories = JSON.parse(localCats);
-
-            triggerAiMessage("Eroare de conexiune (offline). Folosesc datele locale! 📡");
+            if (localCats) setCategories(JSON.parse(localCats));
         }
-        
-        if (storedEvents && storedEvents.length > 0) setEvents(storedEvents);
-        if (storedTodos && storedTodos.length > 0) setTodos(storedTodos);
         
         const storedTheme = storage.getTheme();
         const storedAccent = localStorage.getItem('app_accent_color');

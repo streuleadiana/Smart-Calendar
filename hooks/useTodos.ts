@@ -1,68 +1,68 @@
 import { Todo } from '../types';
-import * as storage from '../utils/storage';
+import { db, auth } from '../lib/firebase';
+import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
 export const useTodos = (
   todos: Todo[],
   setTodos: React.Dispatch<React.SetStateAction<Todo[]>>,
   setLastCompletedTask: React.Dispatch<React.SetStateAction<string | null>>
 ) => {
-  const handleAddTodo = (text: string, isPinned: boolean = false, categoryId?: string, color?: string) => {
-    const newTodo: Todo = {
-      id: crypto.randomUUID(),
-      text,
-      completed: false,
-      isPinned,
-      categoryId,
-      color
-    };
-    const newList = [newTodo, ...todos].sort((a, b) => {
-        if (a.isPinned === b.isPinned) return 0;
-        return a.isPinned ? -1 : 1;
-    });
-    setTodos(newList);
-    storage.saveTodos(newList);
-  };
-
-  const handleEditTodo = (id: string, text: string, categoryId?: string, color?: string) => {
-    const updated = todos.map(t => t.id === id ? { ...t, text, categoryId, color } : t);
-    setTodos(updated);
-    storage.saveTodos(updated);
-  };
-
-  const handleToggleTodo = (id: string) => {
-    let completedTaskName: string | null = null;
-    const updatedTodos = todos.map(t => {
-      if (t.id === id) {
-        const newStatus = !t.completed;
-        if (newStatus) completedTaskName = t.text;
-        return { ...t, completed: newStatus };
-      }
-      return t;
-    });
-    setTodos(updatedTodos);
-    storage.saveTodos(updatedTodos);
-
-    if (completedTaskName) {
-        // @ts-ignore
-        if (window.confetti) window.confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-        setLastCompletedTask(`${completedTaskName}::${Date.now()}`);
+  const handleAddTodo = async (text: string, isPinned: boolean = false, categoryId?: string, color?: string) => {
+    try {
+        await addDoc(collection(db, 'todos'), {
+            text,
+            completed: false,
+            isPinned,
+            categoryId: categoryId || null,
+            color: color || null,
+            userId: auth.currentUser?.uid
+        });
+    } catch (error) {
+        console.error("Error adding todo:", error);
     }
   };
 
-  const handleTogglePin = (id: string) => {
-    const updated = todos.map(t => t.id === id ? { ...t, isPinned: !t.isPinned } : t);
-    updated.sort((a, b) => {
-        if (a.isPinned === b.isPinned) return 0;
-        return a.isPinned ? -1 : 1;
-    });
-    setTodos(updated);
-    storage.saveTodos(updated);
+  const handleEditTodo = async (id: string, text: string, categoryId?: string, color?: string) => {
+    try {
+        await updateDoc(doc(db, 'todos', id), { text, categoryId: categoryId || null, color: color || null });
+    } catch (error) {
+        console.error("Error editing todo:", error);
+    }
   };
 
-  const handleChangeTodoColor = (id: string, color: string) => {
-    const updated = todos.map(t => t.id === id ? { ...t, color: color } : t);
-    setTodos(updated);
-    storage.saveTodos(updated);
+  const handleToggleTodo = async (id: string) => {
+    const todo = todos.find(t => t.id === id);
+    if (!todo) return;
+    try {
+        const newStatus = !todo.completed;
+        await updateDoc(doc(db, 'todos', id), { completed: newStatus });
+        
+        if (newStatus) {
+            // @ts-ignore
+            if (window.confetti) window.confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            setLastCompletedTask(`${todo.text}::${Date.now()}`);
+        }
+    } catch (error) {
+        console.error("Error toggling todo:", error);
+    }
+  };
+
+  const handleTogglePin = async (id: string) => {
+    const todo = todos.find(t => t.id === id);
+    if (!todo) return;
+    try {
+        await updateDoc(doc(db, 'todos', id), { isPinned: !todo.isPinned });
+    } catch (error) {
+        console.error("Error pinning todo:", error);
+    }
+  };
+
+  const handleChangeTodoColor = async (id: string, color: string) => {
+    try {
+        await updateDoc(doc(db, 'todos', id), { color });
+    } catch (error) {
+        console.error("Error tracking color:", error);
+    }
   };
 
   const handleToggleTodoByText = (textFragment: string): boolean => {
@@ -75,10 +75,12 @@ export const useTodos = (
     return false;
   };
 
-  const handleDeleteTodo = (id: string) => {
-    const updatedTodos = todos.filter(t => t.id !== id);
-    setTodos(updatedTodos);
-    storage.saveTodos(updatedTodos);
+  const handleDeleteTodo = async (id: string) => {
+    try {
+        await deleteDoc(doc(db, 'todos', id));
+    } catch (error) {
+        console.error("Error deleting todo:", error);
+    }
   };
 
   return {
