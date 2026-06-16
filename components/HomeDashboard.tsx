@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CalendarEvent, Todo, Theme, Category } from '../types';
 import { translations, LanguageOption } from '../utils/translations';
-import { Calendar as CalendarIcon, CheckSquare, Clock } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckSquare, Clock, Edit2, Trash2 } from 'lucide-react';
 
 interface HomeDashboardProps {
     events: CalendarEvent[];
@@ -13,6 +13,10 @@ interface HomeDashboardProps {
     onTodoToggle: (id: string) => void;
     onAddEventClick: () => void;
     onAddTaskClick: () => void;
+    onEditEventClick: (event: CalendarEvent) => void;
+    onDeleteEventClick: (id: string) => void;
+    onEditTaskClick: (task: Todo) => void;
+    onDeleteTaskClick: (id: string) => void;
 }
 
 export const HomeDashboard: React.FC<HomeDashboardProps> = ({
@@ -24,7 +28,11 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     categories,
     onTodoToggle,
     onAddEventClick,
-    onAddTaskClick
+    onAddTaskClick,
+    onEditEventClick,
+    onDeleteEventClick,
+    onEditTaskClick,
+    onDeleteTaskClick
 }) => {
     const [filter, setFilter] = useState<'today' | 'week'>('today');
     const t = translations[lang];
@@ -131,7 +139,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                         ) : (
                             <div className="space-y-4">
                                 {displayEvents.map(event => (
-                                    <div key={event.id} className="flex gap-4 items-start p-4 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-800 transition-colors" style={{ backgroundColor: `${getCategoryColor(event.categoryId)}10` }}>
+                                    <div key={event.id} className="flex gap-4 items-start p-4 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-800 transition-colors group relative" style={{ backgroundColor: `${getCategoryColor(event.categoryId)}10` }}>
                                         <div className="flex flex-col items-center min-w-[60px] flex-shrink-0 text-center">
                                             <span className="text-xs font-bold uppercase opacity-60">
                                                 {new Date(`${event.date}T12:00:00`).toLocaleDateString(lang === 'ro' ? 'ro-RO' : 'en-US', { weekday: 'short' })}
@@ -140,7 +148,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                                 {new Date(`${event.date}T12:00:00`).getDate()}
                                             </span>
                                         </div>
-                                        <div>
+                                        <div className="flex-1">
                                             <h4 className="font-bold text-lg mb-1">{event.title}</h4>
                                             {event.time && (
                                                 <div className="flex items-center gap-1.5 text-sm opacity-70">
@@ -148,6 +156,20 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                                     {event.time} {event.endTime ? `- ${event.endTime}` : ''}
                                                 </div>
                                             )}
+                                        </div>
+                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
+                                            <button 
+                                                onClick={() => onEditEventClick(event)}
+                                                className="p-1.5 rounded bg-white dark:bg-slate-800 text-slate-500 hover:text-blue-500 shadow hover:shadow-md transition-all"
+                                            >
+                                                <Edit2 size={14} />
+                                            </button>
+                                            <button 
+                                                onClick={() => onDeleteEventClick(event.id)}
+                                                className="p-1.5 rounded bg-white dark:bg-slate-800 text-slate-500 hover:text-red-500 shadow hover:shadow-md transition-all"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
@@ -172,15 +194,29 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                 {displayTodos.map(todo => (
                                     <div 
                                         key={todo.id} 
-                                        onClick={() => onTodoToggle(todo.id)}
-                                        className="flex items-center gap-4 p-4 rounded-xl border border-transparent shadow-sm cursor-pointer hover:shadow-md transition-all"
+                                        className="flex items-center gap-4 p-4 rounded-xl border border-transparent shadow-sm hover:shadow-md transition-all group"
                                         style={{ backgroundColor: `${getCategoryColor(todo.categoryId)}08` }}
                                     >
                                         <div 
-                                            className="w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors"
+                                            onClick={() => onTodoToggle(todo.id)}
+                                            className="w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0"
                                             style={{ borderColor: todo.color || getCategoryColor(todo.categoryId) }}
                                         ></div>
-                                        <span className="font-medium text-[15px]">{todo.text}</span>
+                                        <span onClick={() => onTodoToggle(todo.id)} className="font-medium text-[15px] flex-1 cursor-pointer">{todo.text}</span>
+                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 flex-shrink-0">
+                                            <button 
+                                                onClick={() => onEditTaskClick(todo)}
+                                                className="p-1.5 rounded bg-white dark:bg-slate-800 text-slate-500 hover:text-blue-500 shadow-sm transition-all"
+                                            >
+                                                <Edit2 size={13} />
+                                            </button>
+                                            <button 
+                                                onClick={() => onDeleteTaskClick(todo.id)}
+                                                className="p-1.5 rounded bg-white dark:bg-slate-800 text-slate-500 hover:text-red-500 shadow-sm transition-all"
+                                            >
+                                                <Trash2 size={13} />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

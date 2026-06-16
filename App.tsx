@@ -4,6 +4,7 @@ import { Calendar } from './components/Calendar';
 import { TodoList } from './components/TodoList';
 import { EventModal } from './components/EventModal';
 import { EditEventModal } from './components/EditEventModal';
+import { TaskModal } from './components/TaskModal';
 import { ChatAssistant } from './components/ChatAssistant';
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { Sidebar } from './components/Sidebar';
@@ -90,6 +91,10 @@ const App: React.FC = () => {
   // Edit Event State
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Task Modal State
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Todo | null>(null);
 
   // Settings State (for Import/Export feedback)
   const [importError, setImportError] = useState<string | null>(null);
@@ -525,8 +530,16 @@ const App: React.FC = () => {
                  setIsModalOpen(true);
              }}
              onAddTaskClick={() => {
-                 setCurrentView('tasks');
+                 setEditingTask(null);
+                 setIsTaskModalOpen(true);
              }}
+             onEditEventClick={openEditModal}
+             onDeleteEventClick={handleDeleteEvent}
+             onEditTaskClick={(task) => {
+                 setEditingTask(task);
+                 setIsTaskModalOpen(true);
+             }}
+             onDeleteTaskClick={handleDeleteTodo}
           />
         );
       case 'calendar':
@@ -934,6 +947,23 @@ const App: React.FC = () => {
         event={editingEvent}
         accentColor={accentColor}
         categories={categories}
+      />
+
+      <TaskModal
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        onSave={(text, categoryId, color) => {
+           if (editingTask) {
+               handleEditTodo(editingTask.id, text, categoryId, color);
+           } else {
+               handleAddTodo(text, categoryId, color);
+           }
+        }}
+        theme={theme}
+        accentColor={accentColor}
+        categories={categories}
+        lang={lang}
+        initialTask={editingTask || undefined}
       />
     </div>
   );
