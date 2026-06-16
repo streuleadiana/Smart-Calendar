@@ -14,7 +14,7 @@ import * as storage from './utils/storage';
 import { LanguageOption, translations } from './utils/translations';
 import { requestNotificationPermission, auth, googleProvider, db } from './lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseAuthUser } from 'firebase/auth';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, setDoc, getDoc } from 'firebase/firestore';
 import { useSwipeable } from 'react-swipeable';
 import { useNotifications } from './hooks/useNotifications';
 import { useEvents } from './hooks/useEvents';
@@ -98,15 +98,55 @@ const App: React.FC = () => {
   const [newCategoryColor, setNewCategoryColor] = useState('#10B981');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const savePreferences = async (updates: any) => {
+    if (!auth.currentUser) return;
+    try {
+        await setDoc(doc(db, 'users', auth.currentUser.uid), updates, { merge: true });
+    } catch (error) {
+        console.error("Failed to save preferences:", error);
+    }
+  };
+
   useEffect(() => {
     let unsubscribeEvents: () => void;
     let unsubscribeTodos: () => void;
+    let unsubscribeUser: () => void;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
         if (user) {
             setUserName(user.displayName || 'Utilizator');
             
             // Subscriptions per user
+            const userDocRef = doc(db, 'users', user.uid);
+            unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.themeColor) {
+                        setAccentColor(data.themeColor);
+                        localStorage.setItem('app_accent_color', data.themeColor);
+                    }
+                    if (data.theme) {
+                        setTheme(data.theme as Theme);
+                        storage.saveTheme(data.theme as Theme);
+                    }
+                    if (data.lang) {
+                        setLang(data.lang as LanguageOption);
+                        localStorage.setItem('app_lang', data.lang);
+                    }
+                    if (data.mascot) {
+                        setUserName(data.mascot);
+                    }
+                } else {
+                     // First-time login, set defaults
+                     setDoc(userDocRef, {
+                        themeColor: localStorage.getItem('app_accent_color') || '#4F46E5',
+                        theme: storage.getTheme() || 'modern',
+                        mascot: user.displayName || 'Utilizator',
+                        lang: localStorage.getItem('app_lang') || 'ro'
+                     }, { merge: true });
+                }
+            });
+
             const eventsQuery = query(collection(db, 'events'), where('userId', '==', user.uid));
             unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
                 const loadedEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as CalendarEvent[];
@@ -136,6 +176,7 @@ const App: React.FC = () => {
             setInitializing(false);
             if (unsubscribeEvents) unsubscribeEvents();
             if (unsubscribeTodos) unsubscribeTodos();
+            if (unsubscribeUser) unsubscribeUser();
         }
     });
 
@@ -143,6 +184,7 @@ const App: React.FC = () => {
         unsubscribeAuth();
         if (unsubscribeEvents) unsubscribeEvents();
         if (unsubscribeTodos) unsubscribeTodos();
+        if (unsubscribeUser) unsubscribeUser();
     };
   }, []);
 
@@ -221,6 +263,7 @@ const App: React.FC = () => {
         const { updateProfile } = await import('firebase/auth');
         try {
             await updateProfile(auth.currentUser, { displayName: name });
+            await savePreferences({ mascot: name });
         } catch (error) {
             console.error("Failed to update display name:", error);
         }
@@ -251,16 +294,19 @@ const App: React.FC = () => {
   const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme);
     storage.saveTheme(newTheme);
+    savePreferences({ theme: newTheme });
   };
 
   const handleLangChange = (newLang: LanguageOption) => {
     setLang(newLang);
     localStorage.setItem('app_lang', newLang);
+    savePreferences({ lang: newLang });
   };
 
   const handleAccentChange = (newColor: string) => {
     setAccentColor(newColor);
     localStorage.setItem('app_accent_color', newColor);
+    savePreferences({ themeColor: newColor });
   };
 
   // --- CATEGORY HANDLERS ---
@@ -474,6 +520,13 @@ const App: React.FC = () => {
              lang={lang}
              categories={categories}
              onTodoToggle={handleToggleTodo}
+             onAddEventClick={() => {
+                 setSelectedDate(new Date());
+                 setIsModalOpen(true);
+             }}
+             onAddTaskClick={() => {
+                 setCurrentView('tasks');
+             }}
           />
         );
       case 'calendar':

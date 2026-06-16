@@ -11,6 +11,8 @@ interface HomeDashboardProps {
     lang: LanguageOption;
     categories: Category[];
     onTodoToggle: (id: string) => void;
+    onAddEventClick: () => void;
+    onAddTaskClick: () => void;
 }
 
 export const HomeDashboard: React.FC<HomeDashboardProps> = ({
@@ -20,7 +22,9 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     accentColor,
     lang,
     categories,
-    onTodoToggle
+    onTodoToggle,
+    onAddEventClick,
+    onAddTaskClick
 }) => {
     const [filter, setFilter] = useState<'today' | 'week'>('today');
     const t = translations[lang];
@@ -73,21 +77,41 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                         </p>
                     </div>
 
-                    <div className={`flex p-1 rounded-xl ${isNeon ? 'bg-slate-800' : 'bg-slate-100'} self-start`}>
-                        <button
-                            onClick={() => setFilter('today')}
-                            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${filter === 'today' ? 'shadow-sm' : ''}`}
-                            style={filter === 'today' ? { backgroundColor: isNeon ? '#1e293b' : '#ffffff', color: accentColor } : { color: isNeon ? '#94a3b8' : '#64748b' }}
-                        >
-                            Today
-                        </button>
-                        <button
-                            onClick={() => setFilter('week')}
-                            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${filter === 'week' ? 'shadow-sm' : ''}`}
-                            style={filter === 'week' ? { backgroundColor: isNeon ? '#1e293b' : '#ffffff', color: accentColor } : { color: isNeon ? '#94a3b8' : '#64748b' }}
-                        >
-                            This Week
-                        </button>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 self-start sm:self-auto">
+                        <div className={`flex p-1 rounded-xl ${isNeon ? 'bg-slate-800' : 'bg-slate-100'} self-start sm:self-auto`}>
+                            <button
+                                onClick={() => setFilter('today')}
+                                className={`px-4 sm:px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${filter === 'today' ? 'shadow-sm' : ''}`}
+                                style={filter === 'today' ? { backgroundColor: isNeon ? '#1e293b' : '#ffffff', color: accentColor } : { color: isNeon ? '#94a3b8' : '#64748b' }}
+                            >
+                                Today
+                            </button>
+                            <button
+                                onClick={() => setFilter('week')}
+                                className={`px-4 sm:px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${filter === 'week' ? 'shadow-sm' : ''}`}
+                                style={filter === 'week' ? { backgroundColor: isNeon ? '#1e293b' : '#ffffff', color: accentColor } : { color: isNeon ? '#94a3b8' : '#64748b' }}
+                            >
+                                This Week
+                            </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={onAddEventClick}
+                                className="px-4 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 flex items-center gap-2 whitespace-nowrap"
+                                style={{ backgroundColor: accentColor }}
+                            >
+                                <CalendarIcon size={16} />
+                                {lang === 'ro' ? '+ Eveniment' : '+ Add Event'}
+                            </button>
+                            <button
+                                onClick={onAddTaskClick}
+                                className="px-4 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 flex items-center gap-2 whitespace-nowrap"
+                                style={{ backgroundColor: accentColor }}
+                            >
+                                <CheckSquare size={16} />
+                                {lang === 'ro' ? '+ Task' : '+ Add Task'}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
