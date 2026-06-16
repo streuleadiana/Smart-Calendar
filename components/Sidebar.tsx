@@ -4,8 +4,8 @@ import { Theme } from '../types';
 import { LanguageOption, translations } from '../utils/translations';
 
 interface SidebarProps {
-  activeTab: 'home' | 'calendar' | 'todo' | 'settings';
-  setActiveTab: (tab: 'home' | 'calendar' | 'todo' | 'settings') => void;
+  currentView: 'home' | 'calendar' | 'tasks' | 'settings';
+  setCurrentView: (view: 'home' | 'calendar' | 'tasks' | 'settings') => void;
   isSidebarOpen: boolean;
   setIsSidebarOpen: (isOpen: boolean) => void;
   theme: Theme;
@@ -15,8 +15,8 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  activeTab,
-  setActiveTab,
+  currentView,
+  setCurrentView,
   isSidebarOpen,
   setIsSidebarOpen,
   theme,
@@ -65,18 +65,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {[
                   { id: 'home', icon: Home, label: t.tabs.home },
                   { id: 'calendar', icon: CalendarIcon, label: t.tabs.calendar },
-                  { id: 'todo', icon: CheckSquare, label: t.tabs.tasks },
+                  { id: 'tasks', icon: CheckSquare, label: t.tabs.tasks },
                   { id: 'settings', icon: Settings, label: t.tabs.settings }
               ].map(item => (
                   <button 
                       key={item.id}
-                      onClick={() => setActiveTab(item.id as any)} 
+                      onClick={() => {
+                          setCurrentView(item.id as any);
+                          setIsSidebarOpen(false);
+                      }} 
                       className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 font-medium cursor-pointer w-full ${!isSidebarOpen ? 'justify-center' : ''} ${
-                          activeTab !== item.id 
+                          currentView !== item.id 
                           ? (isNeon ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50')
                           : ''
                       }`}
-                      style={activeTab === item.id ? {
+                      style={currentView === item.id ? {
                           color: accentColor,
                           backgroundColor: `${accentColor}15` // 15 = ~8% opacity hex
                       } : {}}

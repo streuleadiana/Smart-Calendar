@@ -8,6 +8,7 @@ import { ChatAssistant } from './components/ChatAssistant';
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
+import { HomeDashboard } from './components/HomeDashboard';
 import { CalendarEvent, Todo, Theme, Category } from './types';
 import * as storage from './utils/storage';
 import { LanguageOption, translations } from './utils/translations';
@@ -28,7 +29,7 @@ import {
 
 const App: React.FC = () => {
   // --- STATE ---
-  const [activeTab, setActiveTab] = useState<'home' | 'calendar' | 'todo' | 'settings'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'calendar' | 'tasks' | 'settings'>('home');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Data State
@@ -462,41 +463,18 @@ const App: React.FC = () => {
   const renderContent = () => {
     if (initializing) return <LoadingSpinner />;
 
-    switch(activeTab) {
+    switch(currentView) {
       case 'home':
         return (
-          <div className="flex flex-col lg:flex-row gap-6 p-3 lg:p-6 animate-in fade-in duration-300 overflow-hidden min-h-full">
-             {/* Left: Calendar (Flexible) */}
-             <div className="flex-1 min-h-[500px] flex flex-col shadow-sm rounded-2xl overflow-hidden">
-                <Calendar 
-                  events={filteredEvents} 
-                  onDateSelect={handleOpenModal}
-                  onDeleteEvent={handleDeleteEvent}
-                  onEditEvent={openEditModal}
-                  theme={theme}
-                  accentColor={accentColor}
-                  searchQuery={searchQuery}
-                  categories={categories}
-                  lang={lang}
-                />
-             </div>
-             {/* Right: Todos (Fixed Width on Desktop) */}
-             <div className="w-full lg:w-96 flex-shrink-0 flex flex-col min-h-[400px]">
-                <TodoList 
-                    todos={filteredTodos}
-                    onAddTodo={handleAddTodo}
-                    onEditTodo={handleEditTodo}
-                    onToggleTodo={handleToggleTodo}
-                    onDeleteTodo={handleDeleteTodo}
-                    onTogglePin={handleTogglePin}
-                    onChangeColor={handleChangeTodoColor}
-                    theme={theme}
-                    accentColor={accentColor}
-                    searchQuery={searchQuery}
-                    categories={categories}
-                />
-             </div>
-          </div>
+          <HomeDashboard 
+             events={filteredEvents}
+             todos={filteredTodos}
+             theme={theme}
+             accentColor={accentColor}
+             lang={lang}
+             categories={categories}
+             onTodoToggle={handleToggleTodo}
+          />
         );
       case 'calendar':
         return (
@@ -514,7 +492,7 @@ const App: React.FC = () => {
             />
           </div>
         );
-      case 'todo':
+      case 'tasks':
         return (
           <div className="h-full p-3 lg:p-6 overflow-y-auto animate-in fade-in duration-300">
              <div className="max-w-4xl mx-auto h-full flex flex-col">
@@ -830,8 +808,8 @@ const App: React.FC = () => {
 
       {/* SIDEBAR NAVIGATION */}
       <Sidebar 
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          currentView={currentView}
+          setCurrentView={setCurrentView}
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}
           theme={theme}
