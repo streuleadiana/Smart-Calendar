@@ -1,5 +1,5 @@
 import { CalendarEvent, User, Todo, Theme, Category } from '../types';
-import { auth, db } from '../lib/firebase';
+import { auth, db, cleanPayload } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const STORAGE_KEYS = {
@@ -21,21 +21,25 @@ const getUserDocRef = () => {
 
 export const saveCategories = async (categories: Category[]): Promise<void> => {
   localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
+  if (!auth.currentUser) return;
   try {
-    await setDoc(getUserDocRef(), { categories }, { merge: true });
+    const payload = cleanPayload({ categories });
+    await setDoc(getUserDocRef(), payload, { merge: true });
   } catch (error) {
     console.warn('Failed to save categories to Firestore (offline?):', error);
   }
 };
 
 export const getCategories = async (): Promise<Category[]> => {
-  try {
-    const docSnap = await getDoc(getUserDocRef());
-    if (docSnap.exists() && docSnap.data().categories) {
-        return docSnap.data().categories;
-    }
-  } catch (error) {
-    console.warn('Failed to load categories from Firestore (offline?):', error);
+  if (auth.currentUser) {
+      try {
+        const docSnap = await getDoc(getUserDocRef());
+        if (docSnap.exists() && docSnap.data().categories) {
+            return docSnap.data().categories;
+        }
+      } catch (error) {
+        console.warn('Failed to load categories from Firestore (offline?):', error);
+      }
   }
   const local = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
   return local ? JSON.parse(local) : [];

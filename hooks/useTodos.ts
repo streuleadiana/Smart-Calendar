@@ -1,5 +1,5 @@
 import { Todo } from '../types';
-import { db, auth } from '../lib/firebase';
+import { db, auth, cleanPayload } from '../lib/firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
 export const useTodos = (
@@ -8,29 +8,38 @@ export const useTodos = (
   setLastCompletedTask: React.Dispatch<React.SetStateAction<string | null>>
 ) => {
   const handleAddTodo = async (text: string, isPinned: boolean = false, categoryId?: string, color?: string) => {
+    if (!auth.currentUser) {
+        console.error("User not authenticated");
+        return;
+    }
+    
     try {
-        await addDoc(collection(db, 'todos'), {
+        const payload = cleanPayload({
             text,
             completed: false,
             isPinned,
             categoryId: categoryId || null,
             color: color || null,
-            userId: auth.currentUser?.uid
+            userId: auth.currentUser.uid
         });
+        await addDoc(collection(db, 'todos'), payload);
     } catch (error) {
         console.error("Error adding todo:", error);
     }
   };
 
   const handleEditTodo = async (id: string, text: string, categoryId?: string, color?: string) => {
+    if (!auth.currentUser) return;
     try {
-        await updateDoc(doc(db, 'todos', id), { text, categoryId: categoryId || null, color: color || null });
+        const payload = cleanPayload({ text, categoryId: categoryId || null, color: color || null });
+        await updateDoc(doc(db, 'todos', id), payload);
     } catch (error) {
         console.error("Error editing todo:", error);
     }
   };
 
   const handleToggleTodo = async (id: string) => {
+    if (!auth.currentUser) return;
     const todo = todos.find(t => t.id === id);
     if (!todo) return;
     try {
@@ -48,6 +57,7 @@ export const useTodos = (
   };
 
   const handleTogglePin = async (id: string) => {
+    if (!auth.currentUser) return;
     const todo = todos.find(t => t.id === id);
     if (!todo) return;
     try {
@@ -58,6 +68,7 @@ export const useTodos = (
   };
 
   const handleChangeTodoColor = async (id: string, color: string) => {
+    if (!auth.currentUser) return;
     try {
         await updateDoc(doc(db, 'todos', id), { color });
     } catch (error) {

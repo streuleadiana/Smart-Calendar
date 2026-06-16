@@ -1,5 +1,5 @@
 import { CalendarEvent } from '../types';
-import { db, auth } from '../lib/firebase';
+import { db, auth, cleanPayload } from '../lib/firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
 export const useEvents = (
@@ -18,20 +18,28 @@ export const useEvents = (
       }
     }
 
+    if (!auth.currentUser) {
+        console.error("User not authenticated");
+        return;
+    }
+
     try {
-        await addDoc(collection(db, 'events'), {
+        const payload = cleanPayload({
             ...eventData,
-            userId: auth.currentUser?.uid
+            userId: auth.currentUser.uid
         });
+        await addDoc(collection(db, 'events'), payload);
     } catch (error) {
         console.error("Error adding event:", error);
     }
   };
 
   const handleUpdateEvent = async (id: string, eventData: Partial<CalendarEvent>) => {
+    if (!auth.currentUser) return;
     try {
         const eventRef = doc(db, 'events', id);
-        await updateDoc(eventRef, eventData);
+        const payload = cleanPayload(eventData);
+        await updateDoc(eventRef, payload);
         if (eventData.title) {
             triggerAiMessage(`Eveniment actualizat: ${eventData.title} ✏️`);
         }

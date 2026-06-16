@@ -30,6 +30,24 @@ export const messaging = async () => {
     return null;
 };
 
+export const cleanPayload = (obj: any): any => {
+    if (obj === undefined) return null;
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) {
+        return obj.map(cleanPayload);
+    }
+    const cleanObj: any = {};
+    for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            const value = obj[key];
+            if (value !== undefined) {
+                cleanObj[key] = cleanPayload(value);
+            }
+        }
+    }
+    return cleanObj;
+};
+
 export const requestNotificationPermission = async () => {
     if (!('Notification' in window)) return null;
     
