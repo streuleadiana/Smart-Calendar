@@ -1,5 +1,5 @@
 import { CalendarEvent, User, Todo, Theme, Category } from '../types';
-import { db } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const STORAGE_KEYS = {
@@ -10,13 +10,13 @@ const STORAGE_KEYS = {
   CATEGORIES: 'smart_calendar_categories'
 };
 
-// Internal helper to get current logged in user directly from storage
-const getCurrentUserName = () => {
-    return localStorage.getItem('app_username') || 'anonymous_user';
+// Internal helper to get current logged in user
+const getCurrentUserId = () => {
+    return auth.currentUser?.uid || 'anonymous_user';
 };
 
 const getUserDocRef = () => {
-    return doc(db, 'users', getCurrentUserName());
+    return doc(db, 'users', getCurrentUserId());
 };
 
 export const saveCategories = async (categories: Category[]): Promise<void> => {

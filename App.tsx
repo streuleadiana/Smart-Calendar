@@ -11,7 +11,8 @@ import { Header } from './components/Header';
 import { CalendarEvent, Todo, Theme, Category } from './types';
 import * as storage from './utils/storage';
 import { LanguageOption, translations } from './utils/translations';
-import { requestNotificationPermission } from './lib/firebase';
+import { requestNotificationPermission, auth, googleProvider } from './lib/firebase';
+import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseAuthUser } from 'firebase/auth';
 import { useNotifications } from './hooks/useNotifications';
 import { useEvents } from './hooks/useEvents';
 import { useTodos } from './hooks/useTodos';
@@ -94,14 +95,21 @@ const App: React.FC = () => {
   const [newCategoryColor, setNewCategoryColor] = useState('#10B981');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => {
-    const initData = async () => {
-        // 1. Check for logged in user name
-        const storedName = localStorage.getItem('app_username');
-        if (storedName) {
-            setUserName(storedName);
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            setUserName(user.displayName || 'Utilizator');
+            await loadUserData();
+        } else {
+            setUserName(null);
+            setInitializing(false);
         }
-        
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const loadUserData = async () => {
         const storedLang = localStorage.getItem('app_lang') as LanguageOption | null;
         if (storedLang && translations[storedLang]) {
             setLang(storedLang);
@@ -178,10 +186,7 @@ const App: React.FC = () => {
         requestNotificationPermission();
 
         setInitializing(false);
-    };
-
-    initData();
-  }, []);
+  };
 
   useEffect(() => {
     const isDark = theme === 'neon';
@@ -197,18 +202,26 @@ const App: React.FC = () => {
     storage.saveTheme(theme);
   }, [theme]);
 
-  const handleStartApp = (e: React.FormEvent) => {
+  const handleStartApp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nameInput.trim()) return;
-
-    const name = nameInput.trim();
-    localStorage.setItem('app_username', name);
-    setUserName(name);
+    try {
+        await signInWithPopup(auth, googleProvider);
+    } catch (error) {
+        console.error("Login failed:", error);
+        alert("Autentificarea a eșuat. Încercați din nou.");
+    }
   };
 
-  const handleUpdateUserName = (name: string) => {
+  const handleUpdateUserName = async (name: string) => {
     setUserName(name);
-    localStorage.setItem('app_username', name);
+    if (auth.currentUser) {
+        const { updateProfile } = await import('firebase/auth');
+        try {
+            await updateProfile(auth.currentUser, { displayName: name });
+        } catch (error) {
+            console.error("Failed to update display name:", error);
+        }
+    }
   };
   
   const saveNameEdit = () => {
@@ -218,11 +231,18 @@ const App: React.FC = () => {
     setIsEditingName(false);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('app_username');
-    setUserName(null);
-    setNameInput('');
-    sessionStorage.removeItem('olli_greeted');
+  const handleLogout = async () => {
+    try {
+        await signOut(auth);
+        localStorage.removeItem('app_username');
+        setUserName(null);
+        setNameInput('');
+        sessionStorage.removeItem('olli_greeted');
+        setEvents([]);
+        setTodos([]);
+    } catch (error) {
+        console.error("Logout failed:", error);
+    }
   };
 
   const handleThemeChange = (newTheme: Theme) => {
@@ -409,24 +429,17 @@ const App: React.FC = () => {
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">Bine ai venit! 👋</h1>
                 <p className="text-slate-500 mb-8">Smart Calendar te ajută să te organizezi eficient.</p>
                 <form onSubmit={handleStartApp} className="space-y-4">
-                    <div className="text-left">
-                        <label className="block text-sm font-semibold text-slate-700 mb-2 ml-1">Cum te numești?</label>
-                        <input 
-                            type="text" 
-                            value={nameInput}
-                            onChange={(e) => setNameInput(e.target.value)}
-                            placeholder="ex: Alex"
-                            className="w-full px-5 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-lg"
-                            autoFocus
-                        />
-                    </div>
                     <button 
                         type="submit" 
-                        disabled={!nameInput.trim()}
-                        className={`w-full py-3.5 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg bg-indigo-600 hover:bg-indigo-700`}
+                        className={`w-full py-3.5 text-slate-700 font-bold rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-sm transition-all active:scale-95 flex items-center justify-center gap-3 text-lg`}
                     >
-                        <span>Începe</span>
-                        <ArrowRight size={20} />
+                        <svg className="w-5 h-5" viewBox="0 0 24 24">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                        <span>Sign in with Google</span>
                     </button>
                 </form>
              </div>
