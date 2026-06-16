@@ -8,6 +8,7 @@ import { TaskModal } from './components/TaskModal';
 import { FeedbackModal } from './components/FeedbackModal';
 import { ChatAssistant } from './components/ChatAssistant';
 import { ThemeSwitcher } from './components/ThemeSwitcher';
+import { SettingsView } from './components/SettingsView';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { HomeDashboard } from './components/HomeDashboard';
@@ -16,8 +17,8 @@ import { CalendarEvent, Todo, Theme, Category } from './types';
 import * as storage from './utils/storage';
 import { LanguageOption, translations } from './utils/translations';
 import { requestNotificationPermission, auth, googleProvider, db } from './lib/firebase';
-import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseAuthUser } from 'firebase/auth';
-import { collection, query, where, onSnapshot, doc, setDoc, getDoc } from 'firebase/firestore';
+import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { collection, query, where, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { useSwipeable } from 'react-swipeable';
 import { useNotifications } from './hooks/useNotifications';
 import { useEvents } from './hooks/useEvents';
@@ -37,9 +38,21 @@ const App: React.FC = () => {
   
   // Data State
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const { testNotification } = useNotifications(events);
   const [userName, setUserName] = useState<string | null>(null);
-  const [nameInput, setNameInput] = useState('');
+  
+  // Mascot Identity
+  const [assistantName, setAssistantName] = useState(() => localStorage.getItem('assistant_name') || "Olli");
+  const [assistantAvatar, setAssistantAvatar] = useState(() => localStorage.getItem('assistant_avatar') || "🦉");
+
+  const handleUpdateAssistantName = (name: string) => {
+    setAssistantName(name);
+    localStorage.setItem('assistant_name', name);
+  };
+
+  const handleUpdateAssistantAvatar = (avatar: string) => {
+    setAssistantAvatar(avatar);
+    localStorage.setItem('assistant_avatar', avatar);
+  };
   
   // Name Editing in Header
   const [isEditingName, setIsEditingName] = useState(false);
@@ -58,6 +71,7 @@ const App: React.FC = () => {
   
   // Data
   const [todos, setTodos] = useState<Todo[]>([]);
+  const { testNotification } = useNotifications(events, todos);
   const [categories, setCategories] = useState<Category[]>([]);
   const [initializing, setInitializing] = useState(true);
 
@@ -340,6 +354,14 @@ const App: React.FC = () => {
     storage.saveCategories(updated);
   };
 
+  const handleUpdateCategory = (id: string, name: string, color: string) => {
+    const updated = categories.map(c => 
+      c.id === id ? { ...c, name: name.trim(), color } : c
+    );
+    setCategories(updated);
+    storage.saveCategories(updated);
+  };
+
   // --- SEARCH FILTERING ---
   const filteredEvents = events.filter(e => {
     const q = searchQuery.toLowerCase();
@@ -569,17 +591,23 @@ const App: React.FC = () => {
         );
       case 'tasks':
         return (
-          <div className="h-full p-3 lg:p-6 overflow-y-auto animate-in fade-in duration-300">
-             <div className="max-w-4xl mx-auto h-full flex flex-col">
-                <div className="mb-6">
+          <div className="h-full flex flex-col p-3 lg:p-6 animate-in fade-in duration-300">
+             <div className="max-w-4xl w-full mx-auto flex-1 min-h-0 flex flex-col">
+                <div className="mb-6 flex-shrink-0">
                     <h2 className={`text-3xl font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>Task-uri</h2>
                     <p className={`${theme === 'neon' ? 'text-slate-400' : 'text-slate-500'}`}>Gestionează lista ta de priorități</p>
                 </div>
                 <div className="flex-1 min-h-0">
                     <TodoList 
                         todos={filteredTodos}
-                        onAddTodo={handleAddTodo}
-                        onEditTodo={handleEditTodo}
+                        onAddTaskClick={() => {
+                            setEditingTask(null);
+                            setIsTaskModalOpen(true);
+                        }}
+                        onEditTaskClick={(task) => {
+                            setEditingTask(task);
+                            setIsTaskModalOpen(true);
+                        }}
                         onToggleTodo={handleToggleTodo}
                         onDeleteTodo={handleDeleteTodo}
                         onTogglePin={handleTogglePin}
@@ -595,310 +623,39 @@ const App: React.FC = () => {
         );
       case 'settings':
         return (
-          <div className="h-full p-3 lg:p-6 overflow-y-auto animate-in fade-in duration-300">
-             <div className="max-w-3xl mx-auto space-y-6">
-                 <div className="mb-6">
-                    <h2 className={`text-3xl font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{t.settings.title}</h2>
-                    <p className={`${theme === 'neon' ? 'text-slate-400' : 'text-slate-500'}`}>{t.settings.subtitle}</p>
-                </div>
-
-                {/* Profile Card */}
-                <div className={`p-6 rounded-2xl border ${theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className={`p-3 rounded-full bg-slate-100 text-slate-600`}>
-                            <UserIcon size={24} />
-                        </div>
-                        <div>
-                            <h3 className={`font-bold text-lg ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{t.settings.profile}</h3>
-                            <p className="text-sm text-slate-500">{t.settings.profileDesc}</p>
-                        </div>
-                    </div>
-                    <div className="space-y-3">
-                        <label className={`text-sm font-medium ${theme === 'neon' ? 'text-slate-400' : 'text-slate-700'}`}>{t.settings.yourName}</label>
-                        <input 
-                             type="text"
-                             value={userName || ''}
-                             onChange={(e) => handleUpdateUserName(e.target.value)}
-                             className={`w-full p-3 rounded-xl border transition-all ${
-                                 theme === 'neon' 
-                                 ? 'bg-slate-800 border-slate-700 text-white focus:ring-cyan-500 focus:border-cyan-500' 
-                                 : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-indigo-500 focus:border-indigo-500'
-                             }`}
-                        />
-                    </div>
-                </div>
-
-                {/* Categories Card */}
-                <div className={`p-6 rounded-2xl border ${theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className={`p-3 rounded-full bg-slate-100 text-slate-600`}>
-                            <Settings size={24} />
-                        </div>
-                        <div>
-                            <h3 className={`font-bold text-lg ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{t.settings.categoriesTitle}</h3>
-                            <p className="text-sm text-slate-500">{t.settings.categoriesDesc}</p>
-                        </div>
-                    </div>
-                    
-                    <div className="flex flex-col gap-4">
-                        <div className="flex items-center gap-3">
-                             <input 
-                                 type="text"
-                                 placeholder={t.settings.categoryPlaceholder}
-                                 value={newCategoryName}
-                                 onChange={(e) => setNewCategoryName(e.target.value)}
-                                 className={`flex-1 p-2.5 rounded-lg border text-sm transition-all ${
-                                     theme === 'neon' 
-                                     ? 'bg-slate-800 border-slate-700 text-white focus:ring-cyan-500 focus:border-cyan-500' 
-                                     : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-indigo-500 focus:border-indigo-500'
-                                 }`}
-                             />
-                             <div 
-                                className="relative flex items-center justify-center w-10 h-10 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm flex-shrink-0"
-                                style={{ borderColor: theme === 'neon' ? '#334155' : '#e2e8f0' }}
-                             >
-                                 <input
-                                     type="color"
-                                     value={newCategoryColor}
-                                     onChange={(e) => setNewCategoryColor(e.target.value)}
-                                     className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] p-0 m-0 cursor-pointer border-none"
-                                 />
-                             </div>
-                             <button
-                                type="button"
-                                onClick={handleAddCategory}
-                                disabled={!newCategoryName.trim()}
-                                className="px-4 py-2.5 rounded-lg text-white font-medium shadow-sm transition-all hover:opacity-90 disabled:opacity-50 flex-shrink-0"
-                                style={{ backgroundColor: accentColor }}
-                             >
-                                {t.settings.addBtn}
-                             </button>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2 mt-2">
-                             {categories.map(cat => (
-                                 <div 
-                                    key={cat.id}
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm"
-                                    style={{ backgroundColor: `${cat.color}15`, borderColor: cat.color }}
-                                 >
-                                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
-                                     <span className="text-sm font-medium" style={{ color: theme === 'neon' ? 'white' : 'inherit' }}>{cat.name}</span>
-                                     <button 
-                                        onClick={() => handleDeleteCategory(cat.id)}
-                                        className="ml-1 text-slate-400 hover:text-red-500 transition-colors"
-                                        disabled={categories.length <= 1}
-                                        title={categories.length <= 1 ? t.settings.cannotDeleteLast : t.settings.deleteCategory}
-                                     >
-                                         <X size={14} />
-                                     </button>
-                                 </div>
-                             ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Language Card */}
-                <div className={`p-6 rounded-2xl border ${theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className={`p-3 rounded-full bg-slate-100 text-slate-600`}>
-                            <Globe size={24} />
-                        </div>
-                        <div>
-                            <h3 className={`font-bold text-lg ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{t.settings.languageTitle}</h3>
-                            <p className="text-sm text-slate-500">{t.settings.languageDesc}</p>
-                        </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                        <span className={`font-medium ${theme === 'neon' ? 'text-slate-300' : 'text-slate-700'}`}>
-                            {t.settings.languageTitle.split(' /')[0]}
-                        </span>
-                        <div className="relative w-32">
-                            <select
-                                value={lang}
-                                onChange={(e) => handleLangChange(e.target.value as LanguageOption)}
-                                className={`w-full appearance-none bg-transparent border rounded-xl p-3 pr-10 focus:outline-none focus:ring-2 focus:ring-opacity-50 text-sm font-medium cursor-pointer transition-all ${
-                                    theme === 'neon' 
-                                    ? 'text-white border-slate-700 focus:ring-cyan-500 bg-slate-800' 
-                                    : 'text-slate-700 border-slate-200 focus:ring-indigo-500 bg-slate-50'
-                                }`}
-                                title="Language"
-                            >
-                                <option value="ro" className="text-slate-900">Română</option>
-                                <option value="en" className="text-slate-900">English</option>
-                                <option value="es" className="text-slate-900">Español</option>
-                                <option value="fr" className="text-slate-900">Français</option>
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                                <Globe size={16} />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Appearance Card */}
-                <div className={`p-6 rounded-2xl border ${theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className={`p-3 rounded-full bg-slate-100 text-slate-600`}>
-                            <Sparkles size={24} />
-                        </div>
-                        <div>
-                            <h3 className={`font-bold text-lg ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{t.settings.appearance}</h3>
-                            <p className="text-sm text-slate-500">{t.settings.appearanceDesc}</p>
-                        </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between mb-6">
-                        <span className={`font-medium ${theme === 'neon' ? 'text-slate-300' : 'text-slate-700'}`}>{t.settings.theme}</span>
-                        <ThemeSwitcher currentTheme={theme} onThemeChange={handleThemeChange} />
-                    </div>
-
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                        <span className={`font-medium ${theme === 'neon' ? 'text-slate-300' : 'text-slate-700'}`}>
-                            {t.settings.accentColor}
-                        </span>
-                        <div className="flex items-center gap-3">
-                            <span className="text-xs text-slate-400">
-                                {accentColor}
-                            </span>
-                            <div 
-                                className="relative flex items-center justify-center w-10 h-10 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm transition-transform hover:scale-105"
-                                style={{ borderColor: theme === 'neon' ? '#334155' : '#e2e8f0' }}
-                            >
-                                <input
-                                    type="color"
-                                    value={accentColor}
-                                    onChange={(e) => handleAccentChange(e.target.value)}
-                                    className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] p-0 m-0 cursor-pointer border-none"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Data Card */}
-                <div className={`p-6 rounded-2xl border ${theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className={`p-3 rounded-full bg-slate-100 text-slate-600`}>
-                            <Download size={24} />
-                        </div>
-                        <div>
-                            <h3 className={`font-bold text-lg ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{t.settings.dataTitle}</h3>
-                            <p className="text-sm text-slate-500">{t.settings.dataDesc}</p>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                         <div className={`p-4 rounded-xl text-center border ${theme === 'neon' ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-                             <p className={`text-2xl font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{events.length}</p>
-                             <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">{t.settings.events}</p>
-                         </div>
-                         <div className={`p-4 rounded-xl text-center border ${theme === 'neon' ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-                             <p className={`text-2xl font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{todos.length}</p>
-                             <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">{t.settings.tasks}</p>
-                         </div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <div className="flex gap-3">
-                            <button 
-                                onClick={handleExport}
-                                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all ${
-                                    theme === 'neon' 
-                                    ? 'bg-slate-800 hover:bg-slate-700 text-cyan-400' 
-                                    : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
-                                }`}
-                            >
-                                <Download size={18} /> {t.settings.backupBtn}
-                            </button>
-                            <button 
-                                onClick={() => fileInputRef.current?.click()}
-                                style={{ backgroundColor: accentColor }}
-                                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all text-white shadow-lg hover:opacity-90`}
-                            >
-                                <Upload size={18} /> {t.settings.restoreBtn}
-                            </button>
-                            <input 
-                                type="file" 
-                                ref={fileInputRef} 
-                                accept=".json,application/json,text/plain,*/*" 
-                                className="hidden" 
-                                onChange={handleFileChange}
-                            />
-                        </div>
-                        {importError && (
-                            <div className="text-xs text-red-500 flex items-center gap-1 justify-center">
-                                <AlertCircle size={12} /> {importError}
-                            </div>
-                        )}
-                        
-                        <button 
-                            onClick={handleShare}
-                            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-white transition-all shadow-md mt-4 ${
-                                copied 
-                                ? 'bg-green-500 hover:bg-green-600' 
-                                : theme === 'neon' ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-800 hover:bg-slate-900'
-                            }`}
-                        >
-                            {copied ? <Check size={20} /> : <Share2 size={20} />}
-                            {copied ? t.settings.copied : t.settings.shareBtn}
-                        </button>
-                    </div>
-
-                    {/* Notifications Test */}
-                    <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 space-y-4">
-                        <h4 className={`font-medium mb-3 ${theme === 'neon' ? 'text-slate-300' : 'text-slate-700'}`}>System</h4>
-                        <button
-                          onClick={testNotification}
-                          className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-colors ${
-                              theme === 'neon'
-                              ? 'bg-slate-800 hover:bg-slate-700 text-cyan-400'
-                              : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600'
-                          }`}
-                        >
-                          Test Push Notification
-                        </button>
-                        
-                        <a 
-                          href="https://buymeacoffee.com/dianastreulea" target="_blank" rel="noreferrer"
-                          className={`flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl font-semibold border transition-all shadow-sm ${
-                              theme === 'neon' 
-                              ? 'bg-slate-800 border-slate-700 text-yellow-400 hover:bg-slate-700' 
-                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
-                          <span className="text-lg">☕</span> 
-                          Buy me a coffee
-                        </a>
-
-                        <button 
-                          onClick={() => setIsFeedbackModalOpen(true)}
-                          className={`flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl font-semibold border transition-all shadow-sm ${
-                              theme === 'neon' 
-                              ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white' 
-                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900'
-                          }`}
-                        >
-                          <span className="text-lg">💬</span>
-                          Feedback
-                        </button>
-
-                        <button
-                          onClick={handleLogout}
-                          className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium border transition-all shadow-sm ${
-                              theme === 'neon'
-                              ? 'bg-slate-800 border-slate-700 hover:bg-red-900/30 text-red-400'
-                              : 'bg-white border-slate-200 hover:bg-red-50 text-red-500'
-                          }`}
-                        >
-                          <LogOut size={18} />
-                          {t.settings?.logout || "Logout"}
-                        </button>
-                    </div>
-                </div>
-             </div>
-          </div>
+          <SettingsView
+             theme={theme}
+             accentColor={accentColor}
+             lang={lang}
+             userName={userName}
+             handleUpdateUserName={handleUpdateUserName}
+             assistantName={assistantName}
+             handleUpdateAssistantName={handleUpdateAssistantName}
+             assistantAvatar={assistantAvatar}
+             handleUpdateAssistantAvatar={handleUpdateAssistantAvatar}
+             categories={categories}
+             newCategoryName={newCategoryName}
+             setNewCategoryName={setNewCategoryName}
+             newCategoryColor={newCategoryColor}
+             setNewCategoryColor={setNewCategoryColor}
+             handleAddCategory={handleAddCategory}
+             handleUpdateCategory={handleUpdateCategory}
+             handleDeleteCategory={handleDeleteCategory}
+             handleLangChange={handleLangChange}
+             handleLogout={handleLogout}
+             eventsCount={events.length}
+             todosCount={todos.length}
+             handleExport={handleExport}
+             handleFileChange={handleFileChange}
+             fileInputRef={fileInputRef}
+             importError={importError}
+             handleShare={handleShare}
+             copied={copied}
+             testNotification={testNotification}
+             setIsFeedbackModalOpen={setIsFeedbackModalOpen}
+             handleAccentChange={handleAccentChange}
+             handleThemeChange={handleThemeChange}
+          />
         );
       default: return null;
     }
@@ -927,6 +684,7 @@ const App: React.FC = () => {
               theme={theme}
               accentColor={accentColor}
               lang={lang}
+              handleLogout={handleLogout}
           />
       </div>
 
@@ -951,8 +709,8 @@ const App: React.FC = () => {
               lang={lang}
           />
 
-          {/* MAIN SCROLLABLE CONTENT */}
-          <main className="flex-1 overflow-y-auto">
+          {/* MAIN CONFIGURABLE CONTENT */}
+          <main className="flex-1 flex flex-col min-h-0 relative">
              {renderContent()}
           </main>
 
@@ -970,6 +728,10 @@ const App: React.FC = () => {
       {/* GLOBAL FLOATING CHAT WIDGET */}
       <ChatAssistant 
         userName={userName || 'Prieten'}
+        assistantName={assistantName}
+        setAssistantName={handleUpdateAssistantName}
+        assistantAvatar={assistantAvatar}
+        setAssistantAvatar={handleUpdateAssistantAvatar}
         events={events}
         todos={todos}
         categories={categories}
@@ -1007,11 +769,11 @@ const App: React.FC = () => {
       <TaskModal
         isOpen={isTaskModalOpen}
         onClose={() => setIsTaskModalOpen(false)}
-        onSave={(text, categoryId, color) => {
+        onSave={(text, categoryId, color, deadlineDate, notificationOffset, recurrence) => {
            if (editingTask) {
-               handleEditTodo(editingTask.id, text, categoryId, color);
+               handleEditTodo(editingTask.id, text, categoryId, color, deadlineDate, notificationOffset, recurrence);
            } else {
-               handleAddTodo(text, categoryId, color);
+               handleAddTodo(text, false, categoryId, color, deadlineDate, notificationOffset, recurrence);
            }
         }}
         theme={theme}

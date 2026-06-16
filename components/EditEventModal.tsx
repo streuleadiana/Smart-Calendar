@@ -16,21 +16,27 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [time, setTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [details, setDetails] = useState('');
+  const [recurrence, setRecurrence] = useState<'none' | 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'yearly'>('none');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>(accentColor);
   const [useCustomColor, setUseCustomColor] = useState(false);
+  const [notificationOffset, setNotificationOffset] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && event) {
       setTitle(event.title || '');
       setDate(event.date || '');
+      setEndDate(event.endDate || '');
       setTime(event.time || '');
       setEndTime(event.endTime || '');
       setDetails(event.description || '');
+      setRecurrence(event.recurrence || 'none');
+      setNotificationOffset(event.notificationOffset || 0);
       
       if (event.categoryId) {
           setSelectedCategoryId(event.categoryId);
@@ -67,10 +73,13 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
         title,
         description: details || undefined,
         date,
+        endDate: endDate || undefined,
         time: time || undefined,
         endTime: endTime || undefined,
+        recurrence: recurrence !== 'none' ? recurrence : undefined,
         categoryId: selectedCategoryId || undefined,
         color: useCustomColor ? selectedColor : undefined,
+        notificationOffset
       });
       onClose();
     } catch (err) {
@@ -80,8 +89,8 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden scale-100 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar border dark:border-slate-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden scale-100 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar border dark:border-slate-800" onClick={(e) => e.stopPropagation()}>
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Edit Event</h2>
           <button 
@@ -93,6 +102,22 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1">
+              <Type size={14} /> Category
+            </label>
+            <select
+                value={selectedCategoryId || ''}
+                onChange={(e) => setSelectedCategoryId(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
+              >
+                 <option value="">Alege o categorie...</option>
+                 {categories.map(cat => (
+                     <option key={cat.id} value={cat.id}>{cat.name}</option>
+                 ))}
+              </select>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">Event Title</label>
             <input
@@ -106,17 +131,30 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-1 flex items-center gap-1">
-              <CalendarIcon size={14} /> Date
-            </label>
-            <input
-              type="date"
-              required
-              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 appearance-none outline-none transition-all cursor-pointer"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
+          <div className="grid grid-cols-2 gap-4 items-start">
+            <div>
+              <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-1 flex items-center gap-1">
+                <CalendarIcon size={14} /> Start Date
+              </label>
+              <input
+                type="date"
+                required
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 appearance-none outline-none transition-all cursor-pointer"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-1 flex items-center gap-1">
+                End Date (Optional)
+              </label>
+              <input
+                type="date"
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 appearance-none outline-none transition-all cursor-pointer"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 items-start">
@@ -165,66 +203,41 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
              />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1">
-              <Type size={14} /> Category
-            </label>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => {
-                      setSelectedCategoryId(cat.id);
-                      setUseCustomColor(false);
-                  }}
-                  className={`px-2 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
-                    selectedCategoryId === cat.id && !useCustomColor
-                      ? 'text-white'
-                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
-                  }`}
-                  style={selectedCategoryId === cat.id && !useCustomColor ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
+          {time && (
+              <div>
+                <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">
+                  Anunță-mă cu...
+                </label>
+                <select
+                  value={notificationOffset}
+                  onChange={e => setNotificationOffset(Number(e.target.value))}
+                  className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer"
                 >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-          </div>
+                  <option value={0}>Nu mă anunța</option>
+                  <option value={5}>5 minute</option>
+                  <option value={10}>10 minute</option>
+                  <option value={30}>30 minute</option>
+                  <option value={60}>1 oră</option>
+                  <option value={720}>12 ore</option>
+                  <option value={1440}>24 ore</option>
+                </select>
+              </div>
+          )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1">
-              <Palette size={14} /> Culoare Personalizată
-            </label>
-            <div className="flex items-center gap-3">
-               <div 
-                   className="relative flex items-center justify-center w-10 h-10 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm transition-transform hover:scale-105"
-                   style={{ borderColor: useCustomColor ? selectedColor : '#e2e8f0' }}
-               >
-                   <input
-                       type="color"
-                       value={selectedColor}
-                       onChange={(e) => {
-                           setSelectedColor(e.target.value);
-                           setUseCustomColor(true);
-                           setSelectedCategoryId(null);
-                       }}
-                       className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] p-0 m-0 cursor-pointer border-none"
-                   />
-               </div>
-               <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Alege o culoare...</span>
-               {useCustomColor && (
-                 <button 
-                     type="button" 
-                     onClick={() => {
-                         setUseCustomColor(false);
-                         setSelectedColor(accentColor);
-                     }}
-                     className="text-xs text-slate-400 dark:text-slate-500 underline ml-auto"
-                 >
-                     Reset
-                 </button>
-               )}
-            </div>
+            <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">Repetare</label>
+            <select
+              className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              value={recurrence}
+              onChange={(e) => setRecurrence(e.target.value as any)}
+            >
+              <option value="none">Nu se repetă</option>
+              <option value="daily">Zilnic</option>
+              <option value="weekly">Săptămânal</option>
+              <option value="bi-weekly">Bi-săptămânal</option>
+              <option value="monthly">Lunar</option>
+              <option value="yearly">Anual</option>
+            </select>
           </div>
 
           <div className="pt-4 flex gap-3">

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { CalendarEvent, Todo, Theme, Category } from '../types';
 import { translations, LanguageOption } from '../utils/translations';
-import { Calendar as CalendarIcon, CheckSquare, Clock, Edit2, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckSquare, Clock, Edit2, Trash2, Repeat } from 'lucide-react';
+import { checkRecurrence, expandEventsForDateRange } from '../utils/recurrence';
 
 interface HomeDashboardProps {
     events: CalendarEvent[];
@@ -42,25 +43,68 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     // Get end of week
     const todayObj = new Date();
     const dayOfWeek = todayObj.getDay();
-    const isToday = (dateStr: string) => dateStr === todayStr;
-    const isThisWeek = (dateStr: string) => {
-        const dateObj = new Date(dateStr);
-        const diffTime = dateObj.getTime() - todayObj.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays >= -dayOfWeek && diffDays <= (7 - dayOfWeek);
+    const processEventListTextMatches = (catId?: string) => {
+        return catId ? categories.find(c => c.id === catId)?.name || 'Unknown' : '';
     };
 
-    const displayEvents = events.filter(e => {
-        if (!e.date) return false;
-        return filter === 'today' ? isToday(e.date) : isThisWeek(e.date);
-    }).sort((a, b) => {
-        const dateA = new Date(`${a.date}T${a.time || '00:00'}`);
-        const dateB = new Date(`${b.date}T${b.time || '00:00'}`);
-        return dateA.getTime() - dateB.getTime();
-    });
+    const isEventToday = (e: CalendarEvent) => {
+        return checkRecurrence(todayStr, e);
+    };
+    const isEventThisWeek = (e: CalendarEvent) => {
+        // Build an array of date strings for the next 7 days (or current week)
+        for (let i = 0; i <= 6; i++) {
+            const checkDate = new Date(todayObj);
+            checkDate.setDate(todayObj.getDate() - dayOfWeek + i);
+            const y = checkDate.getFullYear();
+            const m = String(checkDate.getMonth() + 1).padStart(2, '0');
+            const d = String(checkDate.getDate()).padStart(2, '0');
+            if (checkRecurrence(`${y}-${m}-${d}`, e)) return true;
+        }
+        return false;
+    };
 
-    // We'll show incomplete tasks, and maybe those that apply
-    const displayTodos = todos.filter(t => !t.completed);
+    const displayEvents = (() => {
+        let targetStart = new Date();
+        targetStart.setHours(0, 0, 0, 0);
+        let targetEnd = new Date(targetStart);
+        
+        if (filter === 'today') {
+            targetEnd.setHours(23, 59, 59, 999);
+        } else {
+            targetStart.setDate(targetStart.getDate() - dayOfWeek);
+            targetEnd = new Date(targetStart);
+            targetEnd.setDate(targetStart.getDate() + 6);
+            targetEnd.setHours(23, 59, 59, 999);
+        }
+        
+        return expandEventsForDateRange(events, targetStart, targetEnd).sort((a, b) => {
+            const dateA = new Date(`${a.date}T${a.time || '00:00'}`);
+            const dateB = new Date(`${b.date}T${b.time || '00:00'}`);
+            return dateA.getTime() - dateB.getTime();
+        });
+    })();
+
+    const displayTodos = todos.filter(t => {
+        if (t.completed) return false;
+        if (!t.deadlineDate) return true; // Show tasks without due date always
+        
+        // Use calendar logic for task due dates
+        if (filter === 'today') {
+            return checkRecurrence(todayStr, { date: t.deadlineDate, recurrence: t.recurrence } as CalendarEvent) || t.deadlineDate < todayStr;
+        } else {
+            // week view: check if task is due any day this week, or is overdue
+            if (t.deadlineDate < todayStr) return true;
+            for (let i = 0; i <= 6; i++) {
+                const checkDate = new Date(todayObj);
+                checkDate.setDate(todayObj.getDate() - dayOfWeek + i);
+                const y = checkDate.getFullYear();
+                const m = String(checkDate.getMonth() + 1).padStart(2, '0');
+                const d = String(checkDate.getDate()).padStart(2, '0');
+                if (checkRecurrence(`${y}-${m}-${d}`, { date: t.deadlineDate, recurrence: t.recurrence } as CalendarEvent)) return true;
+            }
+            return false;
+        }
+    });
 
     const isNeon = theme === 'neon';
     const cardBg = isNeon ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-800';
@@ -73,7 +117,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     };
 
     return (
-        <div className="h-full p-4 lg:p-8 overflow-y-auto animate-in fade-in duration-300">
+        <div className="h-full p-4 pb-24 sm:pb-8 lg:p-8 overflow-y-auto custom-scrollbar animate-in fade-in duration-300">
             <div className="max-w-4xl mx-auto space-y-8">
                 
                 {/* Header & Tabs */}
@@ -146,10 +190,18 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                             </span>
                                             <span className="text-lg font-bold" style={{ color: event.color || getCategoryColor(event.categoryId) }}>
                                                 {new Date(`${event.date}T12:00:00`).getDate()}
+                                                {event.endDate && event.endDate !== event.date && (
+                                                    <span className="text-sm">-{new Date(`${event.endDate}T12:00:00`).getDate()}</span>
+                                                )}
                                             </span>
                                         </div>
                                         <div className="flex-1">
-                                            <h4 className="font-bold text-lg mb-1">{event.title}</h4>
+                                            <h4 className="font-bold text-lg mb-1 flex items-center gap-2">
+                                                {event.title}
+                                                {event.recurrence && event.recurrence !== 'none' && (
+                                                    <Repeat size={14} className="opacity-60 text-indigo-500" />
+                                                )}
+                                            </h4>
                                             {event.time && (
                                                 <div className="flex items-center gap-1.5 text-sm opacity-70">
                                                     <Clock size={14} />
@@ -202,7 +254,16 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                             className="w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0"
                                             style={{ borderColor: todo.color || getCategoryColor(todo.categoryId) }}
                                         ></div>
-                                        <span onClick={() => onTodoToggle(todo.id)} className="font-medium text-[15px] flex-1 cursor-pointer">{todo.text}</span>
+                                        <span 
+                                            onClick={() => onTodoToggle(todo.id)} 
+                                            className={`font-medium text-[15px] flex-1 cursor-pointer flex items-center gap-2 ${todo.color && !todo.color.startsWith('#') ? todo.color : ''}`}
+                                            style={{ color: todo.color && todo.color.startsWith('#') ? todo.color : undefined }}
+                                        >
+                                            {todo.text}
+                                            {todo.recurrence && todo.recurrence !== 'none' && (
+                                                <Repeat size={14} className="opacity-60 text-indigo-500" />
+                                            )}
+                                        </span>
                                         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 flex-shrink-0">
                                             <button 
                                                 onClick={() => onEditTaskClick(todo)}

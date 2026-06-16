@@ -84,8 +84,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className={`w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden scale-100 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] border ${modalBg}`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={onClose}>
+      <div className={`w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden scale-100 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] border ${modalBg}`} onClick={(e) => e.stopPropagation()}>
         
         {/* Header */}
         <div className={`px-8 py-6 border-b flex justify-between items-start ${isNeon ? 'border-slate-800 bg-slate-950' : 'border-slate-100 bg-white/50'}`}>
