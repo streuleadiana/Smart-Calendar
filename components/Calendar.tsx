@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useSwipeable } from 'react-swipeable';
 import { CalendarEvent, Theme, Category } from '../types';
 import { ChevronLeft, ChevronRight, Plus, ZoomIn, ZoomOut } from 'lucide-react';
 import { DayDetailModal } from './DayDetailModal';
@@ -223,8 +224,21 @@ export const Calendar: React.FC<CalendarProps> = ({
   };
   const t = tStrings[lang] || tStrings['en'];
 
+  const calendarSwipeHandlers = useSwipeable({
+    onSwipedLeft: (e) => {
+      e.event.stopPropagation();
+      changeMonth(1);
+    },
+    onSwipedRight: (e) => {
+      e.event.stopPropagation();
+      changeMonth(-1);
+    },
+    trackMouse: false,
+    delta: 40,
+  });
+
   return (
-    <div className="w-full h-full flex flex-col">
+    <div {...calendarSwipeHandlers} className="w-full h-full flex flex-col">
       <div className="flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 px-1 gap-2">
         <div className="text-center sm:text-left">
           <h2 className={`text-xl sm:text-2xl font-bold tracking-tight capitalize ${textHeader}`}>

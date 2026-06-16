@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Calendar as CalendarIcon, CheckSquare, Settings, Layout, Menu } from 'lucide-react';
+import { Home, Calendar as CalendarIcon, CheckSquare, Settings, Layout, Menu, LogOut } from 'lucide-react';
 import { Theme } from '../types';
 import { LanguageOption, translations } from '../utils/translations';
 
@@ -11,6 +11,7 @@ interface SidebarProps {
   theme: Theme;
   accentColor: string;
   lang: LanguageOption;
+  handleLogout: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -20,7 +21,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setIsSidebarOpen,
   theme,
   accentColor,
-  lang
+  lang,
+  handleLogout
 }) => {
   const t = translations[lang];
   const isNeon = theme === 'neon';
@@ -112,6 +114,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-lg">💬</span>
               <span className={`text-xs ${!isSidebarOpen ? 'lg:hidden' : ''}`}>Feedback</span>
               </a>
+
+              <button
+                onClick={handleLogout}
+                className={`flex items-center gap-2 w-full rounded-xl font-semibold border transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 ${
+                  isNeon 
+                  ? 'bg-slate-800 border-slate-700 text-red-400 hover:bg-red-900/30' 
+                  : 'bg-white border-slate-200 text-red-500 hover:bg-red-50'
+                } ${isSidebarOpen ? 'py-3 px-4 justify-center' : 'p-3 py-3 px-4 lg:p-3 lg:aspect-square justify-center'}`}
+                title={t.settings?.logout || "Logout"}
+              >
+                <LogOut size={18} />
+                <span className={`text-xs ${!isSidebarOpen ? 'lg:hidden' : ''}`}>{t.settings?.logout || "Logout"}</span>
+              </button>
           </div>
       </div>
     </aside>

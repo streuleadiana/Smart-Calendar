@@ -45,7 +45,7 @@ export const EventModal: React.FC<EventModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (!title || !date) return;
@@ -57,16 +57,21 @@ export const EventModal: React.FC<EventModalProps> = ({
         }
     }
 
-    onSave({
-      title,
-      description: details || undefined,
-      date,
-      time: time || undefined,
-      endTime: endTime || undefined,
-      categoryId: selectedCategoryId || undefined,
-      color: useCustomColor ? selectedColor : undefined,
-    });
-    onClose();
+    try {
+      await onSave({
+        title,
+        description: details || undefined,
+        date,
+        time: time || undefined,
+        endTime: endTime || undefined,
+        categoryId: selectedCategoryId || undefined,
+        color: useCustomColor ? selectedColor : undefined,
+      });
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError("Failed to save event");
+    }
   };
 
   return (

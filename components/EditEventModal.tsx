@@ -50,7 +50,7 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
 
   if (!isOpen || !event) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (!title || !date) return;
@@ -62,15 +62,21 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
         }
     }
 
-    onSave(event.id, {
-      title,
-      description: details || undefined,
-      date,
-      time: time || undefined,
-      endTime: endTime || undefined,
-      categoryId: selectedCategoryId || undefined,
-      color: useCustomColor ? selectedColor : undefined,
-    });
+    try {
+      await onSave(event.id, {
+        title,
+        description: details || undefined,
+        date,
+        time: time || undefined,
+        endTime: endTime || undefined,
+        categoryId: selectedCategoryId || undefined,
+        color: useCustomColor ? selectedColor : undefined,
+      });
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError("Failed to update event");
+    }
   };
 
   return (

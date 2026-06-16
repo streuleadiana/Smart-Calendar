@@ -14,6 +14,7 @@ import { LanguageOption, translations } from './utils/translations';
 import { requestNotificationPermission, auth, googleProvider, db } from './lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseAuthUser } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { useSwipeable } from 'react-swipeable';
 import { useNotifications } from './hooks/useNotifications';
 import { useEvents } from './hooks/useEvents';
 import { useTodos } from './hooks/useTodos';
@@ -411,6 +412,15 @@ const App: React.FC = () => {
     }
   };
 
+  const sidebarSwipeHandlers = useSwipeable({
+    onSwipedRight: () => setIsSidebarOpen(true),
+    onSwipedLeft: () => {
+      if (isSidebarOpen) setIsSidebarOpen(false);
+    },
+    trackMouse: false,
+    delta: 40,
+  });
+
   if (initializing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -565,6 +575,76 @@ const App: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Categories Card */}
+                <div className={`p-6 rounded-2xl border ${theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className={`p-3 rounded-full bg-slate-100 text-slate-600`}>
+                            <Settings size={24} />
+                        </div>
+                        <div>
+                            <h3 className={`font-bold text-lg ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{t.settings.categoriesTitle}</h3>
+                            <p className="text-sm text-slate-500">{t.settings.categoriesDesc}</p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-3">
+                             <input 
+                                 type="text"
+                                 placeholder={t.settings.categoryPlaceholder}
+                                 value={newCategoryName}
+                                 onChange={(e) => setNewCategoryName(e.target.value)}
+                                 className={`flex-1 p-2.5 rounded-lg border text-sm transition-all ${
+                                     theme === 'neon' 
+                                     ? 'bg-slate-800 border-slate-700 text-white focus:ring-cyan-500 focus:border-cyan-500' 
+                                     : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-indigo-500 focus:border-indigo-500'
+                                 }`}
+                             />
+                             <div 
+                                className="relative flex items-center justify-center w-10 h-10 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm flex-shrink-0"
+                                style={{ borderColor: theme === 'neon' ? '#334155' : '#e2e8f0' }}
+                             >
+                                 <input
+                                     type="color"
+                                     value={newCategoryColor}
+                                     onChange={(e) => setNewCategoryColor(e.target.value)}
+                                     className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] p-0 m-0 cursor-pointer border-none"
+                                 />
+                             </div>
+                             <button
+                                type="button"
+                                onClick={handleAddCategory}
+                                disabled={!newCategoryName.trim()}
+                                className="px-4 py-2.5 rounded-lg text-white font-medium shadow-sm transition-all hover:opacity-90 disabled:opacity-50 flex-shrink-0"
+                                style={{ backgroundColor: accentColor }}
+                             >
+                                {t.settings.addBtn}
+                             </button>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mt-2">
+                             {categories.map(cat => (
+                                 <div 
+                                    key={cat.id}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm"
+                                    style={{ backgroundColor: `${cat.color}15`, borderColor: cat.color }}
+                                 >
+                                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                                     <span className="text-sm font-medium" style={{ color: theme === 'neon' ? 'white' : 'inherit' }}>{cat.name}</span>
+                                     <button 
+                                        onClick={() => handleDeleteCategory(cat.id)}
+                                        className="ml-1 text-slate-400 hover:text-red-500 transition-colors"
+                                        disabled={categories.length <= 1}
+                                        title={categories.length <= 1 ? t.settings.cannotDeleteLast : t.settings.deleteCategory}
+                                     >
+                                         <X size={14} />
+                                     </button>
+                                 </div>
+                             ))}
+                        </div>
+                    </div>
+                </div>
+
                 {/* Language Card */}
                 <div className={`p-6 rounded-2xl border ${theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
                     <div className="flex items-center gap-4 mb-6">
@@ -640,76 +720,6 @@ const App: React.FC = () => {
                                     className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] p-0 m-0 cursor-pointer border-none"
                                 />
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Categories Card */}
-                <div className={`p-6 rounded-2xl border ${theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className={`p-3 rounded-full bg-slate-100 text-slate-600`}>
-                            <Settings size={24} />
-                        </div>
-                        <div>
-                            <h3 className={`font-bold text-lg ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{t.settings.categoriesTitle}</h3>
-                            <p className="text-sm text-slate-500">{t.settings.categoriesDesc}</p>
-                        </div>
-                    </div>
-                    
-                    <div className="flex flex-col gap-4">
-                        <div className="flex items-center gap-3">
-                             <input 
-                                 type="text"
-                                 placeholder={t.settings.categoryPlaceholder}
-                                 value={newCategoryName}
-                                 onChange={(e) => setNewCategoryName(e.target.value)}
-                                 className={`flex-1 p-2.5 rounded-lg border text-sm transition-all ${
-                                     theme === 'neon' 
-                                     ? 'bg-slate-800 border-slate-700 text-white focus:ring-cyan-500 focus:border-cyan-500' 
-                                     : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-indigo-500 focus:border-indigo-500'
-                                 }`}
-                             />
-                             <div 
-                                className="relative flex items-center justify-center w-10 h-10 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm flex-shrink-0"
-                                style={{ borderColor: theme === 'neon' ? '#334155' : '#e2e8f0' }}
-                             >
-                                 <input
-                                     type="color"
-                                     value={newCategoryColor}
-                                     onChange={(e) => setNewCategoryColor(e.target.value)}
-                                     className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] p-0 m-0 cursor-pointer border-none"
-                                 />
-                             </div>
-                             <button
-                                type="button"
-                                onClick={handleAddCategory}
-                                disabled={!newCategoryName.trim()}
-                                className="px-4 py-2.5 rounded-lg text-white font-medium shadow-sm transition-all hover:opacity-90 disabled:opacity-50 flex-shrink-0"
-                                style={{ backgroundColor: accentColor }}
-                             >
-                                {t.settings.addBtn}
-                             </button>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2 mt-2">
-                             {categories.map(cat => (
-                                 <div 
-                                    key={cat.id}
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm"
-                                    style={{ backgroundColor: `${cat.color}15`, borderColor: cat.color }}
-                                 >
-                                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
-                                     <span className="text-sm font-medium" style={{ color: theme === 'neon' ? 'white' : 'inherit' }}>{cat.name}</span>
-                                     <button 
-                                        onClick={() => handleDeleteCategory(cat.id)}
-                                        className="ml-1 text-slate-400 hover:text-red-500 transition-colors"
-                                        disabled={categories.length <= 1}
-                                        title={categories.length <= 1 ? t.settings.cannotDeleteLast : t.settings.deleteCategory}
-                                     >
-                                         <X size={14} />
-                                     </button>
-                                 </div>
-                             ))}
                         </div>
                     </div>
                 </div>
@@ -797,15 +807,6 @@ const App: React.FC = () => {
                           Test Push Notification
                         </button>
                     </div>
-
-                    <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
-                        <button
-                          onClick={handleLogout}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium text-red-500 hover:bg-red-50 transition-colors"
-                        >
-                          <LogOut size={20} /> {t.settings.logout}
-                        </button>
-                    </div>
                 </div>
              </div>
           </div>
@@ -817,7 +818,7 @@ const App: React.FC = () => {
   // --- SIDEBAR STYLES ---
   const sidebarClass = theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200';
   return (
-    <div className={`flex h-screen overflow-hidden transition-colors duration-300 ${getThemeBackground()}`}>
+    <div {...sidebarSwipeHandlers} className={`flex h-screen overflow-hidden transition-colors duration-300 ${getThemeBackground()}`}>
       
       {/* Mobile Overlay */}
       {isSidebarOpen && (
@@ -836,6 +837,7 @@ const App: React.FC = () => {
           theme={theme}
           accentColor={accentColor}
           lang={lang}
+          handleLogout={handleLogout}
       />
 
       {/* RIGHT PANEL: HEADER + CONTENT */}
