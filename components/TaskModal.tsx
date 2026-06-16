@@ -41,7 +41,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   if (!isOpen) return null;
 
-  const t = translations[lang];
   const isNeon = theme === 'neon';
   const modalBg = isNeon ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-800';
   const inputClass = isNeon ? 'bg-slate-800 border-slate-700 text-white focus:ring-cyan-500' : 'bg-slate-50 border-slate-200 focus:ring-indigo-500';
@@ -94,7 +93,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 }}
                 className={`flex-1 p-3 rounded-xl border focus:outline-none focus:ring-2 text-sm ${inputClass}`}
               >
-                 <option value="">{t.calendar.noCategory}</option>
+                 <option value="">{lang === 'ro' ? 'Fără categorie' : 'No category'}</option>
                  {categories.map(cat => (
                      <option key={cat.id} value={cat.id}>{cat.name}</option>
                  ))}
