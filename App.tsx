@@ -183,20 +183,6 @@ const App: React.FC = () => {
         }
         if (storedAccent) setAccentColor(storedAccent);
         
-        if (storedCategories && storedCategories.length > 0) {
-          setCategories(storedCategories);
-        } else {
-          // Default Categories
-          const defaults = [
-            { id: crypto.randomUUID(), name: 'Work', color: '#4F46E5' },
-            { id: crypto.randomUUID(), name: 'Personal', color: '#10B981' },
-            { id: crypto.randomUUID(), name: 'Study', color: '#F59E0B' },
-            { id: crypto.randomUUID(), name: 'Urgent', color: '#EF4444' }
-          ];
-          setCategories(defaults);
-          storage.saveCategories(defaults);
-        }
-        
         // Request notifications permission
         requestNotificationPermission();
 
