@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-2 sm:gap-3">
                  <button 
                    onClick={() => setIsSidebarOpen(true)}
-                   className={`lg:hidden p-1.5 rounded-lg transition-colors ${theme === 'neon' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
+                   className={`hidden md:block lg:hidden p-1.5 rounded-lg transition-colors ${theme === 'neon' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
                  >
                     <Menu size={20} />
                  </button>

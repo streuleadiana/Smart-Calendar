@@ -11,7 +11,6 @@ interface SidebarProps {
   theme: Theme;
   accentColor: string;
   lang: LanguageOption;
-  handleLogout: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -21,8 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setIsSidebarOpen,
   theme,
   accentColor,
-  lang,
-  handleLogout
+  lang
 }) => {
   const t = translations[lang];
   const isNeon = theme === 'neon';
@@ -117,19 +115,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-lg">💬</span>
               <span className={`text-xs ${!isSidebarOpen ? 'lg:hidden' : ''}`}>Feedback</span>
               </a>
-
-              <button
-                onClick={handleLogout}
-                className={`flex items-center gap-2 w-full rounded-xl font-semibold border transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 ${
-                  isNeon 
-                  ? 'bg-slate-800 border-slate-700 text-red-400 hover:bg-red-900/30' 
-                  : 'bg-white border-slate-200 text-red-500 hover:bg-red-50'
-                } ${isSidebarOpen ? 'py-3 px-4 justify-center' : 'p-3 py-3 px-4 lg:p-3 lg:aspect-square justify-center'}`}
-                title={t.settings?.logout || "Logout"}
-              >
-                <LogOut size={18} />
-                <span className={`text-xs ${!isSidebarOpen ? 'lg:hidden' : ''}`}>{t.settings?.logout || "Logout"}</span>
-              </button>
           </div>
       </div>
     </aside>

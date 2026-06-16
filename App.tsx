@@ -10,6 +10,7 @@ import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { HomeDashboard } from './components/HomeDashboard';
+import { BottomNav } from './components/BottomNav';
 import { CalendarEvent, Todo, Theme, Category } from './types';
 import * as storage from './utils/storage';
 import { LanguageOption, translations } from './utils/translations';
@@ -465,7 +466,11 @@ const App: React.FC = () => {
   };
 
   const sidebarSwipeHandlers = useSwipeable({
-    onSwipedRight: () => setIsSidebarOpen(true),
+    onSwipedRight: () => {
+      // Only open sidebar via swipe on tablet+ if desired, though standard is mobile.
+      // We are removing mobile sidebar entirely.
+      if (window.innerWidth >= 768) setIsSidebarOpen(true);
+    },
     onSwipedLeft: () => {
       if (isSidebarOpen) setIsSidebarOpen(false);
     },
@@ -608,7 +613,7 @@ const App: React.FC = () => {
                         <label className={`text-sm font-medium ${theme === 'neon' ? 'text-slate-400' : 'text-slate-700'}`}>{t.settings.yourName}</label>
                         <input 
                              type="text"
-                             value={userName}
+                             value={userName || ''}
                              onChange={(e) => handleUpdateUserName(e.target.value)}
                              className={`w-full p-3 rounded-xl border transition-all ${
                                  theme === 'neon' 
@@ -838,8 +843,8 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Notifications Test */}
-                    <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
-                        <h4 className={`font-medium mb-3 ${theme === 'neon' ? 'text-slate-300' : 'text-slate-700'}`}>Notifications</h4>
+                    <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 space-y-4">
+                        <h4 className={`font-medium mb-3 ${theme === 'neon' ? 'text-slate-300' : 'text-slate-700'}`}>System</h4>
                         <button
                           onClick={testNotification}
                           className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-colors ${
@@ -849,6 +854,42 @@ const App: React.FC = () => {
                           }`}
                         >
                           Test Push Notification
+                        </button>
+                        
+                        <a 
+                          href="https://ko-fi.com/alex1999" target="_blank" rel="noreferrer"
+                          className={`flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl font-semibold border transition-all shadow-sm ${
+                              theme === 'neon' 
+                              ? 'bg-slate-800 border-slate-700 text-yellow-400 hover:bg-slate-700' 
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="text-lg">☕</span> 
+                          Buy me a coffee
+                        </a>
+
+                        <a 
+                          href="mailto:contact@example.com"
+                          className={`flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl font-semibold border transition-all shadow-sm ${
+                              theme === 'neon' 
+                              ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white' 
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                          }`}
+                        >
+                          <span className="text-lg">💬</span>
+                          Feedback
+                        </a>
+
+                        <button
+                          onClick={handleLogout}
+                          className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium border transition-all shadow-sm ${
+                              theme === 'neon'
+                              ? 'bg-slate-800 border-slate-700 hover:bg-red-900/30 text-red-400'
+                              : 'bg-white border-slate-200 hover:bg-red-50 text-red-500'
+                          }`}
+                        >
+                          <LogOut size={18} />
+                          {t.settings?.logout || "Logout"}
                         </button>
                     </div>
                 </div>
@@ -864,28 +905,29 @@ const App: React.FC = () => {
   return (
     <div {...sidebarSwipeHandlers} className={`flex h-screen overflow-hidden transition-colors duration-300 ${getThemeBackground()}`}>
       
-      {/* Mobile Overlay */}
+      {/* Mobile Overlay (Tablet/Desktop when Sidebar is open) */}
       {isSidebarOpen && (
          <div 
-           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+           className="fixed inset-0 bg-black/50 z-40 hidden md:block lg:hidden"
            onClick={() => setIsSidebarOpen(false)}
          />
       )}
 
-      {/* SIDEBAR NAVIGATION */}
-      <Sidebar 
-          currentView={currentView}
-          setCurrentView={setCurrentView}
-          isSidebarOpen={isSidebarOpen}
-          setIsSidebarOpen={setIsSidebarOpen}
-          theme={theme}
-          accentColor={accentColor}
-          lang={lang}
-          handleLogout={handleLogout}
-      />
+      {/* SIDEBAR NAVIGATION - Hidden on mobile */}
+      <div className="hidden md:flex">
+          <Sidebar 
+              currentView={currentView}
+              setCurrentView={setCurrentView}
+              isSidebarOpen={isSidebarOpen}
+              setIsSidebarOpen={setIsSidebarOpen}
+              theme={theme}
+              accentColor={accentColor}
+              lang={lang}
+          />
+      </div>
 
       {/* RIGHT PANEL: HEADER + CONTENT */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden relative pb-20 md:pb-0">
           
           {/* HEADER BAR (FIXED) */}
           <Header 
@@ -911,6 +953,15 @@ const App: React.FC = () => {
           </main>
 
       </div>
+
+      {/* BOTTOM NAVIGATION (Mobile Only) */}
+      <BottomNav
+          currentView={currentView}
+          setCurrentView={setCurrentView}
+          theme={theme}
+          accentColor={accentColor}
+          lang={lang}
+      />
 
       {/* GLOBAL FLOATING CHAT WIDGET */}
       <ChatAssistant 
