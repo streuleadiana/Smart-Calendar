@@ -7,7 +7,15 @@ export const useTodos = (
   setTodos: React.Dispatch<React.SetStateAction<Todo[]>>,
   setLastCompletedTask: React.Dispatch<React.SetStateAction<string | null>>
 ) => {
-  const handleAddTodo = async (text: string, isPinned: boolean = false, categoryId?: string, color?: string) => {
+  const handleAddTodo = async (
+      text: string, 
+      isPinned: boolean = false,
+      categoryId?: string, 
+      color?: string,
+      deadlineDate?: string,
+      notificationOffset?: number,
+      recurrence?: string
+  ) => {
     if (!auth.currentUser) {
         console.error("User not authenticated");
         return;
@@ -20,6 +28,9 @@ export const useTodos = (
             isPinned,
             categoryId: categoryId || null,
             color: color || null,
+            deadlineDate: deadlineDate || null,
+            notificationOffset: notificationOffset || null,
+            recurrence: recurrence || null,
             userId: auth.currentUser.uid
         });
         await addDoc(collection(db, 'todos'), payload);
@@ -28,10 +39,25 @@ export const useTodos = (
     }
   };
 
-  const handleEditTodo = async (id: string, text: string, categoryId?: string, color?: string) => {
+  const handleEditTodo = async (
+      id: string, 
+      text: string, 
+      categoryId?: string, 
+      color?: string,
+      deadlineDate?: string,
+      notificationOffset?: number,
+      recurrence?: string
+  ) => {
     if (!auth.currentUser) return;
     try {
-        const payload = cleanPayload({ text, categoryId: categoryId || null, color: color || null });
+        const payload = cleanPayload({ 
+            text, 
+            categoryId: categoryId || null, 
+            color: color || null,
+            deadlineDate: deadlineDate || null,
+            notificationOffset: notificationOffset || null,
+            recurrence: recurrence || null
+        });
         await updateDoc(doc(db, 'todos', id), payload);
     } catch (error) {
         console.error("Error editing todo:", error);

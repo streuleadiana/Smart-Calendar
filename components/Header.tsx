@@ -42,7 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
     const searchBg = theme === 'neon' ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-600 border-transparent';
 
     return (
-        <header className={`h-16 flex items-center justify-between px-4 lg:px-6 border-b shrink-0 z-10 ${headerBg}`}>
+        <header className={`h-14 sm:h-16 flex items-center justify-between px-3 sm:px-4 lg:px-6 border-b shrink-0 z-10 ${headerBg}`}>
             {/* Left: Hamburger + Greeting + Name Edit */}
             <div className="flex items-center gap-2 sm:gap-3">
                  <button 
@@ -73,13 +73,13 @@ export const Header: React.FC<HeaderProps> = ({
                             setTempName(userName || '');
                             setIsEditingName(true);
                         }}
-                        className={`text-base sm:text-lg font-bold flex items-center gap-2 group transition-colors ${
+                        className={`text-base sm:text-lg font-bold flex items-center gap-1 sm:gap-2 group transition-colors ${
                             theme === 'neon' ? 'text-white' : 'text-slate-800'
                         }`}
                         style={{ color: isEditingName ? undefined : undefined }} // Reset
                         title="Click to edit name"
                     >
-                        <span className="group-hover:opacity-80 transition-opacity truncate max-w-[120px] sm:max-w-none">{userName}</span>
+                        <span className="group-hover:opacity-80 transition-opacity truncate max-w-[100px] sm:max-w-none">{userName}</span>
                         <Pencil size={14} className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                     </button>
                 )}
@@ -87,8 +87,8 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Middle: Search Bar */}
             <div className="flex-1 max-w-md mx-2 sm:mx-4 hidden sm:block">
-                <div className={`relative flex items-center rounded-xl overflow-hidden px-4 py-2 ${searchBg}`}>
-                    <Search size={18} className="opacity-50 mr-2 shrink-0" />
+                <div className={`relative flex items-center rounded-xl overflow-hidden px-3 py-1.5 sm:px-4 sm:py-2 ${searchBg}`}>
+                    <Search size={16} className="opacity-50 mr-2 shrink-0" />
                     <input 
                         type="text"
                         placeholder={t.header.searchPlaceholder}
@@ -100,9 +100,9 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Right: Color Picker & Theme Switcher */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
                 <div 
-                    className="relative flex items-center justify-center w-9 h-9 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm transition-transform hover:scale-105"
+                    className="relative flex items-center justify-center w-7 h-7 sm:w-9 sm:h-9 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm transition-transform hover:scale-105"
                     style={{ borderColor: theme === 'neon' ? '#334155' : '#e2e8f0' }}
                     title={t.header.shareTooltip}
                 >
@@ -113,7 +113,7 @@ export const Header: React.FC<HeaderProps> = ({
                      className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] p-0 m-0 cursor-pointer border-none"
                    />
                 </div>
-                <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-0 sm:mx-1"></div>
                 <ThemeSwitcher currentTheme={theme} onThemeChange={handleThemeChange} />
             </div>
         </header>

@@ -9,11 +9,15 @@ export interface CalendarEvent {
   id: string;
   title: string;
   date: string; // ISO Date String YYYY-MM-DD
+  endDate?: string; // ISO Date String YYYY-MM-DD
   time?: string; // HH:mm Start Time
   endTime?: string; // HH:mm End Time (Optional)
   color?: string; // HEX color string
   categoryId?: string; // matches Category id
   description?: string; // Event description
+  recurrence?: 'none' | 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'yearly';
+  notifyMe?: boolean;
+  notificationOffset?: number; // in minutes
 }
 
 export interface Todo {
@@ -23,6 +27,9 @@ export interface Todo {
   isPinned?: boolean;
   color?: string; // HEX color string
   categoryId?: string; // matches Category id
+  deadlineDate?: string; // ISO Date String YYYY-MM-DD
+  notificationOffset?: number; // in minutes
+  recurrence?: 'none' | 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'yearly';
 }
 
 export interface User {

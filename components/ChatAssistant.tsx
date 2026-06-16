@@ -5,6 +5,10 @@ import { MessageCircle, X, Send, User as UserIcon, Mic, Sparkles, Camera, GripHo
 
 interface ChatAssistantProps {
   userName: string;
+  assistantName: string;
+  setAssistantName: (name: string) => void;
+  assistantAvatar: string;
+  setAssistantAvatar: (avatar: string) => void;
   events: CalendarEvent[];
   todos: Todo[];
   categories?: { id: string; name: string; color: string }[];
@@ -45,6 +49,10 @@ const AVATARS = ["🦉", "🤖", "👽", "🦊", "🐱", "🦁", "🦄", "🧙�
 
 export const ChatAssistant: React.FC<ChatAssistantProps> = ({ 
   userName,
+  assistantName,
+  setAssistantName,
+  assistantAvatar,
+  setAssistantAvatar,
   events, 
   todos, 
   onAddEvent, 
@@ -66,8 +74,6 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   const [isMobile, setIsMobile] = useState(false);
   
   // Identity State
-  const [assistantName, setAssistantName] = useState(() => localStorage.getItem('assistant_name') || "Olli");
-  const [assistantAvatar, setAssistantAvatar] = useState(() => localStorage.getItem('assistant_avatar') || "🦉");
   const [showSettings, setShowSettings] = useState(false);
   
   // Local state for user name editing
