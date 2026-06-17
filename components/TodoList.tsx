@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Todo, Theme, Category } from '../types';
-import { CheckSquare, Square, Trash2, Plus, ListTodo, Pin, Palette, Pencil, Check, X, Repeat } from 'lucide-react';
+import { CheckSquare, Square, Trash2, Plus, ListTodo, Pin, Palette, Pencil, Check, X, Repeat, Heart } from 'lucide-react';
 import { HighlightText } from './HighlightText';
 
 interface TodoListProps {
@@ -67,19 +67,20 @@ export const TodoList: React.FC<TodoListProps> = ({
       <div className={`p-4 border-b ${isNeon ? 'border-slate-800' : 'border-slate-100'}`}>
         <button
           onClick={onAddTaskClick}
-          className={`w-full py-3 rounded-xl font-bold text-white shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2`}
-          style={{ backgroundColor: accentColor }}
+          className={`w-full py-3 rounded-2xl font-bold text-white shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2`}
+          style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`, boxShadow: `0 4px 14px 0 ${accentColor}40` }}
         >
-          <Plus size={18} />
+          <Plus size={18} strokeWidth={1.5} />
           Add Task
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 pb-24 sm:pb-4 space-y-1 custom-scrollbar">
         {todos.length === 0 ? (
-          <div className="text-center py-10 text-slate-400 text-sm">
-            <p>No tasks yet.</p>
-            <p className="text-xs mt-1">Add one above to get started!</p>
+          <div className="text-center py-10 text-slate-400 text-sm flex flex-col items-center gap-2">
+            <span className="text-3xl">🌸</span>
+            <p className="font-medium text-slate-500">Ai terminat tot!</p>
+            <p className="text-xs">E timpul pentru o pauză ☕✨</p>
           </div>
         ) : (
           todos.map((todo) => {
@@ -131,14 +132,14 @@ export const TodoList: React.FC<TodoListProps> = ({
             >
               <button
                 onClick={() => onToggleTodo(todo.id)}
-                className={`flex-shrink-0 transition-colors ${
+                className={`flex-shrink-0 transition-all active:scale-95 ${
                   todo.completed 
-                    ? '' 
-                    : isNeon ? 'text-slate-600' : 'text-slate-300'
+                    ? 'scale-110' 
+                    : isNeon ? 'text-slate-600 hover:text-slate-500' : 'text-slate-300 hover:text-slate-400'
                 }`}
                 style={todo.completed ? { color: accentColor } : {}}
               >
-                {todo.completed ? <CheckSquare size={20} /> : <Square size={20} />}
+                {todo.completed ? <Heart size={20} className="fill-current" strokeWidth={1} /> : <Heart size={20} strokeWidth={1.5} />}
               </button>
               
               <div className="flex-1 min-w-0">

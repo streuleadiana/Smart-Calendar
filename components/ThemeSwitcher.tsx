@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Theme } from '../types';
-import { Palette, Moon, Sun, Coffee } from 'lucide-react';
+import { Palette, Moon, Sun, Flower2, Sparkles } from 'lucide-react';
 
 interface ThemeSwitcherProps {
   currentTheme: Theme;
@@ -20,7 +20,7 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ currentTheme, onTh
         }`}
         title="Modern White"
       >
-        <Sun size={16} className="sm:w-[18px] sm:h-[18px]" />
+        <Sun size={16} className="sm:w-[18px] sm:h-[18px]" strokeWidth={1.5} />
       </button>
       
       <button
@@ -32,19 +32,19 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ currentTheme, onTh
         }`}
         title="Dark Neon"
       >
-        <Moon size={16} className="sm:w-[18px] sm:h-[18px]" />
+        <Moon size={16} className="sm:w-[18px] sm:h-[18px]" strokeWidth={1.5} />
       </button>
 
       <button
-        onClick={() => onThemeChange('pastel')}
+        onClick={() => onThemeChange('soft')}
         className={`p-1.5 sm:p-2 rounded-full transition-all ${
-          currentTheme === 'pastel' 
-            ? 'bg-orange-100 text-orange-600 shadow-sm' 
-            : 'text-slate-500 hover:text-orange-500'
+          currentTheme === 'soft' 
+            ? 'bg-pink-100 text-pink-500 shadow-sm' 
+            : 'text-slate-500 hover:text-pink-400'
         }`}
-        title="Cozy Pastel"
+        title="Soft Girly"
       >
-        <Coffee size={16} className="sm:w-[18px] sm:h-[18px]" />
+        <Sparkles size={16} className="sm:w-[18px] sm:h-[18px]" strokeWidth={1.5} />
       </button>
     </div>
   );

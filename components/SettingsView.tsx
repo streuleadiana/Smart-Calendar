@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Theme, Category } from '../types';
-import { User as UserIcon, Settings, Globe, LogOut, X, Sparkles, Trash2, Plus } from 'lucide-react';
+import { Theme, Category, FontOption } from '../types';
+import { User as UserIcon, Settings, Globe, LogOut, X, Sparkles, Trash2, Plus, Camera } from 'lucide-react';
 import { LanguageOption, translations } from '../utils/translations';
 import { ThemeSwitcher } from './ThemeSwitcher';
 
@@ -10,8 +10,12 @@ interface SettingsViewProps {
   theme: Theme;
   accentColor: string;
   lang: LanguageOption;
+  font: FontOption;
+  handleFontChange: (val: FontOption) => void;
   userName: string | null;
   handleUpdateUserName: (name: string) => void;
+  profilePicture: string | null;
+  handleUpdateProfilePicture: (pic: string | null) => void;
   assistantName: string;
   handleUpdateAssistantName: (name: string) => void;
   assistantAvatar: string;
@@ -33,8 +37,9 @@ interface SettingsViewProps {
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
   importError: string | null;
-  handleShare: () => void;
-  copied: boolean;
+  handleShareDay: () => void;
+  handleShareWeek: () => void;
+  copiedState: 'day' | 'week' | null;
   testNotification: () => void;
   setIsFeedbackModalOpen: (val: boolean) => void;
   handleAccentChange: (val: string) => void;
@@ -42,11 +47,11 @@ interface SettingsViewProps {
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
-  theme, accentColor, lang, userName, handleUpdateUserName,
+  theme, accentColor, lang, font, handleFontChange, userName, handleUpdateUserName, profilePicture, handleUpdateProfilePicture,
   assistantName, handleUpdateAssistantName, assistantAvatar, handleUpdateAssistantAvatar,
   categories, newCategoryName, setNewCategoryName, newCategoryColor, setNewCategoryColor,
   handleAddCategory, handleUpdateCategory, handleDeleteCategory, handleLangChange, handleLogout,
-  eventsCount, todosCount, handleExport, handleFileChange, fileInputRef, importError, handleShare, copied, testNotification, setIsFeedbackModalOpen, handleAccentChange, handleThemeChange
+  eventsCount, todosCount, handleExport, handleFileChange, fileInputRef, importError, handleShareDay, handleShareWeek, copiedState, testNotification, setIsFeedbackModalOpen, handleAccentChange, handleThemeChange
 }) => {
   const t = translations[lang];
 
@@ -64,6 +69,45 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   }, [selectedCategoryId, categories]);
 
+  const profileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const MAX_WIDTH = 300;
+              const MAX_HEIGHT = 300;
+              let width = img.width;
+              let height = img.height;
+
+              if (width > height) {
+                  if (width > MAX_WIDTH) {
+                      height *= MAX_WIDTH / width;
+                      width = MAX_WIDTH;
+                  }
+              } else {
+                  if (height > MAX_HEIGHT) {
+                      width *= MAX_HEIGHT / height;
+                      height = MAX_HEIGHT;
+                  }
+              }
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx?.drawImage(img, 0, 0, width, height);
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+              handleUpdateProfilePicture(dataUrl);
+          };
+          img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+  };
+
   return (
     <div className="h-full p-3 pb-24 sm:pb-6 lg:p-6 overflow-y-auto custom-scrollbar animate-in fade-in duration-300">
        <div className="max-w-3xl mx-auto space-y-6">
@@ -74,31 +118,41 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           {/* Profile Card */}
           <div className={`p-6 rounded-2xl border ${theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-              <div className="flex items-center gap-4 mb-4">
-                  <div className={`p-3 rounded-full ${theme === 'neon' ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
-                      <UserIcon size={24} />
+              <div className="flex items-center gap-4">
+                  <input type="file" accept="image/*" className="hidden" ref={profileInputRef} onChange={handleAvatarChange} />
+                  <div 
+                     onClick={() => profileInputRef.current?.click()}
+                     className={`relative w-16 h-16 rounded-full flex items-center justify-center cursor-pointer overflow-hidden border-2 shadow-sm transition-transform hover:scale-105 flex-shrink-0 group`}
+                     style={{ borderColor: accentColor, backgroundColor: !profilePicture ? accentColor : undefined }}
+                  >
+                     {profilePicture ? (
+                         <img src={profilePicture} alt="Avatar" className="w-full h-full object-cover" />
+                     ) : (
+                         <span className="text-2xl font-bold text-white uppercase">
+                             {userName ? userName.charAt(0) : 'U'}
+                         </span>
+                     )}
+                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                         <Camera size={20} className="text-white" strokeWidth={1.5} />
+                     </div>
                   </div>
-                  <div>
-                      <h3 className={`font-bold text-lg ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{t.settings.profile}</h3>
-                      <p className="text-sm text-slate-500">{t.settings.profileDesc}</p>
-                  </div>
-              </div>
-              <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className={`text-sm font-medium ${theme === 'neon' ? 'text-slate-400' : 'text-slate-700'}`}>{t.settings.yourName}</label>
+                  <div className="flex-1 space-y-1">
+                    <label className={`text-sm font-medium ${theme === 'neon' ? 'text-slate-400' : 'text-slate-700'}`}>{t.settings.profile} - {t.settings.yourName}</label>
                     <input 
                          type="text"
                          value={userName || ''}
                          onChange={(e) => handleUpdateUserName(e.target.value)}
-                         className={`w-full p-3 rounded-xl border transition-all ${
+                         className={`w-full p-3 rounded-xl border transition-all text-lg font-medium shadow-sm ${
                              theme === 'neon' 
-                             ? 'bg-slate-800 border-slate-700 text-white focus:ring-cyan-500 focus:border-cyan-500' 
+                             ? 'bg-slate-800 border-slate-700 text-white focus:ring-cyan-500 focus:border-cyan-500 shadow-cyan-900/20' 
                              : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-indigo-500 focus:border-indigo-500'
                          }`}
+                         style={theme !== 'neon' ? { boxShadow: `0 4px 20px -5px ${accentColor}30` } : undefined}
                     />
                   </div>
+              </div>
 
-                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
+              <div className="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
                       <div className="space-y-2">
                           <label className={`text-sm font-medium ${theme === 'neon' ? 'text-slate-400' : 'text-slate-700'}`}>Nume Mascotă AI / Assistant Name</label>
                           <input 
@@ -131,7 +185,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           </div>
                       </div>
                   </div>
-              </div>
           </div>
 
           {/* Categories Card */}
@@ -281,6 +334,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
                   </div>
               </div>
+
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <span className={`font-medium ${theme === 'neon' ? 'text-slate-300' : 'text-slate-700'}`}>
+                      {lang === 'ro' ? 'Fontul Aplicației' : 'App Font'}
+                  </span>
+                  <select 
+                      value={font}
+                      onChange={(e) => handleFontChange(e.target.value as FontOption)}
+                      className={`px-3 py-2 border rounded-xl shadow-sm text-sm transition-colors focus:ring-2 focus:outline-none ${theme === 'neon' ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}
+                  >
+                      <option value="inter">Inter (Default)</option>
+                      <option value="system">System Sans</option>
+                      <option value="nunito">Nunito</option>
+                      <option value="quicksand">Quicksand</option>
+                      <option value="poppins">Poppins</option>
+                      <option value="playfair">Playfair Display</option>
+                      <option value="oswald">Oswald</option>
+                      <option value="caveat">Caveat (Handwriting)</option>
+                  </select>
+              </div>
           </div>
 
           {/* Language Card */}
@@ -344,9 +417,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   {importError && (
                       <div className="text-xs text-red-500 flex items-center gap-1 justify-center">{importError}</div>
                   )}
-                  <button onClick={handleShare} className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-white transition-all shadow-md mt-4 ${copied ? 'bg-green-500 hover:bg-green-600' : theme === 'neon' ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-800 hover:bg-slate-900'}`}>
-                      {copied ? t.settings.copied : "Share Calendar"}
-                  </button>
+                  <div className="flex gap-2 w-full mt-4">
+                      <button onClick={handleShareDay} className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 rounded-xl font-bold text-white transition-all shadow-md text-sm sm:text-base ${copiedState === 'day' ? 'bg-green-500 hover:bg-green-600' : theme === 'neon' ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-800 hover:bg-slate-900'}`}>
+                          {copiedState === 'day' ? t.settings.copied : (lang === 'ro' ? "Trimite program azi" : "Share Day")}
+                      </button>
+                      <button onClick={handleShareWeek} className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 rounded-xl font-bold text-white transition-all shadow-md text-sm sm:text-base ${copiedState === 'week' ? 'bg-green-500 hover:bg-green-600' : theme === 'neon' ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-800 hover:bg-slate-900'}`}>
+                          {copiedState === 'week' ? t.settings.copied : (lang === 'ro' ? "Trimite program săptămână" : "Share Week")}
+                      </button>
+                  </div>
               </div>
           </div>
 

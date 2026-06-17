@@ -11,6 +11,7 @@ interface HeaderProps {
     handleAccentChange: (color: string) => void;
     handleThemeChange: (theme: Theme) => void;
     userName: string | null;
+    profilePicture: string | null;
     searchQuery: string;
     setSearchQuery: (query: string) => void;
     isEditingName: boolean;
@@ -28,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
     handleAccentChange,
     handleThemeChange,
     userName,
+    profilePicture,
     searchQuery,
     setSearchQuery,
     isEditingName,
@@ -51,7 +53,18 @@ export const Header: React.FC<HeaderProps> = ({
                  >
                     <Menu size={20} />
                  </button>
-                 <span className={`hidden sm:inline text-lg ${theme === 'neon' ? 'text-slate-300' : 'text-slate-500'}`}>{t.header.greeting}</span>
+                 
+               <div className="flex items-center gap-2">
+                 {profilePicture ? (
+                     <img src={profilePicture} alt="Profile" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover shadow-sm border" style={{ borderColor: accentColor }} />
+                 ) : (
+                     <div className="w-8 h-8 sm:w-10 sm:h-10 text-sm sm:text-base rounded-full shadow-sm flex flex-shrink-0 items-center justify-center font-bold text-white uppercase" style={{ backgroundColor: accentColor }}>
+                        {userName ? userName.charAt(0) : 'U'}
+                     </div>
+                 )}
+                 <span className={`hidden lg:inline text-lg ${theme === 'neon' ? 'text-slate-300' : 'text-slate-500'}`}>{t.header.greeting}</span>
+               </div>
+
                  {isEditingName ? (
                     <input 
                         autoFocus

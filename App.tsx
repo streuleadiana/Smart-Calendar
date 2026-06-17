@@ -13,6 +13,7 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { HomeDashboard } from './components/HomeDashboard';
 import { BottomNav } from './components/BottomNav';
+import { UpdateNotifier } from './components/UpdateNotifier';
 import { CalendarEvent, Todo, Theme, Category } from './types';
 import * as storage from './utils/storage';
 import { LanguageOption, translations } from './utils/translations';
@@ -39,6 +40,7 @@ const App: React.FC = () => {
   // Data State
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [userName, setUserName] = useState<string | null>(null);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
   
   // Mascot Identity
   const [assistantName, setAssistantName] = useState(() => localStorage.getItem('assistant_name') || "Olli");
@@ -68,6 +70,7 @@ const App: React.FC = () => {
   // Identity & Themes
   const [theme, setTheme] = useState<Theme>('modern');
   const [accentColor, setAccentColor] = useState<string>('#4F46E5'); // Default Indigo Hex
+  const [font, setFont] = useState<FontOption>('inter');
   
   // Data
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -117,7 +120,7 @@ const App: React.FC = () => {
 
   // Settings State (for Import/Export feedback)
   const [importError, setImportError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedState, setCopiedState] = useState<'day' | 'week' | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState('#10B981');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -160,13 +163,22 @@ const App: React.FC = () => {
                     if (data.mascot) {
                         setUserName(data.mascot);
                     }
+                    if (data.profilePicture !== undefined) {
+                        setProfilePicture(data.profilePicture);
+                    }
+                    if (data.font) {
+                        setFont(data.font as FontOption);
+                        storage.saveFont(data.font as FontOption);
+                    }
                 } else {
                      // First-time login, set defaults
                      setDoc(userDocRef, {
                         themeColor: localStorage.getItem('app_accent_color') || '#4F46E5',
                         theme: storage.getTheme() || 'modern',
                         mascot: user.displayName || 'Utilizator',
-                        lang: localStorage.getItem('app_lang') || 'ro'
+                        lang: localStorage.getItem('app_lang') || 'ro',
+                        profilePicture: null,
+                        font: storage.getFont() || 'inter'
                      }, { merge: true });
                 }
             });
@@ -293,6 +305,13 @@ const App: React.FC = () => {
         }
     }
   };
+
+  const handleUpdateProfilePicture = async (base64Image: string | null) => {
+    setProfilePicture(base64Image);
+    if (auth.currentUser) {
+        await savePreferences({ profilePicture: base64Image });
+    }
+  };
   
   const saveNameEdit = () => {
     if (tempName.trim()) {
@@ -331,6 +350,12 @@ const App: React.FC = () => {
     setAccentColor(newColor);
     localStorage.setItem('app_accent_color', newColor);
     savePreferences({ themeColor: newColor });
+  };
+
+  const handleFontChange = (newFont: FontOption) => {
+    setFont(newFont);
+    storage.saveFont(newFont);
+    savePreferences({ font: newFont });
   };
 
   // --- CATEGORY HANDLERS ---
@@ -433,7 +458,42 @@ const App: React.FC = () => {
     triggerAiMessage("Datele au fost restaurate cu succes! 💾");
   };
 
-  const handleShare = async () => {
+  const handleShareDay = async () => {
+    const now = new Date();
+    
+    const todayEvents = events
+      .filter(e => {
+        const d = new Date(e.date);
+        return d.getFullYear() === now.getFullYear() && 
+               d.getMonth() === now.getMonth() && 
+               d.getDate() === now.getDate();
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    let text = `📅 *Programul meu astăzi*:\n\n`;
+
+    if (todayEvents.length === 0) {
+      text += "Nu am evenimente programate.";
+    } else {
+      todayEvents.forEach((e, index) => {
+        const dateObj = new Date(e.date);
+        const dayShort = dateObj.toLocaleDateString('ro-RO', { weekday: 'short' });
+        const dateFormatted = dateObj.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit' });
+        text += `▫️ ${dayShort.charAt(0).toUpperCase() + dayShort.slice(1)} ${dateFormatted}: ${e.title} ${e.time ? `(${e.time})` : ''}`;
+        if (index < todayEvents.length - 1) text += '\n';
+      });
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedState('day');
+      setTimeout(() => setCopiedState(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy day schedule", err);
+    }
+  };
+
+  const handleShareWeek = async () => {
     const now = new Date();
     const nextWeek = new Date();
     nextWeek.setDate(now.getDate() + 7);
@@ -441,33 +501,32 @@ const App: React.FC = () => {
     const upcoming = events
       .filter(e => {
         const d = new Date(e.date);
-        // Clone now to avoid mutation in filter
         const startOfToday = new Date(now);
         startOfToday.setHours(0,0,0,0);
         return d >= startOfToday && d <= nextWeek;
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    let text = `📅 *Programul meu (Următoarele 7 zile)*:\n\n`;
+    let text = `📅 *Programul meu săptămâna asta*:\n\n`;
 
     if (upcoming.length === 0) {
-      text += "Sunt liber toată săptămâna! 😎\n";
+      text += "Nu am evenimente programate.";
     } else {
-      upcoming.forEach(e => {
+      upcoming.forEach((e, index) => {
         const dateObj = new Date(e.date);
-        const dayName = dateObj.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric' });
-        text += `▫️ ${dayName.charAt(0).toUpperCase() + dayName.slice(1)}: ${e.title} ${e.time ? `(${e.time})` : ''}\n`;
+        const dayShort = dateObj.toLocaleDateString('ro-RO', { weekday: 'short' });
+        const dateFormatted = dateObj.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit' });
+        text += `▫️ ${dayShort.charAt(0).toUpperCase() + dayShort.slice(1)} ${dateFormatted}: ${e.title} ${e.time ? `(${e.time})` : ''}`;
+        if (index < upcoming.length - 1) text += '\n';
       });
     }
-    
-    text += `\nRestul sunt liber! ☕`;
 
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopiedState('week');
+      setTimeout(() => setCopiedState(null), 2000);
     } catch (err) {
-      console.error("Failed to copy", err);
+      console.error("Failed to copy week schedule", err);
     }
   };
 
@@ -486,7 +545,7 @@ const App: React.FC = () => {
   const getThemeBackground = () => {
     switch(theme) {
       case 'neon': return 'bg-slate-950';
-      case 'pastel': return 'bg-stone-50';
+      case 'soft': return 'bg-[#fff5f7]'; // Pale, elegant pink/cream
       default: return 'bg-slate-100';
     }
   };
@@ -511,6 +570,16 @@ const App: React.FC = () => {
       </div>
     );
   }
+
+  // Define Font Class
+  const getFontClass = () => {
+     switch(font) {
+        case 'nunito': return 'font-nunito';
+        case 'quicksand': return 'font-quicksand';
+        case 'caveat': return 'font-caveat';
+        default: return 'font-inter';
+     }
+  };
 
   // --- WELCOME SCREEN ---
   if (!userName) {
@@ -627,8 +696,12 @@ const App: React.FC = () => {
              theme={theme}
              accentColor={accentColor}
              lang={lang}
+             font={font}
+             handleFontChange={handleFontChange}
              userName={userName}
              handleUpdateUserName={handleUpdateUserName}
+             profilePicture={profilePicture}
+             handleUpdateProfilePicture={handleUpdateProfilePicture}
              assistantName={assistantName}
              handleUpdateAssistantName={handleUpdateAssistantName}
              assistantAvatar={assistantAvatar}
@@ -649,8 +722,9 @@ const App: React.FC = () => {
              handleFileChange={handleFileChange}
              fileInputRef={fileInputRef}
              importError={importError}
-             handleShare={handleShare}
-             copied={copied}
+             handleShareDay={handleShareDay}
+             handleShareWeek={handleShareWeek}
+             copiedState={copiedState}
              testNotification={testNotification}
              setIsFeedbackModalOpen={setIsFeedbackModalOpen}
              handleAccentChange={handleAccentChange}
@@ -664,7 +738,7 @@ const App: React.FC = () => {
   // --- SIDEBAR STYLES ---
   const sidebarClass = theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200';
   return (
-    <div {...sidebarSwipeHandlers} className={`flex h-screen overflow-hidden transition-colors duration-300 ${getThemeBackground()}`}>
+    <div {...sidebarSwipeHandlers} className={`flex h-screen overflow-hidden transition-colors duration-300 ${getThemeBackground()} ${getFontClass()}`}>
       
       {/* Mobile Overlay (Tablet/Desktop when Sidebar is open) */}
       {isSidebarOpen && (
@@ -699,6 +773,7 @@ const App: React.FC = () => {
               handleAccentChange={handleAccentChange}
               handleThemeChange={handleThemeChange}
               userName={userName}
+              profilePicture={profilePicture}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               isEditingName={isEditingName}
@@ -788,6 +863,8 @@ const App: React.FC = () => {
         onClose={() => setIsFeedbackModalOpen(false)}
         theme={theme}
       />
+
+      <UpdateNotifier theme={theme} accentColor={accentColor} />
     </div>
   );
 };

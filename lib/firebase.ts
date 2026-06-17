@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getMessaging, isSupported, getToken } from "firebase/messaging";
 
@@ -12,8 +12,10 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
+console.log("Firebase config check:", !!firebaseConfig.apiKey, firebaseConfig.projectId);
+
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+export const db = initializeFirestore(app, { experimentalForceLongPolling: true });
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 

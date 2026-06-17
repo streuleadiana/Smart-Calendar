@@ -25,7 +25,8 @@ export const EventModal: React.FC<EventModalProps> = ({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>(accentColor);
   const [useCustomColor, setUseCustomColor] = useState(false);
-  const [notificationOffset, setNotificationOffset] = useState<number>(0);
+  const [notificationDays, setNotificationDays] = useState<number>(0);
+  const [notificationHours, setNotificationHours] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,7 +40,8 @@ export const EventModal: React.FC<EventModalProps> = ({
       setSelectedCategoryId(categories.length > 0 ? categories[0].id : null);
       setSelectedColor(accentColor);
       setUseCustomColor(false);
-      setNotificationOffset(0);
+      setNotificationDays(0);
+      setNotificationHours(0);
       setError(null);
       
       const year = initialDate.getFullYear();
@@ -64,6 +66,7 @@ export const EventModal: React.FC<EventModalProps> = ({
     }
 
     try {
+      const notificationOffset = (notificationDays * 24 * 60) + (notificationHours * 60);
       await onSave({
         title,
         description: details || undefined,
@@ -201,21 +204,30 @@ export const EventModal: React.FC<EventModalProps> = ({
           {time && (
               <div>
                 <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">
-                  Anunță-mă cu...
+                  Anunță-mă înainte cu:
                 </label>
-                <select
-                  value={notificationOffset}
-                  onChange={e => setNotificationOffset(Number(e.target.value))}
-                  className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer"
-                >
-                  <option value={0}>Nu mă anunța</option>
-                  <option value={5}>5 minute</option>
-                  <option value={10}>10 minute</option>
-                  <option value={30}>30 minute</option>
-                  <option value={60}>1 oră</option>
-                  <option value={720}>12 ore</option>
-                  <option value={1440}>24 ore</option>
-                </select>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Zile</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={notificationDays}
+                      onChange={e => setNotificationDays(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Ore</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={notificationHours}
+                      onChange={e => setNotificationHours(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer"
+                    />
+                  </div>
+                </div>
               </div>
           )}
 
@@ -245,8 +257,8 @@ export const EventModal: React.FC<EventModalProps> = ({
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 rounded-lg text-white font-medium shadow-lg transition-all hover:opacity-90"
-              style={{ backgroundColor: accentColor }}
+              className="flex-1 px-4 py-2.5 rounded-2xl text-white font-medium shadow-lg transition-transform hover:-translate-y-0.5 active:scale-95"
+              style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`, boxShadow: `0 4px 14px 0 ${accentColor}40` }}
             >
               Save Event
             </button>

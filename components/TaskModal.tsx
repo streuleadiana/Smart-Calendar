@@ -29,7 +29,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [color, setColor] = useState(initialTask?.color || accentColor);
   const [useCustomColor, setUseCustomColor] = useState(!!initialTask?.color);
   const [deadlineDate, setDeadlineDate] = useState(initialTask?.deadlineDate || '');
-  const [notificationOffset, setNotificationOffset] = useState<number>(initialTask?.notificationOffset || 0);
+  const [notificationDays, setNotificationDays] = useState<number>(initialTask?.notificationOffset ? Math.floor(initialTask.notificationOffset / 1440) : 0);
+  const [notificationHours, setNotificationHours] = useState<number>(initialTask?.notificationOffset ? Math.floor((initialTask.notificationOffset % 1440) / 60) : 0);
   const [recurrence, setRecurrence] = useState<'none'|'daily'|'weekly'|'bi-weekly'|'monthly'|'yearly'>(initialTask?.recurrence || 'none');
 
   // Reset state when opening/closing or when initialTask changes
@@ -40,7 +41,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
          setColor(initialTask?.color || accentColor);
          setUseCustomColor(!!initialTask?.color);
          setDeadlineDate(initialTask?.deadlineDate || '');
-         setNotificationOffset(initialTask?.notificationOffset || 0);
+         
+         const existingOffset = initialTask?.notificationOffset || 0;
+         setNotificationDays(Math.floor(existingOffset / 1440));
+         setNotificationHours(Math.floor((existingOffset % 1440) / 60));
+         
          setRecurrence(initialTask?.recurrence || 'none');
      }
   }, [isOpen, initialTask, accentColor]);
@@ -54,6 +59,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
+    const notificationOffset = (notificationDays * 24 * 60) + (notificationHours * 60);
     onSave(
         text.trim(), 
         categoryId || undefined, 
@@ -165,29 +171,38 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           {deadlineDate && (
               <div className="space-y-2">
                 <label className="text-sm font-semibold opacity-70">
-                  Anunță-mă înainte de deadline cu...
+                  Anunță-mă înainte cu:
                 </label>
-                <select
-                  value={notificationOffset}
-                  onChange={e => setNotificationOffset(Number(e.target.value))}
-                  className={`w-full p-3 rounded-xl border focus:outline-none focus:ring-2 transition-all cursor-pointer ${inputClass}`}
-                >
-                  <option value={0}>Nu mă anunța</option>
-                  <option value={5}>5 minute</option>
-                  <option value={10}>10 minute</option>
-                  <option value={30}>30 minute</option>
-                  <option value={60}>1 oră</option>
-                  <option value={720}>12 ore</option>
-                  <option value={1440}>24 ore</option>
-                </select>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium opacity-70 mb-1">Zile</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={notificationDays}
+                      onChange={e => setNotificationDays(Math.max(0, parseInt(e.target.value) || 0))}
+                      className={`w-full p-3 rounded-xl border focus:outline-none focus:ring-2 transition-all cursor-pointer ${inputClass}`}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium opacity-70 mb-1">Ore</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={notificationHours}
+                      onChange={e => setNotificationHours(Math.max(0, parseInt(e.target.value) || 0))}
+                      className={`w-full p-3 rounded-xl border focus:outline-none focus:ring-2 transition-all cursor-pointer ${inputClass}`}
+                    />
+                  </div>
+                </div>
               </div>
           )}
 
           <button
              type="submit"
              disabled={!text.trim()}
-             className="w-full py-4 rounded-xl font-bold text-white shadow-md transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-             style={{ backgroundColor: accentColor }}
+             className="w-full py-4 rounded-2xl font-bold text-white shadow-lg transition-transform hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+             style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`, boxShadow: `0 4px 14px 0 ${accentColor}40` }}
           >
              {initialTask ? (lang === 'ro' ? 'Salvează' : 'Save Changes') : (lang === 'ro' ? 'Adaugă Task' : 'Add Task')}
           </button>

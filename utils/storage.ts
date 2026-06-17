@@ -1,4 +1,4 @@
-import { CalendarEvent, User, Todo, Theme, Category } from '../types';
+import { CalendarEvent, User, Todo, Theme, Category, FontOption } from '../types';
 import { auth, db, cleanPayload } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -73,5 +73,14 @@ export const saveTheme = (theme: Theme): void => {
 
 export const getTheme = (): Theme => {
   const t = localStorage.getItem(STORAGE_KEYS.THEME) as Theme;
-  return t && ['modern', 'neon', 'pastel'].includes(t) ? t : 'modern';
+  return t && ['modern', 'neon', 'soft'].includes(t) ? t : 'modern';
+};
+
+export const saveFont = (font: FontOption): void => {
+  localStorage.setItem('smart_calendar_font', font);
+};
+
+export const getFont = (): FontOption => {
+  const f = localStorage.getItem('smart_calendar_font') as FontOption;
+  return f && ['inter', 'nunito', 'quicksand', 'caveat'].includes(f) ? f : 'inter';
 };

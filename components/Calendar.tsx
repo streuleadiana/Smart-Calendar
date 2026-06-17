@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useSwipeable } from 'react-swipeable';
 import { CalendarEvent, Theme, Category } from '../types';
-import { ChevronLeft, ChevronRight, Plus, ZoomIn, ZoomOut, Repeat } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Repeat } from 'lucide-react';
 import { DayDetailModal } from './DayDetailModal';
 import { HighlightText } from './HighlightText';
 
@@ -40,10 +40,9 @@ export const Calendar: React.FC<CalendarProps> = ({
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(2); // 1 = small, 2 = medium, 3 = large
 
   const isNeon = theme === 'neon';
-  const isPastel = theme === 'pastel';
+  const isPastel = theme === 'soft';
 
   const daysOfWeek = WEEKDAYS[lang] || WEEKDAYS['en'];
 
@@ -115,27 +114,18 @@ export const Calendar: React.FC<CalendarProps> = ({
     const allCells = [...blanks, ...days];
 
     // Theme Specific Classes
+    const isPastel = theme === 'soft';
     const gridBg = isNeon ? 'bg-slate-800' : 'bg-slate-200';
-    const cellBg = isNeon ? 'bg-slate-900 hover:bg-slate-800' : isPastel ? 'bg-[#fffdf7] hover:bg-orange-50' : 'bg-white hover:bg-slate-50';
+    const cellBg = isNeon ? 'bg-slate-900 hover:bg-slate-800' : isPastel ? 'bg-[#fff5f7] hover:bg-[#fff0f4]' : 'bg-white hover:bg-slate-50';
     const textBase = isNeon ? 'text-cyan-50' : 'text-slate-700';
     const textMuted = isNeon ? 'text-slate-400' : 'text-slate-400';
-    const dayHeaderBg = isNeon ? 'bg-slate-950 text-cyan-500' : isPastel ? 'bg-stone-100 text-stone-500' : 'bg-slate-50 text-slate-400';
-    const todayHighlight = isNeon ? 'bg-cyan-900/30' : 'bg-indigo-50/40';
+    const dayHeaderBg = isNeon ? 'bg-slate-950 text-cyan-500' : isPastel ? 'bg-pink-50 text-pink-400' : 'bg-slate-50 text-slate-400';
+    const todayHighlight = isNeon ? 'bg-cyan-900/30' : 'bg-pink-50/50';
 
-    // Zoom Classes
-    let cellHeightClass = 'min-h-[60px] sm:min-h-[120px]';
-    let textDisplayClass = 'hidden sm:block';
-    
-    if (zoomLevel === 1) { // Zoomed Out (Small)
-        cellHeightClass = 'min-h-[40px] sm:min-h-[80px]';
-        textDisplayClass = 'hidden'; // Never show text
-    } else if (zoomLevel === 3) { // Zoomed In (Large)
-        cellHeightClass = 'min-h-[100px] sm:min-h-[160px]';
-        textDisplayClass = 'block'; // Always show text
-    }
+    const cellHeightClass = 'min-h-[100px] sm:min-h-[160px]';
 
     return (
-      <div className={`grid grid-cols-7 gap-px rounded-xl sm:rounded-2xl overflow-hidden border shadow-sm ${gridBg} ${isNeon ? 'border-slate-800' : 'border-slate-200'}`}>
+      <div className={`grid grid-cols-7 gap-px rounded-3xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] ${gridBg} ${isNeon ? 'border border-slate-800' : ''}`}>
         {daysOfWeek.map((day, index) => (
           <div key={`header-${index}`} className={`py-2 sm:py-3 text-center text-xs font-bold uppercase tracking-wider flex items-center justify-center ${dayHeaderBg}`}>
             <span>{day}</span>
@@ -178,7 +168,7 @@ export const Calendar: React.FC<CalendarProps> = ({
                 </div>
               </div>
               
-              <div className={`flex-1 overflow-y-auto custom-scrollbar flex ${zoomLevel === 1 ? 'flex-row flex-wrap content-start justify-center px-1' : 'flex-row flex-wrap sm:flex-col content-start justify-center sm:justify-start px-0'} gap-1`}>
+              <div className={`flex-1 overflow-y-auto custom-scrollbar flex flex-row flex-wrap sm:flex-col content-start justify-center sm:justify-start px-0 gap-1`}>
                 {dayEvents.map((event, eventIndex) => {
                   const eventColor = getEventColor(event);
                   const isHighlighted = !!searchQuery;
@@ -192,7 +182,7 @@ export const Calendar: React.FC<CalendarProps> = ({
                   let mlClass = 'sm:ml-2'; // Default margin left inside cell
                   let mrClass = 'sm:mr-2'; // Default margin right inside cell
                   
-                  if (isMultiDay && zoomLevel > 1) {
+                  if (isMultiDay) {
                       if (isStart) {
                           roundedClass = 'rounded-full sm:rounded-l-md sm:rounded-r-none';
                           mrClass = 'sm:mr-0';
@@ -206,14 +196,14 @@ export const Calendar: React.FC<CalendarProps> = ({
                       }
                   }
 
-                  const asBlock = isMultiDay && zoomLevel > 1;
+                  const asBlock = isMultiDay;
 
                   const containerStyles: React.CSSProperties = {
                       ...(isHighlighted && { boxShadow: `0 0 0 2px ${accentColor}`, zIndex: 10 }),
                       backgroundColor: asBlock ? eventColor : undefined,
                       color: asBlock ? '#ffffff' : undefined,
-                      borderLeftColor: (zoomLevel > 1 && !isMultiDay) ? eventColor : 'transparent',
-                      borderLeftWidth: (zoomLevel > 1 && !isMultiDay) ? '2px' : '0px'
+                      borderLeftColor: !isMultiDay ? eventColor : 'transparent',
+                      borderLeftWidth: !isMultiDay ? '2px' : '0px'
                   };
 
                   return (
@@ -227,10 +217,10 @@ export const Calendar: React.FC<CalendarProps> = ({
                         style={containerStyles}
                         title={`${event.title}${event.time ? ` (${event.time}${event.endTime ? ` - ${event.endTime}` : ''})` : ''}`}
                     >
-                        {(!isMultiDay || zoomLevel === 1) && (
+                        {!isMultiDay && (
                            <div className={`w-2 h-2 sm:w-1.5 sm:h-1.5 rounded-full flex-shrink-0`} style={{ backgroundColor: eventColor }}></div>
                         )}
-                        <div className={`${textDisplayClass} flex-1 truncate font-medium ${asBlock ? 'text-white' : (isNeon ? 'text-cyan-100' : 'text-slate-700')} ${(isMultiDay && !isStart) ? 'opacity-0' : ''} flex items-center gap-1`}>
+                        <div className={`block flex-1 truncate font-medium ${asBlock ? 'text-white' : (isNeon ? 'text-cyan-100' : 'text-slate-700')} ${(isMultiDay && !isStart) ? 'opacity-0' : ''} flex items-center gap-1`}>
                             {event.time && (!isMultiDay || isStart) && (
                                 <span className={`${asBlock ? 'text-white/80' : textMuted} mr-1 font-normal whitespace-nowrap`}>
                                     {event.time}
@@ -246,7 +236,7 @@ export const Calendar: React.FC<CalendarProps> = ({
                     </div>
                   );
                 })}
-                {dayEvents.length > 0 && <div className={`${textDisplayClass === 'block' ? 'hidden' : 'sm:hidden'} w-full text-[8px] text-center text-slate-400 mt-0.5 pointer-events-none`}>+{dayEvents.length}</div>}
+                {dayEvents.length > 0 && <div className={`hidden w-full text-[8px] text-center text-slate-400 mt-0.5 pointer-events-none`}>+{dayEvents.length}</div>}
               </div>
             </div>
           );
@@ -297,22 +287,6 @@ export const Calendar: React.FC<CalendarProps> = ({
           <p className={`hidden md:block ${subHeader} text-xs sm:text-sm mt-0.5`}>{t.subtitle}</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
-            {/* Zoom Controls (Mobile Friendly) */}
-            <div className={`hidden sm:flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg border shadow-sm ${navContainer}`}>
-                <ZoomOut size={16} className={subHeader} />
-                <input 
-                    type="range" 
-                    min="1" 
-                    max="3" 
-                    step="1" 
-                    value={zoomLevel} 
-                    onChange={(e) => setZoomLevel(parseInt(e.target.value))}
-                    className="w-16 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                    style={{ accentColor: accentColor }}
-                />
-                <ZoomIn size={16} className={subHeader} />
-            </div>
-            
             <div className={`flex items-center rounded-lg p-0.5 sm:p-1 border shadow-sm ${navContainer}`}>
               <button 
                 onClick={() => changeMonth(-1)}
@@ -351,40 +325,14 @@ export const Calendar: React.FC<CalendarProps> = ({
                    }
                    onDateSelect(targetDate);
                }}
-               className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-white font-medium text-xs sm:text-sm transition-transform hover:scale-105 shadow-sm"
-               style={{ backgroundColor: accentColor }}
+               className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 rounded-xl text-white font-medium text-xs sm:text-sm transition-transform hover:-translate-y-0.5 shadow-md hover:shadow-lg"
+               style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`, boxShadow: `0 4px 14px 0 ${accentColor}40` }}
             >
-               <Plus size={16} />
+               <Plus size={16} strokeWidth={2} />
                <span className="hidden sm:inline break-keep whitespace-nowrap">{lang === 'ro' ? 'Adaugă Eveniment' : 'Add Event'}</span>
                <span className="sm:hidden break-keep whitespace-nowrap">{lang === 'ro' ? 'Adaugă' : 'Add'}</span>
             </button>
         </div>
-      </div>
-      
-      {/* Mobile Zoom Controls (Visible only on small screens) */}
-      <div className={`sm:hidden flex items-center justify-between gap-2 px-2 py-1 mb-2 rounded-lg border bg-opacity-50 ${navContainer}`}>
-           <span className={`text-[10px] uppercase font-bold tracking-wider ${subHeader}`}>{t.aspect}</span>
-           <div className="flex items-center gap-2">
-                <button 
-                    onClick={() => setZoomLevel(Math.max(1, zoomLevel - 1))}
-                    disabled={zoomLevel === 1}
-                    className={`p-1 rounded-md transition-colors disabled:opacity-50 ${buttonNav}`}
-                >
-                    <ZoomOut size={16} />
-                </button>
-                <div className="flex gap-1">
-                    {[1,2,3].map(lvl => (
-                        <div key={lvl} className={`w-2 h-2 rounded-full ${zoomLevel === lvl ? '' : 'bg-slate-300 opacity-50'}`} style={zoomLevel === lvl ? {backgroundColor: accentColor} : {}} />
-                    ))}
-                </div>
-                <button 
-                    onClick={() => setZoomLevel(Math.min(3, zoomLevel + 1))}
-                    disabled={zoomLevel === 3}
-                    className={`p-1 rounded-md transition-colors disabled:opacity-50 ${buttonNav}`}
-                >
-                    <ZoomIn size={16} />
-                </button>
-           </div>
       </div>
       
       <div className="flex-1 overflow-y-auto pb-24 sm:pb-4 custom-scrollbar">

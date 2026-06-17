@@ -36,7 +36,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   if (!isOpen || !date) return null;
 
   const isNeon = theme === 'neon';
-  const isPastel = theme === 'pastel';
+  const isPastel = theme === 'soft';
 
   // Helper to resolve color
   const getEventColor = (event: CalendarEvent) => {
@@ -193,10 +193,10 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 onClose();
                 onAddEvent();
             }}
-            className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 hover:opacity-90`}
-            style={{ backgroundColor: accentColor }}
+            className={`w-full py-3.5 rounded-2xl font-bold text-white shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 hover:-translate-y-0.5`}
+            style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`, boxShadow: `0 4px 14px 0 ${accentColor}40` }}
           >
-            <Plus size={20} />
+            <Plus size={20} strokeWidth={1.5} />
             {t.add}
           </button>
         </div>

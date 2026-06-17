@@ -37,4 +37,5 @@ export interface User {
   email: string;
 }
 
-export type Theme = 'modern' | 'neon' | 'pastel';
+export type Theme = 'modern' | 'neon' | 'soft';
+export type FontOption = 'inter' | 'nunito' | 'quicksand' | 'caveat' | 'poppins' | 'playfair' | 'oswald' | 'system';
