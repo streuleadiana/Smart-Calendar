@@ -31,6 +31,7 @@ import {
   Download, Upload, Share2, Check, User as UserIcon, AlertCircle,
   Menu, Home, Search, Pencil, X, Globe
 } from 'lucide-react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 const App: React.FC = () => {
   // --- STATE ---
@@ -865,6 +866,7 @@ const App: React.FC = () => {
       />
 
       <UpdateNotifier theme={theme} accentColor={accentColor} />
+      <SpeedInsights />
     </div>
   );
 };
