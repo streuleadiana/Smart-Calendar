@@ -8,8 +8,13 @@ export const expandEventsForDateRange = (events: CalendarEvent[], startDate: Dat
         
         // Single Day / No Recurrence
         if ((!e.endDate || e.endDate === e.date) && (!e.recurrence || e.recurrence === 'none')) {
-            const d = new Date(e.date);
-            if (d >= startDate && d <= endDate) {
+            const startObj = new Date(e.date + 'T00:00:00');
+            const searchStart = new Date(startDate);
+            searchStart.setHours(0, 0, 0, 0);
+            const searchEnd = new Date(endDate);
+            searchEnd.setHours(23, 59, 59, 999);
+            
+            if (startObj >= searchStart && startObj <= searchEnd) {
                 instances.push(e);
             }
             return;

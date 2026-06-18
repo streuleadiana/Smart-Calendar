@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Search, Pencil } from 'lucide-react';
+import { Menu, Search, Pencil, Settings, MessageCircle } from 'lucide-react';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { Theme } from '../types';
 import { LanguageOption, translations } from '../utils/translations';
@@ -8,7 +8,6 @@ interface HeaderProps {
     setIsSidebarOpen: (isOpen: boolean) => void;
     theme: Theme;
     accentColor: string;
-    handleAccentChange: (color: string) => void;
     handleThemeChange: (theme: Theme) => void;
     userName: string | null;
     profilePicture: string | null;
@@ -20,13 +19,17 @@ interface HeaderProps {
     setTempName: (name: string) => void;
     saveNameEdit: () => void;
     lang: LanguageOption;
+    isChatOpen: boolean;
+    setIsChatOpen: (isOpen: boolean) => void;
+    hasChatNotification: boolean;
+    setHasChatNotification: (has: boolean) => void;
+    setCurrentView: (view: any) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
     setIsSidebarOpen,
     theme,
     accentColor,
-    handleAccentChange,
     handleThemeChange,
     userName,
     profilePicture,
@@ -37,7 +40,12 @@ export const Header: React.FC<HeaderProps> = ({
     tempName,
     setTempName,
     saveNameEdit,
-    lang
+    lang,
+    isChatOpen,
+    setIsChatOpen,
+    hasChatNotification,
+    setHasChatNotification,
+    setCurrentView
 }) => {
     const t = translations[lang];
     const headerBg = theme === 'neon' ? 'bg-slate-900 border-slate-800' : theme === 'pastel' ? 'bg-[#fffbf0] border-orange-100' : 'bg-white border-slate-200';
@@ -112,20 +120,34 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
             </div>
 
-            {/* Right: Color Picker & Theme Switcher */}
+            {/* Right: Actions & Theme Switcher */}
             <div className="flex items-center gap-2 sm:gap-3">
-                <div 
-                    className="relative flex items-center justify-center w-7 h-7 sm:w-9 sm:h-9 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm transition-transform hover:scale-105"
-                    style={{ borderColor: theme === 'neon' ? '#334155' : '#e2e8f0' }}
-                    title={t.header.shareTooltip}
+                <button
+                    onClick={() => {
+                        if (!isChatOpen) setHasChatNotification(false);
+                        setIsChatOpen(!isChatOpen);
+                    }}
+                    className={`relative p-2 rounded-full transition-colors ${theme === 'neon' ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'} ${isChatOpen ? 'text-primary' : ''}`}
+                    style={isChatOpen ? { color: accentColor, backgroundColor: `${accentColor}1A` } : {}}
+                    title="Assistant"
                 >
-                   <input
-                     type="color"
-                     value={accentColor}
-                     onChange={(e) => handleAccentChange(e.target.value)}
-                     className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] p-0 m-0 cursor-pointer border-none"
-                   />
-                </div>
+                    <MessageCircle size={20} />
+                    {hasChatNotification && !isChatOpen && (
+                        <span className="absolute top-0 right-0 flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-white"></span>
+                        </span>
+                    )}
+                </button>
+                
+                <button 
+                  onClick={() => setCurrentView('settings')}
+                  className={`p-2 rounded-full transition-colors ${theme === 'neon' ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'}`}
+                  title={t.tabs.settings}
+                >
+                   <Settings size={20} />
+                </button>
+
                 <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-0 sm:mx-1"></div>
                 <ThemeSwitcher currentTheme={theme} onThemeChange={handleThemeChange} />
             </div>

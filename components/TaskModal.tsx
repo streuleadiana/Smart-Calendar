@@ -29,8 +29,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [color, setColor] = useState(initialTask?.color || accentColor);
   const [useCustomColor, setUseCustomColor] = useState(!!initialTask?.color);
   const [deadlineDate, setDeadlineDate] = useState(initialTask?.deadlineDate || '');
-  const [notificationDays, setNotificationDays] = useState<number>(initialTask?.notificationOffset ? Math.floor(initialTask.notificationOffset / 1440) : 0);
-  const [notificationHours, setNotificationHours] = useState<number>(initialTask?.notificationOffset ? Math.floor((initialTask.notificationOffset % 1440) / 60) : 0);
+  const [offsetValue, setOffsetValue] = useState<number>(0);
+  const [offsetUnit, setOffsetUnit] = useState<string>('minutes');
   const [recurrence, setRecurrence] = useState<'none'|'daily'|'weekly'|'bi-weekly'|'monthly'|'yearly'>(initialTask?.recurrence || 'none');
 
   // Reset state when opening/closing or when initialTask changes
@@ -43,8 +43,22 @@ export const TaskModal: React.FC<TaskModalProps> = ({
          setDeadlineDate(initialTask?.deadlineDate || '');
          
          const existingOffset = initialTask?.notificationOffset || 0;
-         setNotificationDays(Math.floor(existingOffset / 1440));
-         setNotificationHours(Math.floor((existingOffset % 1440) / 60));
+         let val = 0;
+         let unit = 'minutes';
+         if (existingOffset > 0) {
+             if (existingOffset % 1440 === 0) {
+                 val = existingOffset / 1440;
+                 unit = 'days';
+             } else if (existingOffset % 60 === 0) {
+                 val = existingOffset / 60;
+                 unit = 'hours';
+             } else {
+                 val = existingOffset;
+                 unit = 'minutes';
+             }
+         }
+         setOffsetValue(val);
+         setOffsetUnit(unit);
          
          setRecurrence(initialTask?.recurrence || 'none');
      }
@@ -59,7 +73,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
-    const notificationOffset = (notificationDays * 24 * 60) + (notificationHours * 60);
+    let notificationOffset = 0;
+    if (offsetUnit === 'minutes') {
+        notificationOffset = offsetValue;
+    } else if (offsetUnit === 'hours') {
+        notificationOffset = offsetValue * 60;
+    } else if (offsetUnit === 'days') {
+        notificationOffset = offsetValue * 1440;
+    }
     onSave(
         text.trim(), 
         categoryId || undefined, 
@@ -173,26 +194,26 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 <label className="text-sm font-semibold opacity-70">
                   Anunță-mă înainte cu:
                 </label>
-                <div className="flex gap-4">
+                <div className="flex items-center gap-4">
                   <div className="flex-1">
-                    <label className="block text-xs font-medium opacity-70 mb-1">Zile</label>
                     <input
                       type="number"
                       min="0"
-                      value={notificationDays}
-                      onChange={e => setNotificationDays(Math.max(0, parseInt(e.target.value) || 0))}
-                      className={`w-full p-3 rounded-xl border focus:outline-none focus:ring-2 transition-all cursor-pointer ${inputClass}`}
+                      value={offsetValue}
+                      onChange={e => setOffsetValue(Math.max(0, parseInt(e.target.value) || 0))}
+                      className={`w-full p-3 rounded-xl border focus:outline-none focus:ring-2 transition-all cursor-pointer shadow-sm ${inputClass}`}
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-xs font-medium opacity-70 mb-1">Ore</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={notificationHours}
-                      onChange={e => setNotificationHours(Math.max(0, parseInt(e.target.value) || 0))}
-                      className={`w-full p-3 rounded-xl border focus:outline-none focus:ring-2 transition-all cursor-pointer ${inputClass}`}
-                    />
+                    <select
+                      value={offsetUnit}
+                      onChange={e => setOffsetUnit(e.target.value)}
+                      className={`w-full p-3 rounded-xl border focus:outline-none focus:ring-2 transition-all cursor-pointer shadow-sm appearance-none ${inputClass}`}
+                    >
+                      <option value="minutes">Minute</option>
+                      <option value="hours">Ore</option>
+                      <option value="days">Zile</option>
+                    </select>
                   </div>
                 </div>
               </div>

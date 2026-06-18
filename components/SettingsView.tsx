@@ -344,14 +344,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       onChange={(e) => handleFontChange(e.target.value as FontOption)}
                       className={`px-3 py-2 border rounded-xl shadow-sm text-sm transition-colors focus:ring-2 focus:outline-none ${theme === 'neon' ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}
                   >
-                      <option value="inter">Inter (Default)</option>
-                      <option value="system">System Sans</option>
-                      <option value="nunito">Nunito</option>
+                      <option value="system">Default</option>
                       <option value="quicksand">Quicksand</option>
-                      <option value="poppins">Poppins</option>
                       <option value="playfair">Playfair Display</option>
-                      <option value="oswald">Oswald</option>
-                      <option value="caveat">Caveat (Handwriting)</option>
+                      <option value="caveat">Caveat</option>
                   </select>
               </div>
           </div>

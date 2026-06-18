@@ -32,10 +32,45 @@ export interface Todo {
   recurrence?: 'none' | 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'yearly';
 }
 
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  folder: string; // e.g. "✈️ Travel"
+  color: string; // Pastel hex code
+  createdAt: number;
+}
+
 export interface User {
   name: string;
   email: string;
 }
 
+export interface MoodLog {
+  id: string; // YYYY-MM-DD
+  date: string; // YYYY-MM-DD
+  moodEmoji: string;
+  moodLabel: string;
+  color: string;
+  journalNote?: string;
+}
+
+export interface VisionBoardItem {
+  id: string;
+  imageUrl: string;
+  quote?: string;
+  createdAt: number;
+}
+
+export interface WishlistItem {
+  id: string;
+  title: string;
+  price?: string;
+  storeLink?: string;
+  imageUrl?: string;
+  isPurchased: boolean;
+  createdAt: number;
+}
+
 export type Theme = 'modern' | 'neon' | 'soft';
-export type FontOption = 'inter' | 'nunito' | 'quicksand' | 'caveat' | 'poppins' | 'playfair' | 'oswald' | 'system';
+export type FontOption = 'system' | 'quicksand' | 'playfair' | 'caveat';

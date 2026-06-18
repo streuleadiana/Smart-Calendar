@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
-import { CalendarEvent, Todo, Theme, Category } from '../types';
+import React, { useState, useEffect } from 'react';
+import { CalendarEvent, Todo, Theme, Category, VisionBoardItem, MoodLog, Note } from '../types';
 import { translations, LanguageOption } from '../utils/translations';
-import { Calendar as CalendarIcon, CheckSquare, Clock, Edit2, Trash2, Repeat, Heart } from 'lucide-react';
-import { checkRecurrence, expandEventsForDateRange } from '../utils/recurrence';
+import { Calendar as CalendarIcon, CheckSquare, Heart, X, CheckCircle2 } from 'lucide-react';
+import { expandEventsForDateRange } from '../utils/recurrence';
 
 interface HomeDashboardProps {
     events: CalendarEvent[];
     todos: Todo[];
+    visionItems: VisionBoardItem[];
+    moodLogs: MoodLog[];
+    onSaveMood: (log: Omit<MoodLog, 'id'>) => Promise<void>;
+    onSaveNote: (title: string, content: string, folder: string, color: string) => Promise<void>;
+    setCurrentView: (view: 'home' | 'calendar' | 'tasks' | 'settings' | 'notes' | 'moods' | 'vision') => void;
     theme: Theme;
     accentColor: string;
     lang: LanguageOption;
@@ -20,163 +25,91 @@ interface HomeDashboardProps {
     onDeleteTaskClick: (id: string) => void;
 }
 
+const MOODS = [
+  { id: 'great', emoji: '😄', label: 'Super' },
+  { id: 'good', emoji: '🙂', label: 'Bine' },
+  { id: 'neutral', emoji: '😐', label: 'Normal' },
+  { id: 'bad', emoji: '😔', label: 'Rău' },
+  { id: 'awful', emoji: '😢', label: 'Groaznic' }
+];
+
 export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     events,
     todos,
+    visionItems,
+    moodLogs,
+    onSaveMood,
+    onSaveNote,
+    setCurrentView,
     theme,
     accentColor,
     lang,
     categories,
-    onTodoToggle,
-    onAddEventClick,
-    onAddTaskClick,
-    onEditEventClick,
-    onDeleteEventClick,
-    onEditTaskClick,
-    onDeleteTaskClick
+    onTodoToggle
 }) => {
-    const [filter, setFilter] = useState<'day' | 'week' | 'month'>('day');
-    const [selectedDashboardDate, setSelectedDashboardDate] = useState<Date>(new Date());
     const t = translations[lang];
-
-    // Helper functions for date navigation
-    const navigatePrevious = () => {
-        const newDate = new Date(selectedDashboardDate);
-        if (filter === 'day') newDate.setDate(selectedDashboardDate.getDate() - 1);
-        else if (filter === 'week') newDate.setDate(selectedDashboardDate.getDate() - 7);
-        else if (filter === 'month') newDate.setMonth(selectedDashboardDate.getMonth() - 1);
-        setSelectedDashboardDate(newDate);
-    };
-
-    const navigateNext = () => {
-        const newDate = new Date(selectedDashboardDate);
-        if (filter === 'day') newDate.setDate(selectedDashboardDate.getDate() + 1);
-        else if (filter === 'week') newDate.setDate(selectedDashboardDate.getDate() + 7);
-        else if (filter === 'month') newDate.setMonth(selectedDashboardDate.getMonth() + 1);
-        setSelectedDashboardDate(newDate);
-    };
-
-    const navigateToday = () => {
-        setSelectedDashboardDate(new Date());
-    };
-
-    const isToday = (date: Date) => {
-        const today = new Date();
-        return date.getDate() === today.getDate() &&
-               date.getMonth() === today.getMonth() &&
-               date.getFullYear() === today.getFullYear();
-    };
-
-    const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-    const selectedDateStr = selectedDashboardDate.toLocaleDateString('en-CA');
-
-    // Get end of week based on selected date
-    const dayOfWeek = selectedDashboardDate.getDay();
-    const processEventListTextMatches = (catId?: string) => {
-        return catId ? categories.find(c => c.id === catId)?.name || 'Unknown' : '';
-    };
-
-    const displayEvents = (() => {
-        let targetStart = new Date(selectedDashboardDate);
-        targetStart.setHours(0, 0, 0, 0);
-        let targetEnd = new Date(targetStart);
-        
-        if (filter === 'day') {
-            targetEnd.setHours(23, 59, 59, 999);
-        } else if (filter === 'week') {
-            // Monday start
-            const day = targetStart.getDay();
-            const diff = targetStart.getDate() - day + (day === 0 ? -6 : 1);
-            targetStart.setDate(diff);
-            targetEnd = new Date(targetStart);
-            targetEnd.setDate(targetStart.getDate() + 6);
-            targetEnd.setHours(23, 59, 59, 999);
-        } else if (filter === 'month') {
-            targetStart.setDate(1);
-            targetEnd = new Date(targetStart);
-            targetEnd.setMonth(targetStart.getMonth() + 1);
-            targetEnd.setDate(0);
-            targetEnd.setHours(23, 59, 59, 999);
-        }
-        
-        const now = new Date();
-        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        
-        return expandEventsForDateRange(events, targetStart, targetEnd)
-            .filter(e => {
-                // If the selected date is today, hide finished events that happened today
-                if (filter === 'day' && isToday(selectedDashboardDate)) {
-                    if (e.date !== todayStr) return true;
-                    const endCompareTime = e.endTime || e.time;
-                    if (!endCompareTime) return true;
-                    return endCompareTime >= currentTime;
-                }
-                return true;
-            })
-            .sort((a, b) => {
-                const dateA = new Date(`${a.date}T${a.time || '00:00'}`);
-                const dateB = new Date(`${b.date}T${b.time || '00:00'}`);
-                return dateA.getTime() - dateB.getTime();
-            });
-    })();
-
-    const displayTodos = (() => {
-        // filter tasks based on deadlineDate
-        // tasks without deadline are always shown in 'day' view if selected date is today, or in any view?
-        // Let's show all unfinished tasks that either have no deadline, or have deadline <= targetEnd. But only for their specific group...
-        // Actually, for simplicity: show all tasks due in the selected range, plus overdue/no-deadline in "today" context
-        let targetStart = new Date(selectedDashboardDate);
-        targetStart.setHours(0, 0, 0, 0);
-        let targetEnd = new Date(targetStart);
-        
-        if (filter === 'day') {
-            targetEnd.setHours(23, 59, 59, 999);
-        } else if (filter === 'week') {
-            const day = targetStart.getDay();
-            const diff = targetStart.getDate() - day + (day === 0 ? -6 : 1);
-            targetStart.setDate(diff);
-            targetEnd = new Date(targetStart);
-            targetEnd.setDate(targetStart.getDate() + 6);
-            targetEnd.setHours(23, 59, 59, 999);
-        } else if (filter === 'month') {
-            targetStart.setDate(1);
-            targetEnd = new Date(targetStart);
-            targetEnd.setMonth(targetStart.getMonth() + 1);
-            targetEnd.setDate(0);
-            targetEnd.setHours(23, 59, 59, 999);
-        }
-
-        const startStr = targetStart.toLocaleDateString('en-CA');
-        const endStr = targetEnd.toLocaleDateString('en-CA');
-
-        return todos.filter(t => {
-            if (t.completed) return false;
-            
-            // If it has no deadline and we're exploring present/past, maybe just show it
-            if (!t.deadlineDate) return true;
-
-            // Simple check: is deadline within our range, or before our start (overdue)?
-            // If it's overdue, but we are looking at a past day, it might be weird. Let's just treat standard deadlines:
-            if (t.recurrence && t.recurrence !== 'none') {
-                 // evaluate recurrence over our range
-                 const expanded = expandEventsForDateRange([{ ...t, id: t.id, title: t.text, date: t.deadlineDate, recurrence: t.recurrence } as any], targetStart, targetEnd);
-                 return expanded.length > 0;
-            }
-
-            // no recurrence: is it strictly inside range, or overdue if we're on "today" range
-            const isOverdue = t.deadlineDate < todayStr;
-            const isInRange = t.deadlineDate >= startStr && t.deadlineDate <= endStr;
-            
-            if (isToday(selectedDashboardDate) && isOverdue) return true;
-            return isInRange;
-        });
-    })();
-
     const isNeon = theme === 'neon';
-    const cardBg = isNeon 
-        ? 'bg-slate-900 border-slate-800 text-white rounded-3xl' 
-        : 'bg-white border-transparent text-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl';
-    const textMuted = isNeon ? 'text-slate-400' : 'text-slate-500';
+    const isSoft = theme === 'soft';
+    
+    const bgGradient = isNeon ? 'bg-slate-900 border-slate-800 text-white' : isSoft ? 'bg-white/50 backdrop-blur-xl border-pink-100' : 'bg-white border-slate-100';
+    
+    const [heroItem, setHeroItem] = useState<VisionBoardItem | null>(null);
+    const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+    const [quickNoteTitle, setQuickNoteTitle] = useState('');
+    const [quickNoteContent, setQuickNoteContent] = useState('');
+    const [isSavingNote, setIsSavingNote] = useState(false);
+
+    useEffect(() => {
+        if (visionItems && visionItems.length > 0) {
+            const random = visionItems[Math.floor(Math.random() * visionItems.length)];
+            setHeroItem(random);
+        } else {
+            setHeroItem(null);
+        }
+    }, [visionItems]);
+
+    const fallbackQuotes = [
+        "Fiecare zi este o nouă șansă să devii cea mai bună versiune a ta. ✨",
+        "Nu uita să iei o pauză și să respiri. Ești exact unde trebuie să fii. 🌸",
+        "Lucrurile mici de azi devin amintirile prețioase de mâine. 💖",
+        "Crede în magia noilor începuturi. 🌟",
+        "Fii blândă cu tine însăți în timp ce crești. 🦋"
+    ];
+    
+    // Choose one quote per day consistently
+    const quoteIndex = Math.floor(Date.now() / 86400000) % fallbackQuotes.length;
+    const dailyQuote = fallbackQuotes[quoteIndex];
+
+    const todayCA = new Date().toLocaleDateString('en-CA');
+    const todaysMood = moodLogs.find(m => m.date === todayCA);
+
+    const displayTodos = todos.filter(t => !t.completed && (!t.deadlineDate || t.deadlineDate <= todayCA));
+    
+    const todayEvents = events.filter(e => e.date === todayCA).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+    const handleMoodSelect = async (moodId: string) => {
+        await onSaveMood({ date: todayCA, mood: moodId as any, activities: [], note: '' });
+    };
+
+    const handleSaveQuickNote = async () => {
+        if (!quickNoteTitle.trim() && !quickNoteContent.trim()) return;
+        setIsSavingNote(true);
+        try {
+            await onSaveNote(
+                quickNoteTitle.trim() || 'Notiță Rapidă',
+                quickNoteContent.trim(),
+                'Idei Generale',
+                '#ffffff'
+            );
+            setQuickNoteTitle('');
+            setQuickNoteContent('');
+            setIsNoteModalOpen(false);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsSavingNote(false);
+        }
+    };
 
     const getCategoryColor = (id?: string) => {
         if (!id) return accentColor;
@@ -184,284 +117,201 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
         return cat ? cat.color : accentColor;
     };
 
-    const getFormattedDateRange = () => {
-        if (filter === 'day') {
-            return selectedDashboardDate.toLocaleDateString(lang === 'ro' ? 'ro-RO' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        } else if (filter === 'week') {
-            const start = new Date(selectedDashboardDate);
-            const day = start.getDay();
-            const diff = start.getDate() - day + (day === 0 ? -6 : 1);
-            start.setDate(diff);
-            const end = new Date(start);
-            end.setDate(start.getDate() + 6);
-            return `${start.toLocaleDateString(lang === 'ro' ? 'ro-RO' : 'en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString(lang === 'ro' ? 'ro-RO' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`;
-        } else {
-            return selectedDashboardDate.toLocaleDateString(lang === 'ro' ? 'ro-RO' : 'en-US', { year: 'numeric', month: 'long' });
-        }
-    };
-
-    const groupItemsByTime = <T extends any>(items: T[], isEvent: boolean) => {
-        if (filter === 'day') {
-             return [{ label: '', items }];
-        } else if (filter === 'week') {
-            const grouped = items.reduce((acc, item) => {
-                const dateStr = isEvent ? item.date : (item.deadlineDate || 'no-deadline');
-                if (!acc[dateStr]) acc[dateStr] = [];
-                acc[dateStr].push(item);
-                return acc;
-            }, {} as Record<string, T[]>);
-            return Object.keys(grouped).sort().map(d => {
-                if (d === 'no-deadline') return { label: lang === 'ro' ? 'Fără termen' : 'No deadline', items: grouped[d] };
-                const dt = new Date(`${d}T12:00:00`);
-                return {
-                    label: dt.toLocaleDateString(lang === 'ro' ? 'ro-RO' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' }),
-                    items: grouped[d]
-                };
-            });
-        } else {
-            const grouped = items.reduce((acc, item) => {
-                const dateStr = isEvent ? item.date : (item.deadlineDate || 'no-deadline');
-                if (dateStr === 'no-deadline') {
-                    if (!acc['no-deadline']) acc['no-deadline'] = [];
-                    acc['no-deadline'].push(item);
-                    return acc;
-                }
-                const dt = new Date(`${dateStr}T12:00:00`);
-                const weekNum = Math.ceil(dt.getDate() / 7);
-                const weekStr = `${lang === 'ro' ? 'Săptămâna' : 'Week'} ${weekNum}`;
-                if (!acc[weekStr]) acc[weekStr] = [];
-                acc[weekStr].push(item);
-                return acc;
-            }, {} as Record<string, T[]>);
-            return Object.keys(grouped).sort().map(week => ({
-                label: week === 'no-deadline' ? (lang === 'ro' ? 'Fără termen' : 'No deadline') : week,
-                items: grouped[week]
-            }));
-        }
-    };
-
-    const renderEvent = (event: CalendarEvent) => (
-        <div key={`${event.id}-${event.date}`} className="flex gap-4 items-start p-4 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-800 transition-colors group relative" style={{ backgroundColor: `${getCategoryColor(event.categoryId)}10` }}>
-            <div className="flex flex-col items-center min-w-[60px] flex-shrink-0 text-center">
-                <span className="text-xs font-bold uppercase opacity-60">
-                    {new Date(`${event.date}T12:00:00`).toLocaleDateString(lang === 'ro' ? 'ro-RO' : 'en-US', { weekday: 'short' })}
-                </span>
-                <span className="text-lg font-bold" style={{ color: event.color || getCategoryColor(event.categoryId) }}>
-                    {new Date(`${event.date}T12:00:00`).getDate()}
-                    {event.endDate && event.endDate !== event.date && (
-                        <span className="text-sm">-{new Date(`${event.endDate}T12:00:00`).getDate()}</span>
-                    )}
-                </span>
-            </div>
-            <div className="flex-1">
-                <h4 className="font-bold text-lg mb-1 flex items-center gap-2">
-                    {event.title}
-                    {event.recurrence && event.recurrence !== 'none' && (
-                        <Repeat size={14} className="opacity-60 text-indigo-500" />
-                    )}
-                </h4>
-                {event.time && (
-                    <div className="flex items-center gap-1.5 text-sm opacity-70">
-                        <Clock size={14} />
-                        {event.time} {event.endTime ? `- ${event.endTime}` : ''}
-                    </div>
-                )}
-            </div>
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
-                <button 
-                    onClick={() => onEditEventClick(event)}
-                    className="p-1.5 rounded bg-white dark:bg-slate-800 text-slate-500 hover:text-blue-500 shadow hover:shadow-md transition-all"
-                >
-                    <Edit2 size={14} />
-                </button>
-                <button 
-                    onClick={() => onDeleteEventClick(event.id)}
-                    className="p-1.5 rounded bg-white dark:bg-slate-800 text-slate-500 hover:text-red-500 shadow hover:shadow-md transition-all"
-                >
-                    <Trash2 size={14} />
-                </button>
-            </div>
-        </div>
-    );
-
-    const renderTodo = (todo: Todo) => (
-        <div 
-            key={`${todo.id}-${todo.deadlineDate || 'no-date'}`} 
-            className="flex items-center gap-4 p-4 rounded-xl border border-transparent shadow-sm hover:shadow-md transition-all group"
-            style={{ backgroundColor: `${getCategoryColor(todo.categoryId)}08` }}
-        >
-            <button
-                onClick={() => onTodoToggle(todo.id)}
-                className={`flex-shrink-0 transition-all active:scale-95 ${
-                  todo.completed 
-                    ? 'scale-110' 
-                    : isNeon ? 'text-slate-600 hover:text-slate-500' : 'text-slate-300 hover:text-slate-400'
-                }`}
-                style={{ color: todo.completed ? accentColor : (todo.color || getCategoryColor(todo.categoryId) || undefined) }}
-            >
-                {todo.completed ? <Heart size={20} className="fill-current" strokeWidth={1} /> : <Heart size={20} strokeWidth={1.5} />}
-            </button>
-            <span 
-                onClick={() => onTodoToggle(todo.id)} 
-                className={`font-medium text-[15px] flex-1 cursor-pointer flex items-center gap-2 ${todo.color && !todo.color.startsWith('#') ? todo.color : ''}`}
-                style={{ color: todo.color && todo.color.startsWith('#') ? todo.color : undefined }}
-            >
-                {todo.text}
-                {todo.recurrence && todo.recurrence !== 'none' && (
-                    <Repeat size={14} className="opacity-60 text-indigo-500" />
-                )}
-            </span>
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 flex-shrink-0">
-                <button 
-                    onClick={() => onEditTaskClick(todo)}
-                    className="p-1.5 rounded bg-white dark:bg-slate-800 text-slate-500 hover:text-blue-500 shadow-sm transition-all"
-                >
-                    <Edit2 size={13} />
-                </button>
-                <button 
-                    onClick={() => onDeleteTaskClick(todo.id)}
-                    className="p-1.5 rounded bg-white dark:bg-slate-800 text-slate-500 hover:text-red-500 shadow-sm transition-all"
-                >
-                    <Trash2 size={13} />
-                </button>
-            </div>
-        </div>
-    );
-
     return (
         <div className="h-full p-4 pb-24 sm:pb-8 lg:p-8 overflow-y-auto custom-scrollbar animate-in fade-in duration-300">
-            <div className="max-w-4xl mx-auto space-y-8">
+            <div className="max-w-4xl mx-auto space-y-6">
                 
-                {/* Header & Tabs */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h2 className={`text-3xl font-bold ${isNeon ? 'text-white' : 'text-slate-800'}`}>Dashboard</h2>
-                        <div className="flex items-center gap-3 mt-2">
-                            <button onClick={navigatePrevious} className={`p-1.5 rounded-lg border flex items-center justify-center transition-colors ${isNeon ? 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-300' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'}`}>
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
-                            </button>
-                            <button onClick={navigateToday} className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${isNeon ? 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-300' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'}`}>
-                                {lang === 'ro' ? 'Azi' : 'Today'}
-                            </button>
-                            <button onClick={navigateNext} className={`p-1.5 rounded-lg border flex items-center justify-center transition-colors ${isNeon ? 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-300' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'}`}>
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
-                            </button>
-                        </div>
-                        <p className={`mt-2 font-medium ${textMuted}`}>
-                            {getFormattedDateRange()}
-                        </p>
+                {/* Grid Layout */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 auto-rows-min">
+                    
+                    {/* Widget 1: Daily Inspiration (Hero) */}
+                    <div className={`col-span-1 md:col-span-2 relative overflow-hidden rounded-[2rem] shadow-xl border ${bgGradient} min-h-[250px] flex items-end group transition-all`}>
+                        {heroItem && heroItem.imageUrl ? (
+                            <>
+                                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors z-10" />
+                                <img src={heroItem.imageUrl} alt="Daily Inspiration" className="absolute inset-0 w-full h-full object-cover" />
+                                <div className="relative z-20 p-8 w-full bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                                    <span className="inline-block px-3 py-1 mb-3 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-bold uppercase tracking-wider">
+                                        Tema Zilei
+                                    </span>
+                                    {heroItem.quote && (
+                                        <h3 className="text-2xl md:text-3xl font-bold text-white max-w-2xl leading-tight drop-shadow-md">
+                                            "{heroItem.quote}"
+                                        </h3>
+                                    )}
+                                </div>
+                            </>
+                        ) : (
+                            <div className="absolute inset-0 p-8 flex flex-col justify-center items-center text-center bg-gradient-to-br from-pink-100 to-purple-100">
+                                <span className="inline-block px-3 py-1 mb-4 rounded-full bg-white/60 backdrop-blur-md text-sm font-bold uppercase tracking-wider border-white/40 border text-pink-600">
+                                    Tema Zilei
+                                </span>
+                                <h3 className="text-2xl md:text-3xl font-bold text-slate-800 max-w-2xl leading-relaxed text-center px-4">
+                                    "{dailyQuote}"
+                                </h3>
+                                <button 
+                                    onClick={() => setCurrentView('vision')}
+                                    className="mt-6 px-6 py-2.5 rounded-full font-bold text-slate-700 bg-white/80 hover:bg-white shadow-sm border border-white transition-all hover:scale-105 active:scale-95 text-sm"
+                                >
+                                    Personalizează cu o imagine ✨
+                                </button>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 self-start sm:self-auto">
-                        <div className={`flex p-1 rounded-xl ${isNeon ? 'bg-slate-800' : 'bg-slate-100'} self-start sm:self-auto`}>
-                            <button
-                                onClick={() => setFilter('day')}
-                                className={`px-4 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all ${filter === 'day' ? 'shadow-sm' : ''}`}
-                                style={filter === 'day' ? { backgroundColor: isNeon ? '#1e293b' : '#ffffff', color: accentColor } : { color: isNeon ? '#94a3b8' : '#64748b' }}
+                    {/* Widget 2: Today's Schedule (Spans across) */}
+                    <div className={`col-span-1 md:col-span-2 p-6 rounded-[2rem] shadow-lg border ${bgGradient}`}>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className={`text-xl font-bold flex items-center gap-2 ${isNeon ? 'text-white' : 'text-slate-800'}`}>
+                                🗓️ Programul de azi
+                            </h3>
+                            <button 
+                                onClick={() => setCurrentView('calendar')}
+                                className="text-sm font-bold opacity-70 hover:opacity-100 transition-opacity"
+                                style={{ color: accentColor }}
                             >
-                                {lang === 'ro' ? 'Ziua' : 'Day'}
-                            </button>
-                            <button
-                                onClick={() => setFilter('week')}
-                                className={`px-4 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all ${filter === 'week' ? 'shadow-sm' : ''}`}
-                                style={filter === 'week' ? { backgroundColor: isNeon ? '#1e293b' : '#ffffff', color: accentColor } : { color: isNeon ? '#94a3b8' : '#64748b' }}
-                            >
-                                {lang === 'ro' ? 'Săptămâna' : 'Week'}
-                            </button>
-                            <button
-                                onClick={() => setFilter('month')}
-                                className={`px-4 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all ${filter === 'month' ? 'shadow-sm' : ''}`}
-                                style={filter === 'month' ? { backgroundColor: isNeon ? '#1e293b' : '#ffffff', color: accentColor } : { color: isNeon ? '#94a3b8' : '#64748b' }}
-                            >
-                                {lang === 'ro' ? 'Luna' : 'Month'}
+                                Vezi calendar
                             </button>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={onAddEventClick}
-                                className="px-4 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 flex items-center gap-2 whitespace-nowrap"
+                        {todayEvents.length === 0 ? (
+                            <div className="text-center py-6 opacity-60 font-medium">
+                                Nu ai niciun eveniment planificat pentru azi! Bucură-te de timp liber ✨
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {todayEvents.map(event => (
+                                    <div 
+                                        key={event.id} 
+                                        className={`flex items-center gap-3 p-3 rounded-2xl border border-transparent shadow-sm transition-all group`}
+                                        style={{ backgroundColor: `${event.color || accentColor}10` }}
+                                    >
+                                        <div 
+                                           className="w-1.5 h-full rounded-full min-h-[3rem]" 
+                                           style={{ backgroundColor: event.color || accentColor }} 
+                                        />
+                                        <div className="flex-1 min-w-0 py-1">
+                                            <div className={`font-medium truncate ${isNeon ? 'text-white' : 'text-slate-700'}`}>
+                                                {event.title}
+                                            </div>
+                                            {event.time && (
+                                                <div className={`text-sm tracking-tight font-medium opacity-70 truncate ${isNeon ? 'text-white' : 'text-slate-600'}`}>
+                                                    {event.time} {event.endTime ? `- ${event.endTime}` : ''}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Widget 3: Quick Actions (Shortcuts Grid) */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <button 
+                            onClick={() => setIsNoteModalOpen(true)}
+                            className={`p-6 rounded-[2rem] shadow-lg border flex flex-col items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 ${bgGradient}`}
+                        >
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-amber-100 to-amber-300 text-amber-600 shadow-inner">
+                                <span className="text-2xl">✍️</span>
+                            </div>
+                            <span className={`font-bold tracking-tight ${isNeon ? 'text-white' : 'text-slate-800'}`}>Notiță Rapidă</span>
+                        </button>
+                        
+                        <button 
+                            onClick={() => setCurrentView('tasks')}
+                            className={`p-6 rounded-[2rem] shadow-lg border flex flex-col items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 ${bgGradient}`}
+                        >
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-emerald-100 to-emerald-300 text-emerald-600 shadow-inner">
+                                <span className="text-2xl">✅</span>
+                            </div>
+                            <span className={`font-bold tracking-tight ${isNeon ? 'text-white' : 'text-slate-800'}`}>Task-uri</span>
+                        </button>
+                    </div>
+
+                    {/* Widget 4: Mood Check-in */}
+                    <div className={`p-6 rounded-[2rem] shadow-lg border flex flex-col justify-center ${bgGradient}`}>
+                        {todaysMood ? (
+                            <div className="text-center py-6">
+                                <div className="text-6xl mb-4 animate-bounce">
+                                    {MOODS.find(m => m.id === todaysMood.mood)?.emoji || '✨'}
+                                </div>
+                                <h3 className={`text-xl font-bold mb-2 ${isNeon ? 'text-white' : 'text-slate-800'}`}>
+                                    Mi-ai spus cum te simți azi!
+                                </h3>
+                                <p className={isNeon ? 'text-slate-400' : 'text-slate-500'}>
+                                    Să ai o zi minunată în continuare.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="text-center">
+                                <h3 className={`text-xl font-bold mb-6 ${isNeon ? 'text-white' : 'text-slate-800'}`}>
+                                    Cum te simți astăzi?
+                                </h3>
+                                <div className="flex justify-center gap-2 sm:gap-4">
+                                    {MOODS.map(mood => (
+                                        <button
+                                            key={mood.id}
+                                            onClick={() => handleMoodSelect(mood.id)}
+                                            className={`text-4xl sm:text-5xl hover:scale-110 transition-transform active:scale-95 filter drop-shadow-sm`}
+                                            title={mood.label}
+                                        >
+                                            {mood.emoji}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                </div>
+            </div>
+
+            {/* Quick Note Modal */}
+            {isNoteModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsNoteModalOpen(false)} />
+                    <div className={`relative w-full max-w-lg p-6 rounded-[2rem] shadow-2xl animate-in zoom-in-95 duration-200 ${isNeon ? 'bg-slate-900 border border-slate-800 text-white' : 'bg-white text-slate-800'}`}>
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-2xl font-bold">Notiță Rapidă</h3>
+                            <button 
+                                onClick={() => setIsNoteModalOpen(false)}
+                                className={`p-2 rounded-full transition-colors ${isNeon ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <input 
+                                type="text"
+                                placeholder="Titlu opțional..."
+                                value={quickNoteTitle}
+                                onChange={e => setQuickNoteTitle(e.target.value)}
+                                className={`w-full p-4 text-lg font-bold rounded-2xl border-none focus:ring-2 transition-all ${isNeon ? 'bg-slate-800 focus:ring-slate-700 placeholder-slate-500' : 'bg-slate-50 focus:ring-slate-200 placeholder-slate-400'}`}
+                            />
+                            <textarea 
+                                placeholder="Scrie aici la ce te gândești..."
+                                value={quickNoteContent}
+                                onChange={e => setQuickNoteContent(e.target.value)}
+                                rows={5}
+                                className={`w-full p-4 rounded-2xl border-none focus:ring-2 resize-none transition-all custom-scrollbar ${isNeon ? 'bg-slate-800 focus:ring-slate-700 placeholder-slate-500' : 'bg-slate-50 focus:ring-slate-200 placeholder-slate-400'}`}
+                            />
+                            <button 
+                                onClick={handleSaveQuickNote}
+                                disabled={isSavingNote || (!quickNoteTitle.trim() && !quickNoteContent.trim())}
+                                className="w-full py-4 rounded-2xl font-bold text-white shadow-md active:scale-95 transition-all text-lg flex items-center justify-center gap-2 disabled:opacity-50"
                                 style={{ backgroundColor: accentColor }}
                             >
-                                <CalendarIcon size={16} />
-                                {lang === 'ro' ? '+ Eveniment' : '+ Add Event'}
-                            </button>
-                            <button
-                                onClick={onAddTaskClick}
-                                className="px-4 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 flex items-center gap-2 whitespace-nowrap"
-                                style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`, boxShadow: `0 4px 14px 0 ${accentColor}40` }}
-                            >
-                                <CheckSquare size={16} />
-                                {lang === 'ro' ? '+ Task' : '+ Add Task'}
+                                {isSavingNote ? 'Se salvează...' : (
+                                    <>
+                                        <CheckCircle2 size={20} />
+                                        Salvează Notița
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
                 </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Events Timeline */}
-                    <div className={`p-6 rounded-2xl border ${cardBg}`}>
-                        <div className="flex items-center gap-3 mb-6">
-                            <CalendarIcon size={24} style={{ color: accentColor }} />
-                            <h3 className="text-xl font-bold">Schedule</h3>
-                        </div>
-
-                        {displayEvents.length === 0 ? (
-                            <div className="text-center py-10 opacity-60 flex flex-col items-center">
-                                <span className="text-4xl mb-3">✨</span>
-                                <p className="font-medium">Niciun eveniment.</p>
-                                <p className="text-sm">Folosește timpul pentru tine!</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-6">
-                                {groupItemsByTime(displayEvents, true).map((group, idx) => (
-                                    <div key={idx} className="space-y-3">
-                                        {group.label && (
-                                            <h4 className={`text-sm font-bold tracking-wider uppercase opacity-70 border-b pb-2 ${isNeon ? 'border-slate-800 text-slate-400' : 'border-slate-100 text-slate-500'}`}>
-                                                {group.label}
-                                            </h4>
-                                        )}
-                                        <div className="space-y-3">
-                                            {group.items.map(event => renderEvent(event as CalendarEvent))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Pending Tasks */}
-                    <div className={`p-6 rounded-2xl border ${cardBg}`}>
-                        <div className="flex items-center gap-3 mb-6">
-                            <CheckSquare size={24} style={{ color: accentColor }} />
-                            <h3 className="text-xl font-bold">Pending Tasks</h3>
-                        </div>
-
-                        {displayTodos.length === 0 ? (
-                            <div className="text-center py-10 opacity-60 flex flex-col items-center">
-                                <span className="text-4xl mb-3">🌸</span>
-                                <p className="font-medium">Ai terminat tot!</p>
-                                <p className="text-sm">Bucură-te de liniște ☕</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-6">
-                                {groupItemsByTime(displayTodos, false).map((group, idx) => (
-                                    <div key={idx} className="space-y-3">
-                                        {group.label && (
-                                            <h4 className={`text-sm font-bold tracking-wider uppercase opacity-70 border-b pb-2 ${isNeon ? 'border-slate-800 text-slate-400' : 'border-slate-100 text-slate-500'}`}>
-                                                {group.label}
-                                            </h4>
-                                        )}
-                                        <div className="space-y-3">
-                                            {group.items.map(todo => renderTodo(todo as Todo))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-            </div>
+            )}
         </div>
     );
 };

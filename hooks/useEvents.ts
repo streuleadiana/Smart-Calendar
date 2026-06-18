@@ -1,19 +1,36 @@
+import { useState, useEffect } from 'react';
 import { CalendarEvent } from '../types';
 import { db, auth, cleanPayload } from '../lib/firebase';
-import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
 
 export const useEvents = (
-  events: CalendarEvent[],
-  setEvents: React.Dispatch<React.SetStateAction<CalendarEvent[]>>,
-  triggerAiMessage: (msg: string) => void
+  triggerAiMessage?: (msg: string) => void
 ) => {
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+
+  useEffect(() => {
+    if (!auth.currentUser) {
+        setEvents([]);
+        return;
+    }
+    const eventsQuery = query(collection(db, 'events'), where('userId', '==', auth.currentUser.uid));
+    const unsubscribe = onSnapshot(eventsQuery, (snapshot) => {
+        const loadedEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as CalendarEvent[];
+        setEvents(loadedEvents);
+    }, (error) => {
+        console.error("Events sync failed", error);
+    });
+
+    return () => unsubscribe();
+  }, [auth.currentUser]);
+
   const handleSaveEvent = async (eventData: Omit<CalendarEvent, 'id'>) => {
     if (eventData.time) {
       const conflict = events.find(e => 
         e.date === eventData.date && 
         e.time === eventData.time
       );
-      if (conflict) {
+      if (conflict && triggerAiMessage) {
         triggerAiMessage(`⚠️ Atenție! Te-ai suprapus cu evenimentul '${conflict.title}' la ora ${eventData.time}. Sper că te poți clona! 👯‍♂️`);
       }
     }
@@ -40,7 +57,7 @@ export const useEvents = (
         const eventRef = doc(db, 'events', id);
         const payload = cleanPayload(eventData);
         await updateDoc(eventRef, payload);
-        if (eventData.title) {
+        if (eventData.title && triggerAiMessage) {
             triggerAiMessage(`Eveniment actualizat: ${eventData.title} ✏️`);
         }
     } catch (error) {
@@ -67,6 +84,7 @@ export const useEvents = (
   };
 
   return {
+    events,
     handleSaveEvent,
     handleUpdateEvent,
     handleDeleteEvent,

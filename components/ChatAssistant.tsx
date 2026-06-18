@@ -22,6 +22,10 @@ interface ChatAssistantProps {
   incomingMessage: { text: string; id: string } | null;
   lastCompletedTask: string | null;
   onUpdateUserName: (name: string) => void;
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+  hasNotification: boolean;
+  setHasNotification: (hasNotification: boolean) => void;
 }
 
 interface Message {
@@ -32,6 +36,7 @@ interface Message {
 }
 
 // Maps for Natural Language Processing
+// ... existing imports ...
 const COLOR_MAP: {[key: string]: string} = {
   'rosu': '#ef4444', 'roșu': '#ef4444',
   'albastru': '#3b82f6',
@@ -61,13 +66,14 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   onToggleTodo,
   theme, 
   accentColor,
-  onAccentChange,
   incomingMessage,
   lastCompletedTask,
-  onUpdateUserName
+  onUpdateUserName,
+  isOpen,
+  setIsOpen,
+  hasNotification,
+  setHasNotification
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [hasNotification, setHasNotification] = useState(false);
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -753,35 +759,14 @@ Poți să-mi vorbești liber! Încearcă:
             </div>
         )}
 
-        {/* Launcher */}
-        <div className="fixed bottom-24 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end pointer-events-none">
-            {/* Hidden File Input */}
-            <input 
-                type="file" 
-                accept="image/*" 
-                ref={fileInputRef} 
-                className="hidden" 
-                onChange={() => {}} // Placeholder for now
-            />
-
-            <button 
-                onClick={toggleChat} 
-                className={`pointer-events-auto w-14 h-14 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95 group hover:opacity-90`}
-                style={{ backgroundColor: accentColor }}
-            >
-                {isOpen ? <X size={28} /> : (
-                    <div className="relative">
-                        <MessageCircle size={28} className="transition-transform group-hover:rotate-12" />
-                        {hasNotification && !isOpen && (
-                            <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500 border-2 border-white"></span>
-                            </span>
-                        )}
-                    </div>
-                )}
-            </button>
-        </div>
+        {/* Hidden File Input for Camera tool in Chat */}
+        <input 
+            type="file" 
+            accept="image/*" 
+            ref={fileInputRef} 
+            className="hidden" 
+            onChange={() => {}} // Placeholder for now
+        />
     </>
   );
 };

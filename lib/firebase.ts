@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore, initializeFirestore } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getMessaging, isSupported, getToken } from "firebase/messaging";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -17,6 +18,7 @@ console.log("Firebase config check:", !!firebaseConfig.apiKey, firebaseConfig.pr
 const app = initializeApp(firebaseConfig);
 export const db = initializeFirestore(app, { experimentalForceLongPolling: true });
 export const auth = getAuth(app);
+export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 
 // Initialize Firebase Cloud Messaging safely
@@ -71,4 +73,13 @@ export const requestNotificationPermission = async () => {
         console.error('Unable to get permission to notify.', error);
     }
     return null;
+};
+
+export const uploadImageToStorage = async (file: File, folder: string): Promise<string> => {
+    if (!auth.currentUser) throw new Error("Trebuie să fii autentificat pentru a încărca imagini.");
+    const timestamp = Date.now();
+    const filename = `${timestamp}_${file.name}`;
+    const storageRef = ref(storage, `users/${auth.currentUser.uid}/${folder}/${filename}`);
+    await uploadBytes(storageRef, file);
+    return await getDownloadURL(storageRef);
 };

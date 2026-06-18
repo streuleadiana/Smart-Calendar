@@ -25,8 +25,8 @@ export const EventModal: React.FC<EventModalProps> = ({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>(accentColor);
   const [useCustomColor, setUseCustomColor] = useState(false);
-  const [notificationDays, setNotificationDays] = useState<number>(0);
-  const [notificationHours, setNotificationHours] = useState<number>(0);
+  const [offsetValue, setOffsetValue] = useState<number>(0);
+  const [offsetUnit, setOffsetUnit] = useState<string>('minutes');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,8 +40,8 @@ export const EventModal: React.FC<EventModalProps> = ({
       setSelectedCategoryId(categories.length > 0 ? categories[0].id : null);
       setSelectedColor(accentColor);
       setUseCustomColor(false);
-      setNotificationDays(0);
-      setNotificationHours(0);
+      setOffsetValue(0);
+      setOffsetUnit('minutes');
       setError(null);
       
       const year = initialDate.getFullYear();
@@ -66,7 +66,14 @@ export const EventModal: React.FC<EventModalProps> = ({
     }
 
     try {
-      const notificationOffset = (notificationDays * 24 * 60) + (notificationHours * 60);
+      let notificationOffset = 0;
+      if (offsetUnit === 'minutes') {
+          notificationOffset = offsetValue;
+      } else if (offsetUnit === 'hours') {
+          notificationOffset = offsetValue * 60;
+      } else if (offsetUnit === 'days') {
+          notificationOffset = offsetValue * 1440;
+      }
       await onSave({
         title,
         description: details || undefined,
@@ -206,26 +213,26 @@ export const EventModal: React.FC<EventModalProps> = ({
                 <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">
                   Anunță-mă înainte cu:
                 </label>
-                <div className="flex gap-4">
+                <div className="flex items-center gap-4">
                   <div className="flex-1">
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Zile</label>
                     <input
                       type="number"
                       min="0"
-                      value={notificationDays}
-                      onChange={e => setNotificationDays(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer"
+                      value={offsetValue}
+                      onChange={e => setOffsetValue(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer shadow-sm"
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Ore</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={notificationHours}
-                      onChange={e => setNotificationHours(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer"
-                    />
+                    <select
+                      value={offsetUnit}
+                      onChange={e => setOffsetUnit(e.target.value)}
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer shadow-sm appearance-none"
+                    >
+                      <option value="minutes">Minute</option>
+                      <option value="hours">Ore</option>
+                      <option value="days">Zile</option>
+                    </select>
                   </div>
                 </div>
               </div>

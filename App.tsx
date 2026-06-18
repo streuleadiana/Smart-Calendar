@@ -12,18 +12,24 @@ import { SettingsView } from './components/SettingsView';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { HomeDashboard } from './components/HomeDashboard';
+import { NotesView } from './components/NotesView';
+import { MoodView } from './components/MoodView';
+import { VisionView } from './components/VisionView';
+import { UniversalAddButton } from './components/UniversalAddButton';
 import { BottomNav } from './components/BottomNav';
 import { UpdateNotifier } from './components/UpdateNotifier';
-import { CalendarEvent, Todo, Theme, Category } from './types';
+import { CalendarEvent, Todo, Theme, Category, FontOption, Note, MoodLog, VisionBoardItem, WishlistItem } from './types';
 import * as storage from './utils/storage';
 import { LanguageOption, translations } from './utils/translations';
-import { requestNotificationPermission, auth, googleProvider, db } from './lib/firebase';
+import { requestNotificationPermission, auth, googleProvider, db, storage as firebaseStorage } from './lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, onSnapshot, doc, setDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useSwipeable } from 'react-swipeable';
 import { useNotifications } from './hooks/useNotifications';
 import { useEvents } from './hooks/useEvents';
 import { useTodos } from './hooks/useTodos';
+import { useNotes } from './hooks/useNotes';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { 
   LogOut, Layout, Settings, ArrowRight, Sparkles, 
@@ -34,17 +40,20 @@ import {
 
 const App: React.FC = () => {
   // --- STATE ---
-  const [currentView, setCurrentView] = useState<'home' | 'calendar' | 'tasks' | 'settings'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'calendar' | 'tasks' | 'settings' | 'notes' | 'moods' | 'vision'>('home');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Data State
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [userName, setUserName] = useState<string | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  
+  const [noteCategoryColors, setNoteCategoryColors] = useState<Record<string, string>>({});
+  const [noteCategories, setNoteCategories] = useState<string[]>(["📓 Jurnal", "🛒 Cumpărături", "💡 Idei", "✈️ Travel"]);
   
   // Mascot Identity
   const [assistantName, setAssistantName] = useState(() => localStorage.getItem('assistant_name') || "Olli");
   const [assistantAvatar, setAssistantAvatar] = useState(() => localStorage.getItem('assistant_avatar') || "🦉");
+
 
   const handleUpdateAssistantName = (name: string) => {
     setAssistantName(name);
@@ -70,28 +79,35 @@ const App: React.FC = () => {
   // Identity & Themes
   const [theme, setTheme] = useState<Theme>('modern');
   const [accentColor, setAccentColor] = useState<string>('#4F46E5'); // Default Indigo Hex
-  const [font, setFont] = useState<FontOption>('inter');
+  const [font, setFont] = useState<FontOption>('system');
   
-  // Data
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const { testNotification } = useNotifications(events, todos);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [initializing, setInitializing] = useState(true);
-
   // AI & Gamification State
   const [aiMessage, setAiMessage] = useState<{text: string, id: string} | null>(null);
   const [lastCompletedTask, setLastCompletedTask] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [hasChatNotification, setHasChatNotification] = useState(false);
 
   const triggerAiMessage = (message: string) => {
     setAiMessage({ text: message, id: crypto.randomUUID() });
   };
 
   const {
+      events,
       handleSaveEvent,
       handleUpdateEvent,
       handleDeleteEvent,
       handleDeleteEventByTitle
-  } = useEvents(events, setEvents, triggerAiMessage);
+  } = useEvents(triggerAiMessage);
+
+  // Data
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [moodLogs, setMoodLogs] = useState<MoodLog[]>([]);
+  const [visionItems, setVisionItems] = useState<VisionBoardItem[]>([]);
+  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
+  const { testNotification } = useNotifications(events, todos);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [initializing, setInitializing] = useState(true);
 
   const {
       handleAddTodo,
@@ -102,6 +118,12 @@ const App: React.FC = () => {
       handleToggleTodoByText,
       handleDeleteTodo
   } = useTodos(todos, setTodos, setLastCompletedTask);
+
+  const {
+      handleSaveNote,
+      handleUpdateNote,
+      handleDeleteNote
+  } = useNotes();
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -134,9 +156,150 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdateCategoryColor = (folder: string, color: string) => {
+    const updated = { ...noteCategoryColors, [folder]: color };
+    setNoteCategoryColors(updated);
+    savePreferences({ noteCategoryColors: updated });
+  };
+
+  const handleAddNoteCategory = (folder: string, color: string) => {
+    const newCategories = [...noteCategories, folder];
+    setNoteCategories(newCategories);
+    const newColors = { ...noteCategoryColors, [folder]: color };
+    setNoteCategoryColors(newColors);
+    savePreferences({ customNoteCategories: newCategories, noteCategoryColors: newColors });
+  };
+
+  const handleEditNoteCategory = (oldFolder: string, newFolder: string, newColor: string) => {
+    let updatedCategories = noteCategories;
+    if (oldFolder !== newFolder) {
+      updatedCategories = noteCategories.map(c => c === oldFolder ? newFolder : c);
+      setNoteCategories(updatedCategories);
+    }
+    const newColors = { ...noteCategoryColors };
+    if (oldFolder !== newFolder) {
+      delete newColors[oldFolder];
+    }
+    newColors[newFolder] = newColor;
+    setNoteCategoryColors(newColors);
+    savePreferences({ customNoteCategories: updatedCategories, noteCategoryColors: newColors });
+    
+    if (oldFolder !== newFolder) {
+      notes.forEach(note => {
+        if (note.folder === oldFolder) {
+            handleUpdateNote(note.id, note.title, note.content, newFolder, note.color);
+        }
+      });
+    }
+  };
+
+  const handleSaveVisionItem = async (item: Omit<VisionBoardItem, 'id' | 'createdAt'>) => {
+    if (!auth.currentUser) return;
+    try {
+        const itemRef = doc(collection(db, 'users', auth.currentUser.uid, 'visionBoard'));
+        const payload: any = { ...item, id: itemRef.id, createdAt: Date.now() };
+        Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
+        await setDoc(itemRef, payload);
+    } catch (error) {
+        console.error("Failed to save vision item:", error);
+    }
+  };
+
+  const handleDeleteVisionItem = async (id: string, imageUrl?: string) => {
+    try {
+        if (!auth.currentUser) return;
+        if (imageUrl && imageUrl.includes('firebasestorage.googleapis.com')) {
+             const imageRef = ref(firebaseStorage, imageUrl);
+             await deleteObject(imageRef);
+        }
+        const itemRef = doc(db, 'users', auth.currentUser.uid, 'visionBoard', id);
+        await deleteDoc(itemRef);
+    } catch (error) {
+        console.error("Failed to delete vision item", error);
+    }
+  };
+
+  const handleSaveWishlistItem = async (item: Omit<WishlistItem, 'id' | 'createdAt' | 'isPurchased'>) => {
+    if (!auth.currentUser) return;
+    try {
+        const itemRef = doc(collection(db, 'users', auth.currentUser.uid, 'wishlist'));
+        const payload: any = { ...item, id: itemRef.id, isPurchased: false, createdAt: Date.now() };
+        Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
+        await setDoc(itemRef, payload);
+    } catch (error) {
+        console.error("Failed to save wishlist item:", error);
+    }
+  };
+
+  const handleUpdateWishlistItem = async (id: string, updates: Partial<WishlistItem>) => {
+    if (!auth.currentUser) return;
+    try {
+        const itemRef = doc(db, 'users', auth.currentUser.uid, 'wishlist', id);
+        const payload: any = { ...updates };
+        Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
+        await updateDoc(itemRef, payload);
+    } catch (error) {
+        console.error("Failed to update wishlist item:", error);
+    }
+  };
+
+  const handleDeleteWishlistItem = async (id: string, imageUrl?: string) => {
+    try {
+        if (!auth.currentUser) return;
+        if (imageUrl && imageUrl.includes('firebasestorage.googleapis.com')) {
+             const imageRef = ref(firebaseStorage, imageUrl);
+             await deleteObject(imageRef);
+        }
+        const itemRef = doc(db, 'users', auth.currentUser.uid, 'wishlist', id);
+        await deleteDoc(itemRef);
+    } catch (error) {
+        console.error("Failed to delete wishlist item:", error);
+    }
+  };
+
+  const handleSaveMoodLog = async (log: Omit<MoodLog, 'id'>) => {
+    if (!auth.currentUser) return;
+    try {
+        const moodRef = doc(db, 'users', auth.currentUser.uid, 'moodLogs', log.date);
+        const payload: any = { ...log, id: log.date };
+        Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
+        await setDoc(moodRef, payload, { merge: true });
+    } catch (error) {
+        console.error("Failed to save mood log:", error);
+    }
+  };
+
+  const handleDeleteNoteCategory = async (folder: string) => {
+    try {
+        const newCategories = noteCategories.filter(c => c !== folder);
+        setNoteCategories(newCategories);
+        const newColors = { ...noteCategoryColors };
+        delete newColors[folder];
+        setNoteCategoryColors(newColors);
+        
+        if (auth.currentUser) {
+           await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+               customNoteCategories: newCategories,
+               noteCategoryColors: newColors
+           });
+        }
+    } catch (error) {
+        console.error("Error deleting note category:", error);
+    }
+    
+    notes.forEach(note => {
+      if (note.folder === folder) {
+          handleUpdateNote(note.id, note.title, note.content, "Toate", note.color);
+      }
+    });
+  };
+
   useEffect(() => {
-    let unsubscribeEvents: () => void;
     let unsubscribeTodos: () => void;
+    let unsubscribeNotes: () => void;
+    let unsubscribeMoods: () => void;
+    let unsubscribeVision: () => void;
+    let unsubscribeWishlist: () => void;
     let unsubscribeUser: () => void;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
@@ -170,6 +333,12 @@ const App: React.FC = () => {
                         setFont(data.font as FontOption);
                         storage.saveFont(data.font as FontOption);
                     }
+                    if (data.noteCategoryColors) {
+                        setNoteCategoryColors(data.noteCategoryColors);
+                    }
+                    if (data.customNoteCategories) {
+                        setNoteCategories(data.customNoteCategories);
+                    }
                 } else {
                      // First-time login, set defaults
                      setDoc(userDocRef, {
@@ -178,17 +347,11 @@ const App: React.FC = () => {
                         mascot: user.displayName || 'Utilizator',
                         lang: localStorage.getItem('app_lang') || 'ro',
                         profilePicture: null,
-                        font: storage.getFont() || 'inter'
+                        font: storage.getFont() || 'system',
+                        noteCategoryColors: {},
+                        customNoteCategories: ["📓 Jurnal", "🛒 Cumpărături", "💡 Idei", "✈️ Travel"]
                      }, { merge: true });
                 }
-            });
-
-            const eventsQuery = query(collection(db, 'events'), where('userId', '==', user.uid));
-            unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
-                const loadedEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as CalendarEvent[];
-                setEvents(loadedEvents);
-            }, (error) => {
-                console.error("Events sync failed", error);
             });
 
             const todosQuery = query(collection(db, 'todos'), where('userId', '==', user.uid));
@@ -204,22 +367,66 @@ const App: React.FC = () => {
                 console.error("Todos sync failed", error);
             });
 
+            const notesQuery = query(collection(db, 'notes'), where('userId', '==', user.uid));
+            unsubscribeNotes = onSnapshot(notesQuery, (snapshot) => {
+                const loadedNotes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Note[];
+                loadedNotes.sort((a, b) => b.createdAt - a.createdAt);
+                setNotes(loadedNotes);
+            }, (error) => {
+                console.error("Notes sync failed", error);
+            });
+
+            const moodLogsRef = collection(db, 'users', user.uid, 'moodLogs');
+            unsubscribeMoods = onSnapshot(moodLogsRef, (snapshot) => {
+                const loadedMoods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as MoodLog[];
+                setMoodLogs(loadedMoods);
+            }, (error) => {
+                console.error("Moods sync failed", error);
+            });
+
+            const visionRef = collection(db, 'users', user.uid, 'visionBoard');
+            unsubscribeVision = onSnapshot(visionRef, (snapshot) => {
+                const loadedVision = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as VisionBoardItem[];
+                loadedVision.sort((a, b) => b.createdAt - a.createdAt);
+                setVisionItems(loadedVision);
+            }, (error) => {
+                console.error("Vision Board sync failed", error);
+            });
+
+            const wishlistRef = collection(db, 'users', user.uid, 'wishlist');
+            unsubscribeWishlist = onSnapshot(wishlistRef, (snapshot) => {
+                const loadedWishlist = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as WishlistItem[];
+                loadedWishlist.sort((a, b) => b.createdAt - a.createdAt);
+                setWishlistItems(loadedWishlist);
+            }, (error) => {
+                console.error("Wishlist sync failed", error);
+            });
+
             await loadUserData();
         } else {
             setUserName(null);
-            setEvents([]);
             setTodos([]);
+            setNotes([]);
+            setMoodLogs([]);
+            setVisionItems([]);
+            setWishlistItems([]);
             setInitializing(false);
-            if (unsubscribeEvents) unsubscribeEvents();
             if (unsubscribeTodos) unsubscribeTodos();
+            if (unsubscribeNotes) unsubscribeNotes();
+            if (unsubscribeMoods) unsubscribeMoods();
+            if (unsubscribeVision) unsubscribeVision();
+            if (unsubscribeWishlist) unsubscribeWishlist();
             if (unsubscribeUser) unsubscribeUser();
         }
     });
 
     return () => {
         unsubscribeAuth();
-        if (unsubscribeEvents) unsubscribeEvents();
         if (unsubscribeTodos) unsubscribeTodos();
+        if (unsubscribeNotes) unsubscribeNotes();
+        if (unsubscribeMoods) unsubscribeMoods();
+        if (unsubscribeVision) unsubscribeVision();
+        if (unsubscribeWishlist) unsubscribeWishlist();
         if (unsubscribeUser) unsubscribeUser();
     };
   }, []);
@@ -574,10 +781,10 @@ const App: React.FC = () => {
   // Define Font Class
   const getFontClass = () => {
      switch(font) {
-        case 'nunito': return 'font-nunito';
         case 'quicksand': return 'font-quicksand';
+        case 'playfair': return 'font-playfair';
         case 'caveat': return 'font-caveat';
-        default: return 'font-inter';
+        default: return 'font-system';
      }
   };
 
@@ -620,6 +827,11 @@ const App: React.FC = () => {
           <HomeDashboard 
              events={filteredEvents}
              todos={filteredTodos}
+             visionItems={visionItems}
+             moodLogs={moodLogs}
+             onSaveMood={handleSaveMoodLog}
+             onSaveNote={handleSaveNote}
+             setCurrentView={setCurrentView}
              theme={theme}
              accentColor={accentColor}
              lang={lang}
@@ -689,6 +901,47 @@ const App: React.FC = () => {
                 </div>
              </div>
           </div>
+        );
+      case 'notes':
+        return (
+          <NotesView
+            notes={notes}
+            theme={theme}
+            accentColor={accentColor}
+            lang={lang}
+            categories={noteCategories}
+            categoryColors={noteCategoryColors}
+            onUpdateCategoryColor={handleUpdateCategoryColor}
+            onAddCategory={handleAddNoteCategory}
+            onEditCategory={handleEditNoteCategory}
+            onDeleteCategory={handleDeleteNoteCategory}
+            onSaveNote={handleSaveNote}
+            onUpdateNote={handleUpdateNote}
+            onDeleteNote={handleDeleteNote}
+          />
+        );
+      case 'moods':
+        return (
+          <MoodView
+            moodLogs={moodLogs}
+            onSaveMood={handleSaveMoodLog}
+            theme={theme}
+            accentColor={accentColor}
+          />
+        );
+      case 'vision':
+        return (
+          <VisionView
+             visionItems={visionItems}
+             wishlistItems={wishlistItems}
+             onAddVisionItem={handleSaveVisionItem}
+             onDeleteVisionItem={handleDeleteVisionItem}
+             onAddWishlistItem={handleSaveWishlistItem}
+             onUpdateWishlistItem={handleUpdateWishlistItem}
+             onDeleteWishlistItem={handleDeleteWishlistItem}
+             theme={theme}
+             accentColor={accentColor}
+          />
         );
       case 'settings':
         return (
@@ -770,7 +1023,6 @@ const App: React.FC = () => {
               setIsSidebarOpen={setIsSidebarOpen}
               theme={theme}
               accentColor={accentColor}
-              handleAccentChange={handleAccentChange}
               handleThemeChange={handleThemeChange}
               userName={userName}
               profilePicture={profilePicture}
@@ -782,6 +1034,11 @@ const App: React.FC = () => {
               setTempName={setTempName}
               saveNameEdit={saveNameEdit}
               lang={lang}
+              isChatOpen={isChatOpen}
+              setIsChatOpen={setIsChatOpen}
+              hasChatNotification={hasChatNotification}
+              setHasChatNotification={setHasChatNotification}
+              setCurrentView={setCurrentView}
           />
 
           {/* MAIN CONFIGURABLE CONTENT */}
@@ -790,6 +1047,15 @@ const App: React.FC = () => {
           </main>
 
       </div>
+
+      <UniversalAddButton
+        onSaveNote={handleSaveNote}
+        onAddTask={() => setIsTaskModalOpen(true)}
+        onSaveMood={handleSaveMoodLog}
+        onSaveWishlist={handleSaveWishlistItem}
+        theme={theme}
+        accentColor={accentColor}
+      />
 
       {/* BOTTOM NAVIGATION (Mobile Only) */}
       <BottomNav
@@ -816,10 +1082,13 @@ const App: React.FC = () => {
         onToggleTodo={handleToggleTodoByText}
         theme={theme}
         accentColor={accentColor}
-        onAccentChange={handleAccentChange}
         incomingMessage={aiMessage}
         lastCompletedTask={lastCompletedTask}
         onUpdateUserName={handleUpdateUserName}
+        isOpen={isChatOpen}
+        setIsOpen={setIsChatOpen}
+        hasNotification={hasChatNotification}
+        setHasNotification={setHasChatNotification}
       />
 
       {/* Global Modals (Calendar Interactions) */}
