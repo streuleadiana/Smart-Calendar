@@ -30,6 +30,7 @@ import { useNotifications } from './hooks/useNotifications';
 import { useEvents } from './hooks/useEvents';
 import { useTodos } from './hooks/useTodos';
 import { useNotes } from './hooks/useNotes';
+import { handleShare } from './utils/share';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { 
   LogOut, Layout, Settings, ArrowRight, Sparkles, 
@@ -767,11 +768,11 @@ const App: React.FC = () => {
     }
 
     try {
-      await navigator.clipboard.writeText(text);
+      await handleShare({ title: 'Programul meu astăzi', text });
       setCopiedState('day');
       setTimeout(() => setCopiedState(null), 2000);
     } catch (err) {
-      console.error("Failed to copy day schedule", err);
+      console.error("Failed to share day schedule", err);
     }
   };
 
@@ -804,11 +805,11 @@ const App: React.FC = () => {
     }
 
     try {
-      await navigator.clipboard.writeText(text);
+      await handleShare({ title: 'Programul meu săptămâna asta', text });
       setCopiedState('week');
       setTimeout(() => setCopiedState(null), 2000);
     } catch (err) {
-      console.error("Failed to copy week schedule", err);
+      console.error("Failed to share week schedule", err);
     }
   };
 
@@ -1002,6 +1003,7 @@ const App: React.FC = () => {
              onDeleteWishlistItem={handleDeleteWishlistItem}
              theme={theme}
              accentColor={accentColor}
+             lang={lang}
           />
         );
       case 'settings':
@@ -1036,9 +1038,6 @@ const App: React.FC = () => {
              handleFileChange={handleFileChange}
              fileInputRef={fileInputRef}
              importError={importError}
-             handleShareDay={handleShareDay}
-             handleShareWeek={handleShareWeek}
-             copiedState={copiedState}
              testNotification={testNotification}
              setIsFeedbackModalOpen={setIsFeedbackModalOpen}
              handleAccentChange={handleAccentChange}

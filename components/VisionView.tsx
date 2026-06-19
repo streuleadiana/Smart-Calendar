@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import confetti from 'canvas-confetti';
-import { Sparkles, ShoppingBag, Plus, X, ExternalLink, Heart, Image as ImageIcon, Upload, Edit3 } from 'lucide-react';
-import { Theme, VisionBoardItem, WishlistItem } from '../types';
+import html2canvas from 'html2canvas';
+import { Sparkles, ShoppingBag, Plus, X, ExternalLink, Heart, Image as ImageIcon, Upload, Edit3, Share2 } from 'lucide-react';
+import { Theme, VisionBoardItem, WishlistItem, LanguageOption } from '../types';
 import { auth, storage as firebaseStorage, uploadImageToStorage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { handleShare } from '../utils/share';
 
 interface VisionViewProps {
   visionItems: VisionBoardItem[];
@@ -15,6 +17,7 @@ interface VisionViewProps {
   onDeleteWishlistItem: (id: string, imageUrl?: string) => Promise<void>;
   theme: Theme;
   accentColor: string;
+  lang: LanguageOption;
 }
 
 export const VisionView: React.FC<VisionViewProps> = ({
@@ -26,7 +29,8 @@ export const VisionView: React.FC<VisionViewProps> = ({
   onUpdateWishlistItem,
   onDeleteWishlistItem,
   theme,
-  accentColor
+  accentColor,
+  lang
 }) => {
   const [activeTab, setActiveTab] = useState<'vision' | 'wishlist'>('vision');
   
@@ -42,6 +46,65 @@ export const VisionView: React.FC<VisionViewProps> = ({
   const [newWishlistPrice, setNewWishlistPrice] = useState('');
   const [newWishlistLink, setNewWishlistLink] = useState('');
   const [isUploadingWishlist, setIsUploadingWishlist] = useState(false);
+  const [isSharingCollage, setIsSharingCollage] = useState(false);
+
+  const handleShareCollage = async () => {
+    const element = document.getElementById('vision-board-collage');
+    if (!element) return;
+    setIsSharingCollage(true);
+    try {
+      const canvas = await html2canvas(element, {
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: theme === 'neon' ? '#020617' : theme === 'soft' ? '#fff5f7' : '#fafafa',
+        scale: 2
+      });
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          alert(lang === 'ro' ? 'Eroare la generarea imaginii colajului.' : 'Error generating collage image.');
+          setIsSharingCollage(false);
+          return;
+        }
+
+        const file = new File([blob], 'vision_board_collage.png', { type: 'image/png' });
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: lang === 'ro' ? 'Vision Board-ul Meu' : 'My Vision Board',
+              text: lang === 'ro' ? 'Iată vision board-ul meu de astăzi! 🌟' : 'Here is my vision board for today! 🌟',
+            });
+            setIsSharingCollage(false);
+            return;
+          } catch (e: any) {
+            console.error("Web Share API error, falling back to download:", e);
+          }
+        }
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'vision_board_collage.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        setIsSharingCollage(false);
+        alert(
+          lang === 'ro' 
+            ? 'Imaginea colajului a fost descărcată în mod automat! 🖼️' 
+            : 'Collage image downloaded successfully! 🖼️'
+        );
+      }, 'image/png');
+    } catch (e) {
+      console.error("Collage generation error:", e);
+      setIsSharingCollage(false);
+      alert(lang === 'ro' ? 'Eroare la generarea colajului.' : 'Error generating collage.');
+    }
+  };
 
   const isNeon = theme === 'neon';
   const isSoft = theme === 'soft';
@@ -188,10 +251,19 @@ export const VisionView: React.FC<VisionViewProps> = ({
         {/* Vision Board View */}
         {activeTab === 'vision' && (
           <div className="animate-in fade-in duration-300">
-             <div className="mb-6 flex justify-end">
+             <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                {visionItems.length > 0 && (
+                   <button
+                      onClick={handleShareCollage}
+                      disabled={isSharingCollage}
+                      className={`px-4 py-2.5 rounded-2xl flex items-center justify-center gap-2 font-bold shadow-sm transition-transform hover:-translate-y-0.5 active:scale-95 border cursor-pointer ${isNeon ? 'bg-slate-900 border-slate-800 text-pink-400 hover:bg-slate-800' : isSoft ? 'bg-pink-50 border-pink-100 text-pink-600 hover:bg-pink-100' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'}`}
+                   >
+                      <Share2 size={18} /> {isSharingCollage ? (lang === 'ro' ? 'Se generează...' : 'Generating...') : (lang === 'ro' ? '📤 Distribuie Vision Board' : '📤 Share Vision Board')}
+                   </button>
+                )}
                 <button
                    onClick={() => setIsVisionModalOpen(true)}
-                   className="px-4 py-2.5 rounded-2xl flex items-center gap-2 font-bold shadow-sm transition-transform hover:-translate-y-0.5 active:scale-95 text-white"
+                   className="px-4 py-2.5 rounded-2xl flex items-center justify-center gap-2 font-bold shadow-sm transition-transform hover:-translate-y-0.5 active:scale-95 text-white sm:ml-auto cursor-pointer"
                    style={{ backgroundColor: accentColor }}
                 >
                    <Plus size={18} className="stroke-[3]" /> Adaugă Inspirație
@@ -205,7 +277,7 @@ export const VisionView: React.FC<VisionViewProps> = ({
                      <p className={`text-sm mt-1 ${isNeon ? 'text-slate-500' : 'text-slate-400'}`}>Adaugă imagini care te inspiră!</p>
                  </div>
              ) : (
-                 <div className="columns-2 md:columns-3 gap-6 space-y-8 pb-12 px-2">
+                 <div id="vision-board-collage" className="columns-2 md:columns-3 gap-6 space-y-8 pb-12 px-2 bg-inherit rounded-2xl p-4">
                      {visionItems.map((item, index) => {
                          const rotationClass = ['rotate-1', '-rotate-2', 'rotate-2', '-rotate-1', 'rotate-3', '-rotate-3'][index % 6];
                          const marginClass = ['mt-2', '-mt-4', 'mt-4', '-mt-2', 'mt-1', '-mt-3'][index % 6];
@@ -223,12 +295,34 @@ export const VisionView: React.FC<VisionViewProps> = ({
                                         </div>
                                      )}
                                  </div>
-                                 <button 
-                                    onClick={(e) => { e.stopPropagation(); if(confirm("Ștergi această imagine?")) onDeleteVisionItem(item.id, item.imageUrl); }}
-                                    className="absolute top-4 right-4 p-2 bg-black/40 backdrop-blur-md text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/60"
-                                 >
-                                    <X size={16} />
-                                 </button>
+                                 <div className="absolute top-4 right-4 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                     <button 
+                                        onClick={async (e) => { 
+                                            e.stopPropagation(); 
+                                            e.preventDefault();
+                                            const quoteStr = item.quote ? `"${item.quote}"` : '';
+                                            const text = quoteStr 
+                                                ? `✨ Inspirație zilnică:\n${quoteStr}\n\nImagine: ${item.imageUrl}\n\nTrimis din SmartCalendar 🌸`
+                                                : `✨ Inspirație zilnică:\nImagine: ${item.imageUrl}\n\nTrimis din SmartCalendar 🌸`;
+                                            await handleShare({ 
+                                                title: 'Inspirație', 
+                                                text,
+                                                url: item.imageUrl 
+                                            }); 
+                                        }}
+                                        className="p-2 bg-black/40 backdrop-blur-md text-white rounded-full hover:bg-black/60 transition-colors cursor-pointer hidden"
+                                        title={lang === 'ro' ? 'Distribuie' : 'Share'}
+                                     >
+                                        <Share2 size={16} />
+                                     </button>
+                                     <button 
+                                        onClick={(e) => { e.stopPropagation(); if(confirm(lang === 'ro' ? "Ștergi această imagine?" : "Delete this image?")) onDeleteVisionItem(item.id, item.imageUrl); }}
+                                        className="p-2 bg-black/40 backdrop-blur-md text-white rounded-full hover:bg-red-600 transition-colors cursor-pointer"
+                                        title={lang === 'ro' ? 'Șterge' : 'Delete'}
+                                     >
+                                        <X size={16} />
+                                     </button>
+                                 </div>
                              </div>
                          );
                      })}
@@ -326,6 +420,26 @@ export const VisionView: React.FC<VisionViewProps> = ({
                                              className={`p-2 rounded-xl transition-all ${isNeon ? 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'}`}
                                          >
                                              <Edit3 size={18} />
+                                         </button>
+                                         <button 
+                                             onClick={async (e) => { 
+                                                 e.stopPropagation(); 
+                                                 e.preventDefault();
+                                                 const priceStr = item.price ? item.price : (lang === 'ro' ? 'Nespecificat' : 'Unspecified');
+                                                 const linkStr = item.storeLink ? item.storeLink : (lang === 'ro' ? 'Fără link' : 'No link');
+                                                 const text = lang === 'ro'
+                                                     ? `🛍️ Mic indiciu pentru cadoul meu ideal:\n• Produs: ${item.title}\n• Preț: ${priceStr}\n• Link magazin: ${linkStr}\n\nSper să îți placă! 🌸✨`
+                                                     : `🛍️ Small hint for my ideal gift:\n• Product: ${item.title}\n• Price: ${priceStr}\n• Shop link: ${linkStr}\n\nHope you like it! 🌸✨`;
+                                                 await handleShare({ 
+                                                     title: lang === 'ro' ? 'Sugestie Cadou' : 'Gift Hint', 
+                                                     text,
+                                                     ...(item.storeLink ? { url: item.storeLink } : {})
+                                                 });
+                                             }}
+                                             className={`p-2 rounded-xl transition-all ${isNeon ? 'bg-slate-800 text-pink-400 hover:text-pink-300 hover:bg-slate-700' : 'bg-pink-50 text-pink-600 hover:text-pink-700 hover:bg-pink-100'}`}
+                                             title={lang === 'ro' ? 'Trimite un indiciu 🎁' : 'Send a hint 🎁'}
+                                         >
+                                             🎁
                                          </button>
                                          <button 
                                              onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleDeleteWishlistItem(item.id, item.imageUrl); }}
@@ -474,7 +588,7 @@ export const VisionView: React.FC<VisionViewProps> = ({
                           </div>
                       </div>
                       <div>
-                          <label className={`block text-sm font-bold mb-2 ml-1 ${textSecondary}`}>Link Magazin (opțional - extragem imaginea automat! ✨)</label>
+                          <label className={`block text-sm font-bold mb-2 ml-1 ${textSecondary}`}>Link Magazin</label>
                           <input 
                               type="url"
                               value={newWishlistLink}

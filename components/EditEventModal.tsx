@@ -153,8 +153,8 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          <div>
+        <form onSubmit={handleSubmit} className="p-6 flex flex-col space-y-4">
+          <div className="mb-4">
             <label className={labelClass}>
               🦄 Category
             </label>
@@ -170,7 +170,7 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
             </select>
           </div>
 
-          <div>
+          <div className="mb-4">
             <label className={labelClass}>
               🏷️ Event Title
             </label>
@@ -185,7 +185,7 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4 items-start">
+          <div className="grid grid-cols-2 gap-4 items-start mb-4">
             <div>
               <label className={labelClass}>
                 📅 Start Date
@@ -211,7 +211,7 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 items-start">
+          <div className="grid grid-cols-2 gap-4 items-start mb-4">
             <div>
               <label className={labelClass}>
                 ⏰ Start Time
@@ -251,10 +251,10 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
           </div>
           
           {error && (
-            <p className="text-xs text-red-500 font-medium px-1">✨ {error}</p>
+            <p className="text-xs text-red-500 font-medium px-1 mb-4">✨ {error}</p>
           )}
 
-          <div>
+          <div className="mb-4">
              <label className={labelClass}>
                ✍️ Detalii (opțional)
              </label>
@@ -267,7 +267,7 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
              />
           </div>
 
-          <div>
+          <div className="mb-4">
             <label className={labelClass}>
               🔔 Anunță-mă înainte cu:
             </label>
@@ -295,7 +295,7 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
             </div>
           </div>
 
-          <div>
+          <div className="mb-4">
             <label className={labelClass}>
               🔁 Repetare
             </label>

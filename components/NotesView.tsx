@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Note, Theme, LanguageOption } from '../types';
-import { Plus, X, Wand2, Trash2, Check, Circle, Heart, Settings } from 'lucide-react';
+import { Plus, X, Wand2, Trash2, Check, Circle, Heart, Settings, Share2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { handleShare } from '../utils/share';
 
 interface NotesViewProps {
   notes: Note[];
@@ -262,8 +263,21 @@ export const NotesView: React.FC<NotesViewProps> = ({ notes, theme, accentColor,
                   className={`break-inside-avoid rounded-3xl p-5 cursor-pointer transition-all hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] relative group shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 ${textPrimary}`}
                   style={{ backgroundColor: (note.folder && !categoryColors[note.folder] && note.folder.includes("Jurnal")) ? accentColor : bg }}
                 >
-                  <div className="text-xs font-bold uppercase tracking-wider mb-2 opacity-50 flex justify-between">
+                  <div className="text-xs font-bold uppercase tracking-wider mb-2 opacity-50 flex justify-between items-center">
                       <span>{note.folder}</span>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const titleStr = typeof note.title === 'string' && note.title.trim() ? note.title.trim() : (lang === 'ro' ? 'Fără titlu' : 'Untitled');
+                          const contentStr = typeof note.content === 'string' ? note.content.trim() : '';
+                          const text = `📝 ${titleStr}\n\n${contentStr}\n\n${lang === 'ro' ? 'Trimis din SmartNotes ✨' : 'Sent from SmartNotes ✨'}`;
+                          await handleShare({ title: titleStr, text });
+                        }}
+                        className="p-1 hover:scale-110 transition-transform text-slate-600 dark:text-slate-300 rounded-full hover:bg-black/5"
+                        title={lang === 'ro' ? 'Distribuie' : 'Share'}
+                      >
+                        <Share2 size={14} className="stroke-[2.5]" />
+                      </button>
                   </div>
                   <h3 className={`font-bold text-lg leading-tight ${typeof note.title === 'string' && note.title.trim() ? 'text-slate-800' : 'text-slate-400 italic'}`}>
                       {(typeof note.title === 'string' && note.title.trim()) ? note.title : 'Fără titlu'}
@@ -391,6 +405,7 @@ export const NotesView: React.FC<NotesViewProps> = ({ notes, theme, accentColor,
           theme={theme}
           accentColor={accentColor}
           categoryColors={categoryColors}
+          lang={lang}
           onClose={() => setIsModalOpen(false)}
           onSave={onSaveNote}
           onUpdate={onUpdateNote}
@@ -408,13 +423,14 @@ interface NoteEditorModalProps {
   theme: Theme;
   accentColor: string;
   categoryColors: Record<string, string>;
+  lang: LanguageOption;
   onClose: () => void;
   onSave: (title: string, content: string, folder: string, color: string) => Promise<void>;
   onUpdate: (id: string, title: string, content: string, folder: string, color: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
-const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ note, initialFolder, folders, theme, accentColor, categoryColors, onClose, onSave, onUpdate, onDelete }) => {
+const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ note, initialFolder, folders, theme, accentColor, categoryColors, lang, onClose, onSave, onUpdate, onDelete }) => {
   const getTemplateForFolder = (folderName: string) => {
     const today = new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
     if (folderName?.includes('Jurnal')) {
@@ -537,6 +553,19 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ note, initialFolder, 
                  <Trash2 size={20} />
                </button>
              )}
+             <button 
+               onClick={async () => {
+                 const titleStr = title.trim() || (lang === 'ro' ? 'Notiță nouă' : 'New note');
+                 const contentStr = content.trim();
+                 const text = `📝 ${titleStr}\n\n${contentStr}\n\n${lang === 'ro' ? 'Trimis din SmartNotes ✨' : 'Sent from SmartNotes ✨'}`;
+                 await handleShare({ title: titleStr, text });
+               }}
+               disabled={!title.trim() && !content.trim()}
+               className="p-2 bg-black/5 rounded-full text-slate-700 hover:bg-black/10 transition-colors ml-2 disabled:opacity-40"
+               title={lang === 'ro' ? 'Distribuie' : 'Share'}
+             >
+               <Share2 size={20} />
+             </button>
              <button onClick={onClose} className="p-2 bg-black/5 rounded-full text-slate-700 hover:bg-black/10 transition-colors ml-1">
                <X size={20} />
              </button>

@@ -8,6 +8,7 @@ import { HighlightText } from './HighlightText';
 import { TodoList } from './TodoList';
 
 import { checkRecurrence, expandEventsForDateRange } from '../utils/recurrence';
+import { handleShare } from '../utils/share';
 
 interface CalendarProps {
   events: CalendarEvent[];
@@ -55,6 +56,111 @@ export const Calendar: React.FC<CalendarProps> = ({
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [showShareDropdown, setShowShareDropdown] = useState(false);
+
+  const handleShareToday = async () => {
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+    
+    const todayEvents = expandEventsForDateRange(events, startOfToday, endOfToday)
+      .sort((a, b) => {
+        if (a.time && b.time) return a.time.localeCompare(b.time);
+        if (a.time) return -1;
+        if (b.time) return 1;
+        return 0;
+      });
+
+    const dateFormatted = today.toLocaleDateString(lang === 'ro' ? 'ro-RO' : 'en-US', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    let text = lang === 'ro' 
+      ? `🗓️ Programul meu pentru azi (${dateFormatted}):\n` 
+      : `🗓️ My schedule for today (${dateFormatted}):\n`;
+
+    if (todayEvents.length === 0) {
+      text += lang === 'ro' ? '• Niciun eveniment programat pentru azi. ✨' : '• No events scheduled for today. ✨';
+    } else {
+      todayEvents.forEach(e => {
+        text += `• ${e.time ? `${e.time} - ` : ''}${e.title}\n`;
+      });
+    }
+    
+    text += lang === 'ro' ? '\nTrimis din SmartCalendar.' : '\nSent from SmartCalendar.';
+
+    try {
+      await handleShare({ 
+        title: lang === 'ro' ? 'Programul meu azi' : "Today's Schedule", 
+        text 
+      });
+    } catch (err) {
+      console.error("Failed to share today schedule", err);
+    }
+  };
+
+  const handleShareThisWeek = async () => {
+    const today = new Date();
+    const currentDay = today.getDay();
+    const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + distanceToMonday);
+    monday.setHours(0, 0, 0, 0);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    const weekEvents = expandEventsForDateRange(events, monday, sunday)
+      .sort((a, b) => {
+        const dateA = new Date(a.date + 'T00:00:00').getTime();
+        const dateB = new Date(b.date + 'T00:00:00').getTime();
+        if (dateA !== dateB) return dateA - dateB;
+        if (a.time && b.time) return a.time.localeCompare(b.time);
+        if (a.time) return -1;
+        if (b.time) return 1;
+        return 0;
+      });
+
+    const formatOptions: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit' };
+    const localeStr = lang === 'ro' ? 'ro-RO' : 'en-US';
+    const rangeStr = `${monday.toLocaleDateString(localeStr, formatOptions)} - ${sunday.toLocaleDateString(localeStr, formatOptions)}`;
+
+    let text = lang === 'ro' 
+      ? `🗓️ Programul meu pentru săptămâna aceasta (${rangeStr}):\n\n` 
+      : `🗓️ My schedule for this week (${rangeStr}):\n\n`;
+
+    if (weekEvents.length === 0) {
+      text += lang === 'ro' ? '• Niciun eveniment programat pentru această săptămână. ✨' : '• No events scheduled for this week. ✨';
+    } else {
+      const eventsByDay: Record<string, CalendarEvent[]> = {};
+      weekEvents.forEach(e => {
+        const evDate = new Date(e.date + 'T12:00:00');
+        const dayName = evDate.toLocaleDateString(localeStr, { weekday: 'long', day: 'numeric', month: 'short' });
+        const capitalizedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+        if (!eventsByDay[capitalizedDayName]) {
+          eventsByDay[capitalizedDayName] = [];
+        }
+        eventsByDay[capitalizedDayName].push(e);
+      });
+
+      Object.entries(eventsByDay).forEach(([dayLabel, dayEvs]) => {
+        text += `📅 *${dayLabel}*:\n`;
+        dayEvs.forEach(e => {
+          text += `  • ${e.time ? `${e.time} - ` : ''}${e.title}\n`;
+        });
+        text += `\n`;
+      });
+    }
+
+    text += lang === 'ro' ? 'Trimis din SmartCalendar.' : 'Sent from SmartCalendar.';
+
+    try {
+      await handleShare({ 
+        title: lang === 'ro' ? 'Program săptămâna asta' : "This Week's Schedule", 
+        text 
+      });
+    } catch (err) {
+      console.error("Failed to share week schedule", err);
+    }
+  };
 
   const isNeon = theme === 'neon';
   const isPastel = theme === 'soft';
@@ -328,6 +434,53 @@ export const Calendar: React.FC<CalendarProps> = ({
               </button>
             </div>
             
+            <div className="relative">
+              <button
+                onClick={() => setShowShareDropdown(!showShareDropdown)}
+                className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl border font-bold text-xs sm:text-sm transition-all active:scale-95 shadow-sm ${
+                  isNeon 
+                    ? 'border-slate-800 bg-slate-900 text-cyan-400 hover:border-slate-700' 
+                    : 'border-pink-200 bg-pink-50/30 text-pink-600 hover:bg-pink-50/50'
+                }`}
+              >
+                <span className="text-sm">📤</span>
+                <span className="hidden sm:inline whitespace-nowrap">{lang === 'ro' ? 'Distribuie' : 'Share'}</span>
+                <span className="sm:hidden whitespace-nowrap">{lang === 'ro' ? 'Distribuie' : 'Share'}</span>
+              </button>
+
+              {showShareDropdown && (
+                <>
+                  <div className="fixed inset-0 z-35" onClick={() => setShowShareDropdown(false)} />
+                  <div className={`absolute right-0 mt-2 w-56 rounded-2xl shadow-xl z-40 p-2 border animate-in fade-in slide-in-from-top-2 duration-200 ${
+                    isNeon ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-white border-pink-100 text-slate-700'
+                  }`}>
+                    <button
+                      onClick={() => {
+                        handleShareToday();
+                        setShowShareDropdown(false);
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-left text-sm font-semibold transition-colors ${
+                        isNeon ? 'hover:bg-slate-900 text-cyan-400' : 'hover:bg-pink-50/50 text-pink-600'
+                      }`}
+                    >
+                      <span>🗓️</span> {lang === 'ro' ? 'Programul de azi' : "Today's Schedule"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleShareThisWeek();
+                        setShowShareDropdown(false);
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-left text-sm font-semibold transition-colors ${
+                        isNeon ? 'hover:bg-slate-900 text-cyan-400' : 'hover:bg-pink-50/50 text-pink-600'
+                      }`}
+                    >
+                      <span>📅</span> {lang === 'ro' ? 'Săptămâna aceasta' : 'This Week\'s Schedule'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
             <button
                onClick={() => {
                    const now = new Date();

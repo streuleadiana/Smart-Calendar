@@ -37,9 +37,6 @@ interface SettingsViewProps {
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
   importError: string | null;
-  handleShareDay: () => void;
-  handleShareWeek: () => void;
-  copiedState: 'day' | 'week' | null;
   testNotification: () => void;
   setIsFeedbackModalOpen: (val: boolean) => void;
   handleAccentChange: (val: string) => void;
@@ -51,7 +48,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   assistantName, handleUpdateAssistantName, assistantAvatar, handleUpdateAssistantAvatar,
   categories, newCategoryName, setNewCategoryName, newCategoryColor, setNewCategoryColor,
   handleAddCategory, handleUpdateCategory, handleDeleteCategory, handleLangChange, handleLogout,
-  eventsCount, todosCount, handleExport, handleFileChange, fileInputRef, importError, handleShareDay, handleShareWeek, copiedState, testNotification, setIsFeedbackModalOpen, handleAccentChange, handleThemeChange
+  eventsCount, todosCount, handleExport, handleFileChange, fileInputRef, importError, testNotification, setIsFeedbackModalOpen, handleAccentChange, handleThemeChange
 }) => {
   const t = translations[lang];
 
@@ -413,14 +410,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   {importError && (
                       <div className="text-xs text-red-500 flex items-center gap-1 justify-center">{importError}</div>
                   )}
-                  <div className="flex gap-2 w-full mt-4">
-                      <button onClick={handleShareDay} className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 rounded-xl font-bold text-white transition-all shadow-md text-sm sm:text-base ${copiedState === 'day' ? 'bg-green-500 hover:bg-green-600' : theme === 'neon' ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-800 hover:bg-slate-900'}`}>
-                          {copiedState === 'day' ? t.settings.copied : (lang === 'ro' ? "Trimite program azi" : "Share Day")}
-                      </button>
-                      <button onClick={handleShareWeek} className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 rounded-xl font-bold text-white transition-all shadow-md text-sm sm:text-base ${copiedState === 'week' ? 'bg-green-500 hover:bg-green-600' : theme === 'neon' ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-800 hover:bg-slate-900'}`}>
-                          {copiedState === 'week' ? t.settings.copied : (lang === 'ro' ? "Trimite program săptămână" : "Share Week")}
-                      </button>
-                  </div>
               </div>
           </div>
 

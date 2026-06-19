@@ -116,7 +116,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4 animate-in fade-in duration-200" onClick={onClose}>
       
-      <div className={`relative w-full max-w-md ${modalBg} border flex flex-col animate-in zoom-in-95 duration-200 overflow-hidden`} onClick={(e) => e.stopPropagation()}>
+      <div className={`relative w-full max-w-md ${modalBg} border flex flex-col animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar`} onClick={(e) => e.stopPropagation()}>
         <div className={`px-6 py-5 border-b flex items-center justify-between ${isSoft ? 'border-pink-100/50 bg-pink-100/10' : isNeon ? 'border-slate-800' : 'border-slate-100'}`}>
           <h2 className={`text-lg font-extrabold ${headingColor}`}>
              {initialTask ? '✨ ' : '🌸 '}
@@ -127,8 +127,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="space-y-2">
+        <form onSubmit={handleSubmit} className="p-6 flex flex-col space-y-4">
+          <div className="space-y-2 mb-4">
             <label className={labelClass}>🦄 {lang === 'ro' ? 'Categorie' : 'Category'}</label>
             <div className="flex items-center gap-3">
               <select
@@ -153,7 +153,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 mb-4">
              <label className={labelClass}>🏷️ {lang === 'ro' ? 'Denumire Task' : 'Task Name'}</label>
              <input
                autoFocus
@@ -165,7 +165,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
              />
           </div>
 
-          <div className="grid grid-cols-2 gap-4 items-start">
+          <div className="grid grid-cols-2 gap-4 items-start mb-4">
              <div className="space-y-2">
                   <label className={labelClass}>📅 Deadline Date</label>
                   <input
@@ -193,7 +193,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           </div>
 
           {useCustomColor && (
-             <div className="space-y-2">
+             <div className="space-y-2 mb-4">
                   <label className={labelClass}>
                     🎨 {lang === 'ro' ? 'Culoare Personalizată' : 'Custom Color'}
                   </label>
@@ -202,18 +202,18 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                         className="relative flex items-center justify-center w-11 h-11 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm transition-transform hover:scale-110"
                         style={{ borderColor: isSoft ? '#fbcfe8' : isNeon ? '#334155' : '#e2e8f0' }}
                      >
-                         <input
-                             type="color"
-                             value={color}
-                             onChange={(e) => setColor(e.target.value)}
-                             className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[160%] h-[160%] p-0 m-0 cursor-pointer border-none"
-                         />
+                          <input
+                              type="color"
+                              value={color}
+                              onChange={(e) => setColor(e.target.value)}
+                              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[160%] h-[160%] p-0 m-0 cursor-pointer border-none"
+                          />
                      </div>
                   </div>
              </div>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-2 mb-4">
             <label className={labelClass}>
               🔔 Anunță-mă înainte cu:
             </label>
