@@ -16,6 +16,7 @@ interface TodoListProps {
   accentColor?: string;
   searchQuery?: string;
   categories: Category[];
+  hideHeader?: boolean;
 }
 
 export const TodoList: React.FC<TodoListProps> = ({ 
@@ -29,7 +30,8 @@ export const TodoList: React.FC<TodoListProps> = ({
   theme,
   accentColor = '#4F46E5',
   searchQuery = '',
-  categories = []
+  categories = [],
+  hideHeader = false
 }) => {
   const isNeon = theme === 'neon';
   const isPastel = theme === 'pastel';
@@ -50,19 +52,21 @@ export const TodoList: React.FC<TodoListProps> = ({
   const completedText = isNeon ? 'text-slate-600' : 'text-slate-400';
 
   return (
-    <div className={`rounded-2xl shadow-sm border h-full flex flex-col overflow-hidden ${containerClass}`}>
-      <div className={`p-4 border-b flex items-center gap-2 ${headerClass}`}>
-        <div 
-            className={`p-1.5 rounded-md text-white`}
-            style={{ backgroundColor: `${accentColor}80` }}
-        >
-          <ListTodo size={20} />
+    <div className={`rounded-3xl shadow-sm border w-full flex flex-col overflow-visible ${containerClass}`}>
+      {!hideHeader && (
+        <div className={`p-4 border-b flex items-center gap-2 ${headerClass}`}>
+          <div 
+              className={`p-1.5 rounded-md text-white`}
+              style={{ backgroundColor: `${accentColor}80` }}
+          >
+            <ListTodo size={20} />
+          </div>
+          <h3 className="font-bold">My Tasks</h3>
+          <span className={`ml-auto text-xs font-semibold px-2 py-1 rounded-full ${isNeon ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600'}`}>
+            {todos.filter(t => !t.completed).length} pending
+          </span>
         </div>
-        <h3 className="font-bold">My Tasks</h3>
-        <span className={`ml-auto text-xs font-semibold px-2 py-1 rounded-full ${isNeon ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600'}`}>
-          {todos.filter(t => !t.completed).length} pending
-        </span>
-      </div>
+      )}
 
       <div className={`p-4 border-b ${isNeon ? 'border-slate-800' : 'border-slate-100'}`}>
         <button
@@ -75,7 +79,7 @@ export const TodoList: React.FC<TodoListProps> = ({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 pb-24 sm:pb-4 space-y-1 custom-scrollbar">
+      <div className="flex-1 p-2 space-y-1 overflow-visible">
         {todos.length === 0 ? (
           <div className="text-center py-10 text-slate-400 text-sm flex flex-col items-center gap-2">
             <span className="text-3xl">🌸</span>

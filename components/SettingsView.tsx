@@ -109,7 +109,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   return (
-    <div className="h-full p-3 pb-24 sm:pb-6 lg:p-6 overflow-y-auto custom-scrollbar animate-in fade-in duration-300">
+    <div className="w-full p-3 pb-32 sm:pb-6 lg:p-6 animate-in fade-in duration-300">
        <div className="max-w-3xl mx-auto space-y-6">
            <div className="mb-6">
               <h2 className={`text-3xl font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>{t.settings.title}</h2>

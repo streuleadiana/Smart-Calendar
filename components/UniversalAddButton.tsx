@@ -6,10 +6,14 @@ import { uploadImageToStorage } from '../lib/firebase';
 interface UniversalAddButtonProps {
     onSaveNote: (title: string, content: string, folder: string, color: string) => Promise<void>;
     onAddTask: () => void;
-    onSaveMood: (mood: MoodLog) => Promise<void>;
+    onAddEvent: () => void;
+    onSaveMood: (mood: any) => Promise<void>;
     onSaveWishlist?: (item: any) => Promise<void>;
     theme: Theme;
     accentColor: string;
+    moodLogs?: MoodLog[];
+    noteCategories?: string[];
+    noteCategoryColors?: Record<string, string>;
 }
 
 const MOODS = [
@@ -23,10 +27,14 @@ const MOODS = [
 export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
     onSaveNote,
     onAddTask,
+    onAddEvent,
     onSaveMood,
     onSaveWishlist,
     theme,
-    accentColor
+    accentColor,
+    moodLogs = [],
+    noteCategories = ["📓 Jurnal", "🛒 Cumpărături", "💡 Idei", "✈️ Travel"],
+    noteCategoryColors = {}
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -37,7 +45,14 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
     // Note State
     const [noteTitle, setNoteTitle] = useState('');
     const [noteContent, setNoteContent] = useState('');
+    const [noteCategory, setNoteCategory] = useState(noteCategories[0] || '💡 Idei');
     const [isSavingNote, setIsSavingNote] = useState(false);
+
+    useEffect(() => {
+        if (noteCategories && noteCategories.length > 0) {
+            setNoteCategory(noteCategories[0]);
+        }
+    }, [noteCategories]);
 
     // Wishlist State
     const [wishlistTitle, setWishlistTitle] = useState('');
@@ -62,22 +77,51 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
     const isNeon = theme === 'neon';
     const isSoft = theme === 'pastel';
 
+    // Check if daily mood already exists
+    const dStr = (() => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    })();
+    const todayMoodExists = moodLogs.some(m => m.date === dStr);
+
+    // Speed Dial Menu Items in precise, requested visual order:
+    // 1. 🗓️ Eveniment Nou
+    // 2. ✅ Task Nou
+    // 3. 📝 Notiță Nouă
+    // 4. 🛍️ Dorință Nouă
+    // 5. ✨ Starea de azi
     const menuItems = [
-        { label: 'Notiță Nouă', icon: '📝', onClick: () => setActiveModal('note') },
+        { label: 'Eveniment Nou', icon: '🗓️', onClick: onAddEvent },
         { label: 'Task Nou', icon: '✅', onClick: onAddTask },
-        { label: 'Starea de azi', icon: '✨', onClick: () => setActiveModal('mood') },
+        { label: 'Notiță Nouă', icon: '📝', onClick: () => setActiveModal('note') },
         { label: 'Dorință Nouă', icon: '🛍️', onClick: () => setActiveModal('wishlist') },
     ];
+
+    if (!todayMoodExists) {
+        menuItems.push({ label: 'Starea de azi', icon: '✨', onClick: () => setActiveModal('mood') });
+    }
 
     const handleSaveQuickNote = async () => {
         if (!noteTitle.trim() && !noteContent.trim()) return;
         setIsSavingNote(true);
         try {
+            const folder = noteCategory || noteCategories[0] || '💡 Idei';
+            const CATEGORY_COLORS: Record<string, string> = {
+              "✈️ Travel": "#bae6fd",
+              "💡 Idei": "#fef08a",
+              "🛒 Cumpărături": "#bbf7d0",
+              "📓 Jurnal": "#fce7f3",
+            };
+            const noteColor = noteCategoryColors[folder] || CATEGORY_COLORS[folder] || (folder.includes("Jurnal") ? accentColor + "20" : "#bfdbfe");
+
             await onSaveNote(
                 noteTitle.trim() || 'Notiță Rapidă',
                 noteContent.trim(),
-                'Idei Generale',
-                '#ffffff'
+                folder,
+                noteColor
             );
             setNoteTitle('');
             setNoteContent('');
@@ -90,8 +134,12 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
     };
 
     const handleSaveQuickMood = async (moodId: string) => {
-        const todayCA = new Date().toLocaleDateString('en-CA');
-        await onSaveMood({ date: todayCA, mood: moodId as any, activities: [], note: '' });
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const todayCA = `${year}-${month}-${day}`;
+        await onSaveMood({ date: todayCA, mood: moodId, activities: [], note: '' });
         setActiveModal(null);
     };
 
@@ -182,6 +230,22 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
                             </button>
                         </div>
                         <div className="space-y-4">
+                            <div>
+                                <label className={`block text-xs font-bold mb-1.5 ml-1 opacity-70 ${isNeon ? 'text-slate-300' : 'text-slate-600'}`}>
+                                    Categorie
+                                </label>
+                                <select 
+                                    value={noteCategory}
+                                    onChange={(e) => setNoteCategory(e.target.value)}
+                                    className={`w-full p-4 font-bold rounded-2xl border transition-all ${isNeon ? 'bg-slate-800 border-slate-700 text-white focus:ring-2 focus:ring-slate-700 outline-none' : 'bg-slate-50 border-slate-200 text-slate-800 focus:ring-2 focus:ring-indigo-400 outline-none'}`}
+                                >
+                                    {noteCategories.map(f => (
+                                        <option key={f} value={f} className={isNeon ? 'bg-slate-800 text-white' : 'bg-white text-slate-800'}>
+                                            {f}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                             <input 
                                 type="text"
                                 placeholder="Titlu opțional..."
@@ -214,31 +278,53 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
             )}
 
             {/* Quick Mood Modal */}
-            {activeModal === 'mood' && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => setActiveModal(null)} />
-                    <div className={`relative w-full max-w-sm rounded-[2rem] shadow-2xl p-8 text-center animate-in zoom-in-95 duration-200 border ${isNeon ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
-                        <button onClick={() => setActiveModal(null)} className={`absolute top-4 right-4 p-2 rounded-full transition-colors ${isNeon ? 'hover:bg-slate-800 text-slate-400' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>
-                            <X size={20} />
-                        </button>
-                        <h3 className={`text-2xl font-bold mb-6 ${isNeon ? 'text-white' : 'text-slate-800'}`}>
-                            Cum te simți astăzi?
-                        </h3>
-                        <div className="flex justify-center gap-2 sm:gap-4">
-                            {MOODS.map(mood => (
-                                <button
-                                    key={mood.id}
-                                    onClick={() => handleSaveQuickMood(mood.id)}
-                                    className={`text-4xl sm:text-5xl hover:scale-110 transition-transform active:scale-95 filter drop-shadow-sm`}
-                                    title={mood.label}
-                                >
-                                    {mood.emoji}
-                                </button>
-                            ))}
+            {activeModal === 'mood' && (() => {
+                const d = new Date();
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                const todayCA = `${year}-${month}-${day}`;
+                const todaysMood = moodLogs.find(m => m.date === todayCA);
+
+                return (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => setActiveModal(null)} />
+                        <div className={`relative w-full max-w-sm rounded-[2rem] shadow-2xl p-8 text-center animate-in zoom-in-95 duration-200 border ${isNeon ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+                            <button onClick={() => setActiveModal(null)} className={`absolute top-4 right-4 p-2 rounded-full transition-colors ${isNeon ? 'hover:bg-slate-800 text-slate-400' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>
+                                <X size={20} />
+                            </button>
+                            <h3 className={`text-2xl font-bold mb-2 ${isNeon ? 'text-white' : 'text-slate-800'} flex flex-col items-center gap-2`}>
+                                <span>Cum te simți astăzi?</span>
+                                {todaysMood && (
+                                    <span className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2.5 py-1 rounded-full font-semibold animate-pulse">
+                                        Înregistrat deja ✨
+                                    </span>
+                                )}
+                            </h3>
+                            {todaysMood && (
+                                <p className={`text-xs mb-6 ${isNeon ? 'text-slate-400' : 'text-slate-500'}`}>
+                                    Starea ta este salvată. Alege alt emoji pentru a o actualiza.
+                                </p>
+                            )}
+                            <div className={`flex justify-center gap-2 sm:gap-4 ${!todaysMood ? 'mt-6' : ''}`}>
+                                {MOODS.map(mood => {
+                                    const isActive = todaysMood ? (todaysMood.mood === mood.id || todaysMood.moodEmoji === mood.emoji) : false;
+                                    return (
+                                        <button
+                                            key={mood.id}
+                                            onClick={() => handleSaveQuickMood(mood.id)}
+                                            className={`text-4xl sm:text-5xl hover:scale-110 transition-transform active:scale-95 p-1 rounded-2xl ${isActive ? 'ring-2 ring-emerald-400 bg-emerald-400/10' : 'opacity-60 hover:opacity-100'}`}
+                                            title={mood.label}
+                                        >
+                                            {mood.emoji}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* Quick Wishlist Modal */}
             {activeModal === 'wishlist' && (

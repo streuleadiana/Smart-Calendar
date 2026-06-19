@@ -146,7 +146,7 @@ export const VisionView: React.FC<VisionViewProps> = ({
   };
 
   return (
-    <div className={`flex flex-col h-full overflow-y-auto px-4 pb-24 lg:pb-6 custom-scrollbar animate-in slide-in-from-bottom-2 ${isNeon ? 'bg-slate-950 text-slate-200' : 'bg-[#fafafa]'}`}>
+    <div className={`flex flex-col w-full px-4 pb-32 lg:pb-8 animate-in slide-in-from-bottom-2 ${isNeon ? 'bg-slate-950 text-slate-200' : 'bg-[#fafafa]'}`}>
       <div className="max-w-5xl w-full mx-auto mt-6">
         
         {/* Header & Toggle */}

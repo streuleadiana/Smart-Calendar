@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
 import { useSwipeable } from 'react-swipeable';
-import { CalendarEvent, Theme, Category } from '../types';
+import { CalendarEvent, Theme, Category, Todo } from '../types';
 import { ChevronLeft, ChevronRight, Plus, Repeat } from 'lucide-react';
 import { DayDetailModal } from './DayDetailModal';
 import { HighlightText } from './HighlightText';
+import { TodoList } from './TodoList';
 
 import { checkRecurrence, expandEventsForDateRange } from '../utils/recurrence';
 
@@ -18,6 +19,13 @@ interface CalendarProps {
   searchQuery?: string;
   categories: Category[];
   lang: string;
+  todos: Todo[];
+  onAddTaskClick: () => void;
+  onEditTaskClick: (task: Todo) => void;
+  onToggleTodo: (id: string) => void;
+  onDeleteTodo: (id: string) => void;
+  onTogglePin: (id: string) => void;
+  onChangeColor: (id: string, color: string) => void;
 }
 
 const WEEKDAYS: Record<string, string[]> = {
@@ -36,7 +44,14 @@ export const Calendar: React.FC<CalendarProps> = ({
   accentColor = '#4F46E5',
   searchQuery = '',
   categories,
-  lang = 'ro'
+  lang = 'ro',
+  todos,
+  onAddTaskClick,
+  onEditTaskClick,
+  onToggleTodo,
+  onDeleteTodo,
+  onTogglePin,
+  onChangeColor
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
@@ -335,8 +350,29 @@ export const Calendar: React.FC<CalendarProps> = ({
         </div>
       </div>
       
-      <div className="flex-1 overflow-y-auto pb-24 sm:pb-4 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto pb-24 sm:pb-4 custom-scrollbar space-y-8">
          {renderCalendarGrid()}
+
+         {/* ✅ Task-urile Mele (My Tasks) */}
+         <div className="mt-8 max-w-4xl mx-auto px-1 animate-in fade-in duration-300">
+            <h3 className={`text-xl font-bold mb-4 flex items-center gap-2 ${textHeader}`}>
+               <span>{lang === 'ro' ? '✅ Task-urile Mele' : '✅ My Tasks'}</span>
+            </h3>
+            <TodoList 
+               todos={todos}
+               onAddTaskClick={onAddTaskClick}
+               onEditTaskClick={onEditTaskClick}
+               onToggleTodo={onToggleTodo}
+               onDeleteTodo={onDeleteTodo}
+               onTogglePin={onTogglePin}
+               onChangeColor={onChangeColor}
+               theme={theme}
+               accentColor={accentColor}
+               searchQuery={searchQuery}
+               categories={categories}
+               hideHeader={true}
+            />
+         </div>
       </div>
 
       {/* Day Detail Modal */}

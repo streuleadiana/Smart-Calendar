@@ -23,19 +23,33 @@ export const MoodView: React.FC<MoodViewProps> = ({ moodLogs, onSaveMood, theme,
   const textPrimary = isNeon ? 'text-white' : 'text-slate-800';
   const textSecondary = isNeon ? 'text-slate-400' : 'text-slate-500';
 
-  const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+  const getLocalDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayStr = getLocalDateString();
   const todayMood = moodLogs.find(m => m.date === todayStr);
 
-  const [selectedMood, setSelectedMood] = useState<{ emoji: string, label: string, color: string } | null>(
-      todayMood ? { emoji: todayMood.moodEmoji, label: todayMood.moodLabel, color: todayMood.color } : null
-  );
-  const [journalNote, setJournalNote] = useState(todayMood?.journalNote || '');
+  const [selectedMood, setSelectedMood] = useState<{ emoji: string, label: string, color: string } | null>(null);
+  const [journalNote, setJournalNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showRecapModal, setShowRecapModal] = useState(false);
   const [recapText, setRecapText] = useState('');
   const [isGeneratingRecap, setIsGeneratingRecap] = useState(false);
   
   const [selectedDayLog, setSelectedDayLog] = useState<MoodLog | null>(null);
+
+  // Sync state once the mood logs are loaded asynchronously from Firestore
+  React.useEffect(() => {
+    if (todayMood) {
+      setSelectedMood({ emoji: todayMood.moodEmoji, label: todayMood.moodLabel, color: todayMood.color });
+      setJournalNote(todayMood.journalNote || '');
+    }
+  }, [todayMood]);
 
   const handleSave = async () => {
     if (!selectedMood) return;
@@ -144,7 +158,7 @@ export const MoodView: React.FC<MoodViewProps> = ({ moodLogs, onSaveMood, theme,
   };
 
   return (
-    <div className={`flex flex-col h-full overflow-y-auto px-4 pb-24 lg:pb-6 custom-scrollbar animate-in slide-in-from-bottom-2 ${isNeon ? 'bg-slate-950 text-slate-200' : 'bg-[#fafafa]'}`}>
+    <div className={`flex flex-col w-full px-4 pb-32 lg:pb-8 animate-in slide-in-from-bottom-2 ${isNeon ? 'bg-slate-950 text-slate-200' : 'bg-[#fafafa]'}`}>
         <div className="max-w-xl w-full mx-auto mt-6">
             
             <div className="flex items-center justify-between mb-8">
@@ -163,7 +177,21 @@ export const MoodView: React.FC<MoodViewProps> = ({ moodLogs, onSaveMood, theme,
 
             {/* Check-in Card (Soft UI) */}
             <div className={`rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 mb-8 transition-all ${isNeon ? 'bg-slate-900 border border-slate-800' : isSoft ? 'bg-white border border-pink-50' : 'bg-white'}`}>
-                <h2 className={`text-xl font-bold mb-6 text-center ${textPrimary}`}>Cum te simți azi?</h2>
+                 <div className="flex flex-col items-center mb-6">
+                    <h2 className={`text-xl font-bold text-center ${textPrimary} flex items-center gap-2 justify-center`}>
+                        <span>Cum te simți azi?</span>
+                        {todayMood && (
+                            <span className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-0.5 rounded-full font-semibold animate-pulse">
+                                Înregistrat deja ✨
+                            </span>
+                        )}
+                    </h2>
+                    {todayMood && (
+                        <p className={`text-xs text-center mt-1 ${textSecondary}`}>
+                            Ai înregistrat deja starea pentru azi. O poți edita mai jos.
+                        </p>
+                    )}
+                </div>
                 <div className="flex justify-between sm:justify-center sm:gap-6 mb-6">
                     {DEFAULT_MOODS.map(mood => (
                         <button

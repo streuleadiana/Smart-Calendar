@@ -23,6 +23,8 @@ interface HomeDashboardProps {
     onDeleteEventClick: (id: string) => void;
     onEditTaskClick: (task: Todo) => void;
     onDeleteTaskClick: (id: string) => void;
+    noteCategories?: string[];
+    noteCategoryColors?: Record<string, string>;
 }
 
 const MOODS = [
@@ -45,7 +47,9 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     accentColor,
     lang,
     categories,
-    onTodoToggle
+    onTodoToggle,
+    noteCategories = ["📓 Jurnal", "🛒 Cumpărături", "💡 Idei", "✈️ Travel"],
+    noteCategoryColors = {}
 }) => {
     const t = translations[lang];
     const isNeon = theme === 'neon';
@@ -57,7 +61,14 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
     const [quickNoteTitle, setQuickNoteTitle] = useState('');
     const [quickNoteContent, setQuickNoteContent] = useState('');
+    const [quickNoteCategory, setQuickNoteCategory] = useState(noteCategories[0] || '💡 Idei');
     const [isSavingNote, setIsSavingNote] = useState(false);
+
+    useEffect(() => {
+        if (noteCategories && noteCategories.length > 0) {
+            setQuickNoteCategory(noteCategories[0]);
+        }
+    }, [noteCategories]);
 
     useEffect(() => {
         if (visionItems && visionItems.length > 0) {
@@ -80,12 +91,31 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     const quoteIndex = Math.floor(Date.now() / 86400000) % fallbackQuotes.length;
     const dailyQuote = fallbackQuotes[quoteIndex];
 
-    const todayCA = new Date().toLocaleDateString('en-CA');
+    const getLocalDateString = () => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const todayCA = getLocalDateString();
     const todaysMood = moodLogs.find(m => m.date === todayCA);
 
     const displayTodos = todos.filter(t => !t.completed && (!t.deadlineDate || t.deadlineDate <= todayCA));
     
-    const todayEvents = events.filter(e => e.date === todayCA).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    const d = new Date();
+    const currentHour = d.getHours();
+    const currentMin = d.getMinutes();
+    const currentTimeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`;
+
+    const allTodayEvents = events.filter(e => e.date === todayCA);
+    const todayEvents = allTodayEvents
+        .filter(e => {
+            if (!e.time) return true;
+            return e.time > currentTimeStr;
+        })
+        .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
     const handleMoodSelect = async (moodId: string) => {
         await onSaveMood({ date: todayCA, mood: moodId as any, activities: [], note: '' });
@@ -95,11 +125,20 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
         if (!quickNoteTitle.trim() && !quickNoteContent.trim()) return;
         setIsSavingNote(true);
         try {
+            const folder = quickNoteCategory || noteCategories[0] || '💡 Idei';
+            const CATEGORY_COLORS: Record<string, string> = {
+              "✈️ Travel": "#bae6fd",
+              "💡 Idei": "#fef08a",
+              "🛒 Cumpărături": "#bbf7d0",
+              "📓 Jurnal": "#fce7f3",
+            };
+            const noteColor = noteCategoryColors[folder] || CATEGORY_COLORS[folder] || (folder.includes("Jurnal") ? accentColor + "20" : "#bfdbfe");
+            
             await onSaveNote(
                 quickNoteTitle.trim() || 'Notiță Rapidă',
                 quickNoteContent.trim(),
-                'Idei Generale',
-                '#ffffff'
+                folder,
+                noteColor
             );
             setQuickNoteTitle('');
             setQuickNoteContent('');
@@ -118,7 +157,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     };
 
     return (
-        <div className="h-full p-4 pb-24 sm:pb-8 lg:p-8 overflow-y-auto custom-scrollbar animate-in fade-in duration-300">
+        <div className="w-full p-4 pb-32 sm:pb-8 lg:p-8 animate-in fade-in duration-300">
             <div className="max-w-4xl mx-auto space-y-6">
                 
                 {/* Grid Layout */}
@@ -142,16 +181,30 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                 </div>
                             </>
                         ) : (
-                            <div className="absolute inset-0 p-8 flex flex-col justify-center items-center text-center bg-gradient-to-br from-pink-100 to-purple-100">
-                                <span className="inline-block px-3 py-1 mb-4 rounded-full bg-white/60 backdrop-blur-md text-sm font-bold uppercase tracking-wider border-white/40 border text-pink-600">
+                            <div className={`absolute inset-0 p-8 md:p-12 flex flex-col justify-center items-center text-center ${
+                                isNeon 
+                                    ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950' 
+                                    : 'bg-gradient-to-br from-pink-50/95 via-purple-50/80 to-indigo-50/95'
+                            }`}>
+                                <span className={`inline-block px-3 py-1 mb-4 rounded-full text-xs font-bold uppercase tracking-wider border backdrop-blur-md ${
+                                    isNeon 
+                                        ? 'bg-slate-800/40 border-slate-700/50 text-cyan-400' 
+                                        : 'bg-white/60 border-white/40 text-pink-600'
+                                }`}>
                                     Tema Zilei
                                 </span>
-                                <h3 className="text-2xl md:text-3xl font-bold text-slate-800 max-w-2xl leading-relaxed text-center px-4">
+                                <h3 className={`text-xl md:text-2xl font-medium italic ${
+                                    isNeon ? 'text-slate-200' : 'text-slate-700'
+                                } max-w-2xl leading-relaxed text-center px-4`}>
                                     "{dailyQuote}"
                                 </h3>
                                 <button 
                                     onClick={() => setCurrentView('vision')}
-                                    className="mt-6 px-6 py-2.5 rounded-full font-bold text-slate-700 bg-white/80 hover:bg-white shadow-sm border border-white transition-all hover:scale-105 active:scale-95 text-sm"
+                                    className={`mt-6 px-6 py-2.5 rounded-full font-bold transition-all hover:scale-105 active:scale-95 text-sm shadow-sm border ${
+                                        isNeon 
+                                            ? 'text-cyan-400 bg-slate-800/80 hover:bg-slate-800 border-slate-700' 
+                                            : 'text-slate-700 bg-white/80 hover:bg-white border-white'
+                                    }`}
                                 >
                                     Personalizează cu o imagine ✨
                                 </button>
@@ -173,9 +226,17 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                 Vezi calendar
                             </button>
                         </div>
-                        {todayEvents.length === 0 ? (
+                        {allTodayEvents.length === 0 ? (
                             <div className="text-center py-6 opacity-60 font-medium">
                                 Nu ai niciun eveniment planificat pentru azi! Bucură-te de timp liber ✨
+                            </div>
+                        ) : todayEvents.length === 0 ? (
+                            <div className={`text-center py-6 font-medium p-4 rounded-2xl border ${
+                                isNeon 
+                                    ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' 
+                                    : 'bg-emerald-500/5 border-emerald-500/10 text-emerald-600'
+                            }`}>
+                                Toate evenimentele de azi s-au încheiat! Te poți relaxa. ✨
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -230,37 +291,36 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
 
                     {/* Widget 4: Mood Check-in */}
                     <div className={`p-6 rounded-[2rem] shadow-lg border flex flex-col justify-center ${bgGradient}`}>
-                        {todaysMood ? (
-                            <div className="text-center py-6">
-                                <div className="text-6xl mb-4 animate-bounce">
-                                    {MOODS.find(m => m.id === todaysMood.mood)?.emoji || '✨'}
-                                </div>
-                                <h3 className={`text-xl font-bold mb-2 ${isNeon ? 'text-white' : 'text-slate-800'}`}>
-                                    Mi-ai spus cum te simți azi!
-                                </h3>
-                                <p className={isNeon ? 'text-slate-400' : 'text-slate-500'}>
-                                    Să ai o zi minunată în continuare.
+                        <div className="text-center">
+                            <h3 className={`text-xl font-bold mb-3 flex items-center justify-center gap-2 ${isNeon ? 'text-white' : 'text-slate-800'}`}>
+                                <span>Cum te simți astăzi?</span>
+                                {todaysMood && (
+                                    <span className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-0.5 rounded-full font-semibold animate-pulse">
+                                        Înregistrat deja ✨
+                                    </span>
+                                )}
+                            </h3>
+                            {todaysMood && (
+                                <p className={`text-xs mb-4 ${isNeon ? 'text-slate-400' : 'text-slate-500'}`}>
+                                    Astăzi te simți: <span className="font-bold">{todaysMood.moodLabel || MOODS.find(m => m.id === todaysMood.mood)?.label || ''}</span>. Alege altă stare pentru a o actualiza.
                                 </p>
-                            </div>
-                        ) : (
-                            <div className="text-center">
-                                <h3 className={`text-xl font-bold mb-6 ${isNeon ? 'text-white' : 'text-slate-800'}`}>
-                                    Cum te simți astăzi?
-                                </h3>
-                                <div className="flex justify-center gap-2 sm:gap-4">
-                                    {MOODS.map(mood => (
+                            )}
+                            <div className="flex justify-center flex-wrap gap-2 sm:gap-4 mt-2">
+                                {MOODS.map(mood => {
+                                    const isActive = todaysMood ? (todaysMood.mood === mood.id || todaysMood.moodEmoji === mood.emoji) : false;
+                                    return (
                                         <button
                                             key={mood.id}
                                             onClick={() => handleMoodSelect(mood.id)}
-                                            className={`text-4xl sm:text-5xl hover:scale-110 transition-transform active:scale-95 filter drop-shadow-sm`}
+                                            className={`text-4xl sm:text-5xl hover:scale-110 transition-transform active:scale-95 filter drop-shadow-sm p-1.5 rounded-2xl ${isActive ? 'ring-2 ring-emerald-500 bg-emerald-500/10' : 'opacity-60 hover:opacity-100'}`}
                                             title={mood.label}
                                         >
                                             {mood.emoji}
                                         </button>
-                                    ))}
-                                </div>
+                                    );
+                                })}
                             </div>
-                        )}
+                        </div>
                     </div>
 
                 </div>
@@ -281,6 +341,22 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                             </button>
                         </div>
                         <div className="space-y-4">
+                            <div>
+                                <label className={`block text-xs font-bold mb-1.5 ml-1 opacity-70 ${isNeon ? 'text-slate-300' : 'text-slate-600'}`}>
+                                    Categorie
+                                </label>
+                                <select 
+                                    value={quickNoteCategory}
+                                    onChange={(e) => setQuickNoteCategory(e.target.value)}
+                                    className={`w-full p-4 font-bold rounded-2xl border transition-all ${isNeon ? 'bg-slate-800 border-slate-700 text-white focus:ring-2 focus:ring-slate-700 outline-none' : 'bg-slate-50 border-slate-200 text-slate-800 focus:ring-2 focus:ring-indigo-400 outline-none'}`}
+                                >
+                                    {noteCategories.map(f => (
+                                        <option key={f} value={f} className={isNeon ? 'bg-slate-800 text-white' : 'bg-white text-slate-800'}>
+                                            {f}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                             <input 
                                 type="text"
                                 placeholder="Titlu opțional..."

@@ -260,10 +260,55 @@ const App: React.FC = () => {
   const handleSaveMoodLog = async (log: Omit<MoodLog, 'id'>) => {
     if (!auth.currentUser) return;
     try {
-        const moodRef = doc(db, 'users', auth.currentUser.uid, 'moodLogs', log.date);
-        const payload: any = { ...log, id: log.date };
-        Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
-        await setDoc(moodRef, payload, { merge: true });
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const localDateString = log.date || `${year}-${month}-${day}`;
+
+        const moodRef = doc(db, 'users', auth.currentUser.uid, 'moodLogs', localDateString);
+
+        const moodMap: Record<string, { moodEmoji: string, moodLabel: string, color: string }> = {
+          'great': { moodEmoji: '😄', moodLabel: 'Super', color: '#fef08a' },
+          'good': { moodEmoji: '🙂', moodLabel: 'Bine', color: '#bbf7d0' },
+          'neutral': { moodEmoji: '😐', moodLabel: 'Normal', color: '#bfdbfe' },
+          'bad': { moodEmoji: '😔', moodLabel: 'Rău', color: '#c084fc' },
+          'awful': { moodEmoji: '😢', moodLabel: 'Groaznic', color: '#fecaca' },
+
+          'amazing': { moodEmoji: '🤩', moodLabel: 'Excelent', color: '#fef08a' },
+          'happy': { moodEmoji: '😊', moodLabel: 'Bine', color: '#bbf7d0' },
+          'meh': { moodEmoji: '😐', moodLabel: 'Meh', color: '#bfdbfe' },
+          'sad': { moodEmoji: '😔', moodLabel: 'Trist', color: '#c084fc' },
+          'terrible': { moodEmoji: '😫', moodLabel: 'Groaznic', color: '#fecaca' },
+        };
+
+        const incomingMood = (log as any).mood;
+        let moodEmoji = log.moodEmoji;
+        let moodLabel = log.moodLabel;
+        let color = log.color;
+        let journalNote = log.journalNote || (log as any).note || '';
+
+        if (incomingMood && moodMap[incomingMood]) {
+            const mapped = moodMap[incomingMood];
+            moodEmoji = mapped.moodEmoji;
+            moodLabel = mapped.moodLabel;
+            color = mapped.color;
+        }
+
+        const moodData: any = {
+            id: localDateString,
+            date: localDateString,
+            moodEmoji: moodEmoji || '✨',
+            moodLabel: moodLabel || 'Normal',
+            color: color || '#bfdbfe',
+            journalNote: journalNote || ''
+        };
+
+        if (incomingMood) {
+            moodData.mood = incomingMood;
+        }
+
+        await setDoc(moodRef, moodData, { merge: true });
     } catch (error) {
         console.error("Failed to save mood log:", error);
     }
@@ -852,11 +897,13 @@ const App: React.FC = () => {
                  setIsTaskModalOpen(true);
              }}
              onDeleteTaskClick={handleDeleteTodo}
+             noteCategories={noteCategories}
+             noteCategoryColors={noteCategoryColors}
           />
         );
       case 'calendar':
         return (
-          <div className="h-full flex flex-col p-3 lg:p-6 animate-in fade-in duration-300">
+          <div className="w-full flex flex-col p-3 lg:p-6 pb-24 md:pb-0 animate-in fade-in duration-300">
              <Calendar 
               events={filteredEvents} 
               onDateSelect={handleOpenModal}
@@ -867,39 +914,20 @@ const App: React.FC = () => {
               searchQuery={searchQuery}
               categories={categories}
               lang={lang}
+              todos={filteredTodos}
+              onAddTaskClick={() => {
+                  setEditingTask(null);
+                  setIsTaskModalOpen(true);
+              }}
+              onEditTaskClick={(task) => {
+                  setEditingTask(task);
+                  setIsTaskModalOpen(true);
+              }}
+              onToggleTodo={handleToggleTodo}
+              onDeleteTodo={handleDeleteTodo}
+              onTogglePin={handleTogglePin}
+              onChangeColor={handleChangeTodoColor}
             />
-          </div>
-        );
-      case 'tasks':
-        return (
-          <div className="h-full flex flex-col p-3 lg:p-6 animate-in fade-in duration-300">
-             <div className="max-w-4xl w-full mx-auto flex-1 min-h-0 flex flex-col">
-                <div className="mb-6 flex-shrink-0">
-                    <h2 className={`text-3xl font-bold ${theme === 'neon' ? 'text-white' : 'text-slate-800'}`}>Task-uri</h2>
-                    <p className={`${theme === 'neon' ? 'text-slate-400' : 'text-slate-500'}`}>Gestionează lista ta de priorități</p>
-                </div>
-                <div className="flex-1 min-h-0">
-                    <TodoList 
-                        todos={filteredTodos}
-                        onAddTaskClick={() => {
-                            setEditingTask(null);
-                            setIsTaskModalOpen(true);
-                        }}
-                        onEditTaskClick={(task) => {
-                            setEditingTask(task);
-                            setIsTaskModalOpen(true);
-                        }}
-                        onToggleTodo={handleToggleTodo}
-                        onDeleteTodo={handleDeleteTodo}
-                        onTogglePin={handleTogglePin}
-                        onChangeColor={handleChangeTodoColor}
-                        theme={theme}
-                        accentColor={accentColor}
-                        searchQuery={searchQuery}
-                        categories={categories}
-                    />
-                </div>
-             </div>
           </div>
         );
       case 'notes':
@@ -991,7 +1019,7 @@ const App: React.FC = () => {
   // --- SIDEBAR STYLES ---
   const sidebarClass = theme === 'neon' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200';
   return (
-    <div {...sidebarSwipeHandlers} className={`flex h-screen overflow-hidden transition-colors duration-300 ${getThemeBackground()} ${getFontClass()}`}>
+    <div {...sidebarSwipeHandlers} className={`flex min-h-screen transition-colors duration-300 ${getThemeBackground()} ${getFontClass()}`}>
       
       {/* Mobile Overlay (Tablet/Desktop when Sidebar is open) */}
       {isSidebarOpen && (
@@ -1016,7 +1044,7 @@ const App: React.FC = () => {
       </div>
 
       {/* RIGHT PANEL: HEADER + CONTENT */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden relative pb-20 md:pb-0">
+      <div className="flex-1 flex flex-col min-h-screen relative pb-24 md:pb-0">
           
           {/* HEADER BAR (FIXED) */}
           <Header 
@@ -1042,7 +1070,7 @@ const App: React.FC = () => {
           />
 
           {/* MAIN CONFIGURABLE CONTENT */}
-          <main className="flex-1 flex flex-col min-h-0 relative">
+          <main className="flex-1 flex flex-col relative pb-6">
              {renderContent()}
           </main>
 
@@ -1051,10 +1079,17 @@ const App: React.FC = () => {
       <UniversalAddButton
         onSaveNote={handleSaveNote}
         onAddTask={() => setIsTaskModalOpen(true)}
+        onAddEvent={() => {
+            setSelectedDate(new Date());
+            setIsModalOpen(true);
+        }}
         onSaveMood={handleSaveMoodLog}
         onSaveWishlist={handleSaveWishlistItem}
         theme={theme}
         accentColor={accentColor}
+        moodLogs={moodLogs}
+        noteCategories={noteCategories}
+        noteCategoryColors={noteCategoryColors}
       />
 
       {/* BOTTOM NAVIGATION (Mobile Only) */}

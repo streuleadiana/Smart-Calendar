@@ -144,7 +144,7 @@ export const NotesView: React.FC<NotesViewProps> = ({ notes, theme, accentColor,
   };
 
   return (
-    <div className="h-full flex flex-col pt-6 pb-[90px] px-4 md:px-8 max-w-7xl mx-auto w-full animate-in fade-in duration-300">
+    <div className="w-full min-h-screen flex flex-col pt-6 pb-32 px-4 md:px-8 max-w-7xl mx-auto animate-in fade-in duration-300">
       <div className="mb-6 flex justify-between items-center z-10">
         <div>
           <h1 className={`text-3xl font-bold tracking-tight mb-2 ${textPrimary}`}>
