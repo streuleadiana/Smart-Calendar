@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import confetti from 'canvas-confetti';
 import { Sparkles, ShoppingBag, Plus, X, ExternalLink, Heart, Image as ImageIcon, Upload, Edit3 } from 'lucide-react';
 import { Theme, VisionBoardItem, WishlistItem } from '../types';
 import { auth, storage as firebaseStorage, uploadImageToStorage } from '../lib/firebase';
@@ -65,20 +66,24 @@ export const VisionView: React.FC<VisionViewProps> = ({
         setNewVisionImageUrl('');
         setNewVisionQuote('');
         setIsVisionModalOpen(false);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to upload image:", error);
-        alert("Eroare la încărcarea imaginii.");
+        alert(`Eroare la încărcarea imaginii: ${error?.message || error || "Problemă de conexiune sau lipsă permisiuni"}`);
     } finally {
         setIsUploadingVision(false);
     }
   };
 
   const handleEditWishlistItem = (item: WishlistItem) => {
-      setEditingWishlistId(item.id);
-      setNewWishlistTitle(item.title);
-      setNewWishlistPrice(item.price || '');
-      setNewWishlistLink(item.storeLink || '');
-      setIsWishlistModalOpen(true);
+      try {
+          setEditingWishlistId(item.id);
+          setNewWishlistTitle(item.title);
+          setNewWishlistPrice(item.price || '');
+          setNewWishlistLink(item.storeLink || '');
+          setIsWishlistModalOpen(true);
+      } catch (error) {
+          console.error("Error setting edit wishlist item state:", error);
+      }
   };
 
   const handleOpenWishlistModal = () => {
@@ -89,9 +94,14 @@ export const VisionView: React.FC<VisionViewProps> = ({
       setIsWishlistModalOpen(true);
   };
   
-  const handleDeleteWishlistItem = (id: string, imageUrl?: string) => {
-      if(confirm("Ștergi acest obiect?")) {
-          onDeleteWishlistItem(id, imageUrl);
+  const handleDeleteWishlistItem = async (id: string, imageUrl?: string) => {
+      try {
+          if (confirm("Ștergi acest obiect?")) {
+              await onDeleteWishlistItem(id, imageUrl);
+          }
+      } catch (error) {
+          console.error("Failed to delete wishlist item:", error);
+          alert("Eroare la ștergerea elementului din catalog.");
       }
   };
 
@@ -105,14 +115,15 @@ export const VisionView: React.FC<VisionViewProps> = ({
             try {
                 const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(newWishlistLink.trim())}`);
                 const data = await res.json();
-                imageUrl = data.data?.image?.url || data.data?.logo?.url;
+                imageUrl = data.data?.image?.url || data.data?.screenshot?.url || data.data?.logo?.url;
             } catch (e) {
                 console.error("Microlink fetch error:", e);
             }
         }
+        
         if (!imageUrl && !editingWishlistId) {
-            // Placeholder if creating and no image could be found
-            imageUrl = "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800&q=80";
+            // Default elegant fallback pastel gradient image
+            imageUrl = "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=800&q=80";
         }
         
         if (editingWishlistId) {
@@ -124,12 +135,12 @@ export const VisionView: React.FC<VisionViewProps> = ({
              if (imageUrl) updates.imageUrl = imageUrl;
              await onUpdateWishlistItem(editingWishlistId, updates);
         } else {
-            await onAddWishlistItem({
-                title: newWishlistTitle.trim(),
-                price: newWishlistPrice.trim() || undefined,
-                storeLink: newWishlistLink.trim() || undefined,
-                imageUrl
-            });
+             await onAddWishlistItem({
+                 title: newWishlistTitle.trim(),
+                 price: newWishlistPrice.trim() || undefined,
+                 storeLink: newWishlistLink.trim() || undefined,
+                 imageUrl: imageUrl || "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=800&q=80"
+             });
         }
         
         setNewWishlistTitle('');
@@ -137,9 +148,9 @@ export const VisionView: React.FC<VisionViewProps> = ({
         setNewWishlistLink('');
         setEditingWishlistId(null);
         setIsWishlistModalOpen(false);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to save wishlist item:", error);
-        alert("Eroare la salvarea elementului.");
+        alert(`Eroare la salvare: ${error?.message || error || "Verifică conexiunea sau link-ul."}`);
     } finally {
         setIsUploadingWishlist(false);
     }
@@ -274,7 +285,18 @@ export const VisionView: React.FC<VisionViewProps> = ({
                                  
                                  <div className="mt-auto flex items-center justify-between gap-2">
                                      <button 
-                                        onClick={() => onUpdateWishlistItem(item.id, { isPurchased: !item.isPurchased })}
+                                        onClick={() => {
+                                             const nextPurchased = !item.isPurchased;
+                                             if (nextPurchased) {
+                                                 confetti({ 
+                                                     particleCount: 150, 
+                                                     spread: 80, 
+                                                     origin: { y: 0.6 }, 
+                                                     colors: ['#fbcfe8', '#fce7f3', '#fef4f8', '#fde047'] 
+                                                 });
+                                             }
+                                             onUpdateWishlistItem(item.id, { isPurchased: nextPurchased });
+                                         }}
                                         className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all font-medium text-sm border ${item.isPurchased ? (isNeon ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-500') : (isNeon ? 'bg-slate-800 border-slate-700 hover:bg-slate-700' : 'bg-white border-slate-200 hover:bg-slate-50')}`}
                                      >
                                          <Heart size={16} className={item.isPurchased ? "fill-current text-pink-500" : ""} />
@@ -283,24 +305,31 @@ export const VisionView: React.FC<VisionViewProps> = ({
 
                                      <div className="flex items-center gap-1">
                                          {item.storeLink && (
-                                             <a 
-                                                 href={item.storeLink} 
-                                                 target="_blank" 
-                                                 rel="noopener noreferrer"
+                                             <button 
+                                                 onClick={(e) => { 
+                                                     e.stopPropagation(); 
+                                                     e.preventDefault(); 
+                                                     try {
+                                                         window.open(item.storeLink, '_blank'); 
+                                                     } catch (err) {
+                                                         console.error("Failed to open link:", err);
+                                                     }
+                                                 }}
                                                  className={`p-2 rounded-xl transition-all ${isNeon ? 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'}`}
+                                                 title="Vizitează Magazinul"
                                              >
                                                  <ExternalLink size={18} />
-                                             </a>
+                                             </button>
                                          )}
                                          <button 
-                                             onClick={(e) => { e.stopPropagation(); handleEditWishlistItem(item); }}
+                                             onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleEditWishlistItem(item); }}
                                              className={`p-2 rounded-xl transition-all ${isNeon ? 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'}`}
                                          >
                                              <Edit3 size={18} />
                                          </button>
                                          <button 
-                                             onClick={(e) => { e.stopPropagation(); handleDeleteWishlistItem(item.id, item.imageUrl); }}
-                                             className="p-2 rounded-xl transition-all text-red-400 hover:bg-red-50 hover:text-red-600"
+                                             onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleDeleteWishlistItem(item.id, item.imageUrl); }}
+                                             className="p-2 rounded-xl transition-all text-red-500 hover:bg-red-500/10 hover:text-red-600"
                                          >
                                              <X size={18} />
                                          </button>

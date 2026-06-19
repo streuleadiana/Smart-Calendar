@@ -77,9 +77,29 @@ export const requestNotificationPermission = async () => {
 
 export const uploadImageToStorage = async (file: File, folder: string): Promise<string> => {
     if (!auth.currentUser) throw new Error("Trebuie să fii autentificat pentru a încărca imagini.");
-    const timestamp = Date.now();
-    const filename = `${timestamp}_${file.name}`;
-    const storageRef = ref(storage, `users/${auth.currentUser.uid}/${folder}/${filename}`);
-    await uploadBytes(storageRef, file);
-    return await getDownloadURL(storageRef);
+    
+    // Check if storage bucket config is present
+    if (!firebaseConfig.storageBucket) {
+        throw new Error("Firebase Storage non-configurat (lipsește 'storageBucket' în configurație).");
+    }
+
+    try {
+        const uploadPromise = (async () => {
+            const timestamp = Date.now();
+            const filename = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+            const storageRef = ref(storage, `users/${auth.currentUser.uid}/${folder}/${filename}`);
+            await uploadBytes(storageRef, file);
+            return await getDownloadURL(storageRef);
+        })();
+
+        // Timeout of 15 seconds to prevent hanging indefinitely if block or rules fail quietly
+        const timeoutPromise = new Promise<string>((_, reject) => {
+            setTimeout(() => reject(new Error("Încărcarea a expirat după 15 secunde (Timeout).")), 15000);
+        });
+
+        return await Promise.race([uploadPromise, timeoutPromise]);
+    } catch (error: any) {
+        console.error("Firebase Storage upload failed:", error);
+        throw new Error(error?.message || "Eroare la încărcarea imaginii în Storage.");
+    }
 };

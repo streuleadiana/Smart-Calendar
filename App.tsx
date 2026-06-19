@@ -21,7 +21,7 @@ import { UpdateNotifier } from './components/UpdateNotifier';
 import { CalendarEvent, Todo, Theme, Category, FontOption, Note, MoodLog, VisionBoardItem, WishlistItem } from './types';
 import * as storage from './utils/storage';
 import { LanguageOption, translations } from './utils/translations';
-import { requestNotificationPermission, auth, googleProvider, db, storage as firebaseStorage } from './lib/firebase';
+import { requestNotificationPermission, auth, googleProvider, db, storage as firebaseStorage, cleanPayload } from './lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -113,10 +113,10 @@ const App: React.FC = () => {
       handleAddTodo,
       handleEditTodo,
       handleToggleTodo,
-      handleTogglePin,
+      handleTogglePin: handleTogglePinOld,
       handleChangeTodoColor,
       handleToggleTodoByText,
-      handleDeleteTodo
+      handleDeleteTodo: handleDeleteTodoOld
   } = useTodos(todos, setTodos, setLastCompletedTask);
 
   const {
@@ -136,6 +136,36 @@ const App: React.FC = () => {
   // Task Modal State
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Todo | null>(null);
+  const [editTaskId, setEditTaskId] = useState<string | null>(null);
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (!auth.currentUser) return;
+    try {
+      await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'tasks', taskId));
+    } catch (error) {
+      console.error("Error in handleDeleteTask from subcollection:", error);
+    }
+    try {
+      await deleteDoc(doc(db, 'todos', taskId));
+    } catch (error) {
+      console.error("Error in handleDeleteTask from root collection:", error);
+    }
+  };
+
+  const handleTogglePin = async (task: Todo) => {
+    if (!auth.currentUser) return;
+    const newPinned = !task.isPinned;
+    try {
+      await updateDoc(doc(db, 'users', auth.currentUser.uid, 'tasks', task.id), { isPinned: newPinned });
+    } catch (error) {
+      console.error("Error toggling pin in subcollection:", error);
+    }
+    try {
+      await updateDoc(doc(db, 'todos', task.id), { isPinned: newPinned });
+    } catch (error) {
+      console.error("Error toggling pin in root collection:", error);
+    }
+  };
 
   // Feedback Modal State
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
@@ -888,15 +918,17 @@ const App: React.FC = () => {
              }}
              onAddTaskClick={() => {
                  setEditingTask(null);
+                 setEditTaskId(null);
                  setIsTaskModalOpen(true);
              }}
              onEditEventClick={openEditModal}
              onDeleteEventClick={handleDeleteEvent}
              onEditTaskClick={(task) => {
                  setEditingTask(task);
+                 setEditTaskId(task.id);
                  setIsTaskModalOpen(true);
              }}
-             onDeleteTaskClick={handleDeleteTodo}
+             onDeleteTaskClick={handleDeleteTask}
              noteCategories={noteCategories}
              noteCategoryColors={noteCategoryColors}
           />
@@ -917,6 +949,7 @@ const App: React.FC = () => {
               todos={filteredTodos}
               onAddTaskClick={() => {
                   setEditingTask(null);
+                  setEditTaskId(null);
                   setIsTaskModalOpen(true);
               }}
               onEditTaskClick={(task) => {
@@ -924,7 +957,7 @@ const App: React.FC = () => {
                   setIsTaskModalOpen(true);
               }}
               onToggleTodo={handleToggleTodo}
-              onDeleteTodo={handleDeleteTodo}
+              onDeleteTodo={handleDeleteTask}
               onTogglePin={handleTogglePin}
               onChangeColor={handleChangeTodoColor}
             />
@@ -1044,7 +1077,7 @@ const App: React.FC = () => {
       </div>
 
       {/* RIGHT PANEL: HEADER + CONTENT */}
-      <div className="flex-1 flex flex-col min-h-screen relative pb-24 md:pb-0">
+      <div className="flex-1 flex flex-col min-h-screen relative pb-24 pb-[env(safe-area-inset-bottom)] md:pb-0">
           
           {/* HEADER BAR (FIXED) */}
           <Header 
@@ -1070,7 +1103,7 @@ const App: React.FC = () => {
           />
 
           {/* MAIN CONFIGURABLE CONTENT */}
-          <main className="flex-1 flex flex-col relative pb-6">
+          <main className="flex-1 flex flex-col relative pb-24 pb-[env(safe-area-inset-bottom)] md:pb-6">
              {renderContent()}
           </main>
 
@@ -1134,6 +1167,7 @@ const App: React.FC = () => {
         initialDate={selectedDate}
         accentColor={accentColor}
         categories={categories}
+        theme={theme}
       />
 
       <EditEventModal
@@ -1143,16 +1177,44 @@ const App: React.FC = () => {
         event={editingEvent}
         accentColor={accentColor}
         categories={categories}
+        theme={theme}
       />
 
       <TaskModal
         isOpen={isTaskModalOpen}
-        onClose={() => setIsTaskModalOpen(false)}
-        onSave={(text, categoryId, color, deadlineDate, notificationOffset, recurrence) => {
-           if (editingTask) {
-               handleEditTodo(editingTask.id, text, categoryId, color, deadlineDate, notificationOffset, recurrence);
-           } else {
-               handleAddTodo(text, false, categoryId, color, deadlineDate, notificationOffset, recurrence);
+        onClose={() => {
+           setIsTaskModalOpen(false);
+           setEditingTask(null);
+           setEditTaskId(null);
+        }}
+        onSave={async (text, categoryId, color, deadlineDate, notificationOffset, recurrence) => {
+           try {
+              if (editTaskId) {
+                  await handleEditTodo(editTaskId, text, categoryId, color, deadlineDate, notificationOffset, recurrence);
+                  if (auth.currentUser) {
+                      const payload = cleanPayload({ 
+                          text, 
+                          categoryId: categoryId || null, 
+                          color: color || null,
+                          deadlineDate: deadlineDate || null,
+                          notificationOffset: notificationOffset || null,
+                          recurrence: recurrence || null
+                      });
+                      try {
+                          await updateDoc(doc(db, 'users', auth.currentUser.uid, 'tasks', editTaskId), payload);
+                      } catch (subErr) {
+                          console.error("Error updating subcollection copy of task:", subErr);
+                      }
+                  }
+              } else {
+                  await handleAddTodo(text, false, categoryId, color, deadlineDate, notificationOffset, recurrence);
+              }
+           } catch (error) {
+              console.error("Error saving task:", error);
+           } finally {
+              setEditingTask(null);
+              setEditTaskId(null);
+              setIsTaskModalOpen(false);
            }
         }}
         theme={theme}

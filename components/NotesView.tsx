@@ -508,7 +508,7 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ note, initialFolder, 
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
       <div 
-        className="relative w-full max-w-2xl h-[85vh] flex flex-col rounded-[2rem] shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-2xl h-auto max-h-[80vh] flex flex-col rounded-[2rem] shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200"
         style={{ backgroundColor: folder?.includes("Jurnal") ? accentColor : color }}
       >
         <div className="flex justify-between items-center mb-6">
@@ -552,7 +552,7 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ note, initialFolder, 
 
         <div className="flex-1 min-h-0 relative flex flex-col">
           {isChecklist ? (
-             <div className="flex-1 overflow-y-auto no-scrollbar pb-16">
+             <div className="flex-1 min-h-[150px] max-h-[45vh] overflow-y-auto no-scrollbar pb-16">
                {content.split('\n').map((line, idx) => {
                  const isChecked = line.startsWith('[x] ') || line.startsWith('[X] ');
                  const text = line.replace(/^\[[xX ]\] /, '');
@@ -621,7 +621,7 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ note, initialFolder, 
                value={content}
                onChange={(e) => setContent(e.target.value)}
                placeholder="Scrie ceva inspirat..."
-               className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-800 text-lg resize-none placeholder:text-slate-800/40 px-1 leading-relaxed pb-16"
+               className="w-full min-h-[150px] max-h-[45vh] bg-transparent border-none focus:outline-none focus:ring-0 text-slate-800 text-lg resize-none placeholder:text-slate-800/40 px-1 leading-relaxed pb-16 overflow-y-auto"
             />
           )}
 

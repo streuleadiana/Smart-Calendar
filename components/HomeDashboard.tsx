@@ -48,6 +48,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     lang,
     categories,
     onTodoToggle,
+    onAddTaskClick,
     noteCategories = ["📓 Jurnal", "🛒 Cumpărături", "💡 Idei", "✈️ Travel"],
     noteCategoryColors = {}
 }) => {
@@ -167,17 +168,15 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                     <div className={`col-span-1 md:col-span-2 relative overflow-hidden rounded-[2rem] shadow-xl border ${bgGradient} min-h-[250px] flex items-end group transition-all`}>
                         {heroItem && heroItem.imageUrl ? (
                             <>
-                                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors z-10" />
+                                <div className="absolute inset-0 bg-black/30 group-hover:bg-black/25 transition-colors z-10" />
                                 <img src={heroItem.imageUrl} alt="Daily Inspiration" className="absolute inset-0 w-full h-full object-cover" />
-                                <div className="relative z-20 p-8 w-full bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                                <div className="relative z-20 p-8 w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent">
                                     <span className="inline-block px-3 py-1 mb-3 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-bold uppercase tracking-wider">
                                         Tema Zilei
                                     </span>
-                                    {heroItem.quote && (
-                                        <h3 className="text-2xl md:text-3xl font-bold text-white max-w-2xl leading-tight drop-shadow-md">
-                                            "{heroItem.quote}"
-                                        </h3>
-                                    )}
+                                    <h3 className="text-2xl md:text-3xl font-bold text-white max-w-2xl leading-tight drop-shadow-md">
+                                        "{heroItem.quote || (heroItem as any).description || dailyQuote}"
+                                    </h3>
                                 </div>
                             </>
                         ) : (
@@ -279,7 +278,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                         </button>
                         
                         <button 
-                            onClick={() => setCurrentView('tasks')}
+                            onClick={onAddTaskClick}
                             className={`p-6 rounded-[2rem] shadow-lg border flex flex-col items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 ${bgGradient}`}
                         >
                             <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-emerald-100 to-emerald-300 text-emerald-600 shadow-inner">

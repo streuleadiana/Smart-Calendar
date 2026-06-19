@@ -10,7 +10,7 @@ interface TodoListProps {
   onEditTaskClick: (task: Todo) => void;
   onToggleTodo: (id: string) => void;
   onDeleteTodo: (id: string) => void;
-  onTogglePin: (id: string) => void;
+  onTogglePin: (task: Todo) => void;
   onChangeColor: (id: string, color: string) => void;
   theme: Theme;
   accentColor?: string;
@@ -79,6 +79,37 @@ export const TodoList: React.FC<TodoListProps> = ({
         </button>
       </div>
 
+      {/* Pastel Progress Bar */}
+      {todos.length > 0 && (() => {
+        const totalTasks = todos.length;
+        const completedTasks = todos.filter(t => t.completed).length;
+        const completionPercentage = Math.round((completedTasks / totalTasks) * 100);
+        
+        let encouragementText = '';
+        if (completionPercentage === 0) {
+          encouragementText = `Hai să începem! 0 din ${totalTasks} task-uri completate. ✨`;
+        } else if (completionPercentage === 100) {
+          encouragementText = "Yay! Ai terminat tot pentru azi! Ești minunată! 💖";
+        } else {
+          encouragementText = `Super progres! Ai terminat ${completedTasks} din ${totalTasks} task-uri. 🌸`;
+        }
+
+        return (
+          <div className="px-4 py-3.5 border-b border-pink-100/50 bg-pink-50/10 space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold text-pink-600/95">
+              <span>{encouragementText}</span>
+              <span className="font-mono text-pink-500 font-bold">{completionPercentage}%</span>
+            </div>
+            <div className="h-4 w-full bg-pink-100 rounded-full overflow-hidden shadow-sm">
+              <div 
+                className="h-full bg-gradient-to-r from-pink-300 to-pink-500 rounded-full transition-all duration-700 ease-out"
+                style={{ width: `${completionPercentage}%` }}
+              />
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="flex-1 p-2 space-y-1 overflow-visible">
         {todos.length === 0 ? (
           <div className="text-center py-10 text-slate-400 text-sm flex flex-col items-center gap-2">
@@ -135,7 +166,10 @@ export const TodoList: React.FC<TodoListProps> = ({
               style={itemStyle}
             >
               <button
-                onClick={() => onToggleTodo(todo.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleTodo(todo.id);
+                }}
                 className={`flex-shrink-0 transition-all active:scale-95 ${
                   todo.completed 
                     ? 'scale-110' 
@@ -171,7 +205,10 @@ export const TodoList: React.FC<TodoListProps> = ({
                  
                  {/* Edit Task */}
                  <button
-                    onClick={() => onEditTaskClick(todo)}
+                    onClick={(e) => {
+                       e.stopPropagation();
+                       onEditTaskClick(todo);
+                    }}
                     className="p-1 text-slate-300 hover:text-indigo-500 dark:hover:text-cyan-400 transition-colors"
                     title="Edit task"
                  >
@@ -180,7 +217,10 @@ export const TodoList: React.FC<TodoListProps> = ({
 
                  {/* Pin Toggle */}
                  <button
-                    onClick={() => onTogglePin(todo.id)}
+                    onClick={(e) => {
+                       e.stopPropagation();
+                       onTogglePin(todo);
+                    }}
                     className={`p-1 rounded transition-colors ${
                         todo.isPinned 
                         ? 'text-amber-500' 
@@ -192,7 +232,10 @@ export const TodoList: React.FC<TodoListProps> = ({
                  </button>
 
                  <button
-                    onClick={() => onDeleteTodo(todo.id)}
+                    onClick={(e) => {
+                       e.stopPropagation();
+                       onDeleteTodo(todo.id);
+                    }}
                     className="text-slate-300 hover:text-red-500 p-1"
                     title="Delete task"
                  >

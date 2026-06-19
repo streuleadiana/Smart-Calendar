@@ -181,10 +181,18 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
 
     return (
         <>
-            <div className="fixed bottom-24 right-6 z-50 flex flex-col items-end" ref={containerRef}>
+            {/* Backdrop Blur Overlay */}
+            {isOpen && (
+                <div 
+                    onClick={() => setIsOpen(false)}
+                    className="fixed inset-0 z-40 backdrop-blur-sm bg-black/10 dark:bg-black/40 animate-in fade-in duration-200 cursor-pointer"
+                />
+            )}
+
+            <div className="fixed bottom-24 right-6 z-50 flex flex-col items-end pointer-events-none" ref={containerRef}>
                 {/* Speed Dial Menu */}
                 <div 
-                    className={`flex flex-col gap-3 mb-4 transition-all duration-300 origin-bottom-right ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'}`}
+                    className={`flex flex-col gap-3 mb-4 transition-all duration-300 origin-bottom-right pointer-events-auto ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-50 !pointer-events-none'}`}
                 >
                     {menuItems.map((item, idx) => (
                         <button
@@ -204,7 +212,7 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
                 {/* Main FAB */}
                 <button
                     onClick={() => setIsOpen(!isOpen)}
-                    className="w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl transition-transform hover:scale-105 active:scale-95"
+                    className="w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl transition-transform hover:scale-105 active:scale-95 pointer-events-auto"
                     style={{ 
                         background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
                         boxShadow: `0 10px 25px -5px ${accentColor}80`

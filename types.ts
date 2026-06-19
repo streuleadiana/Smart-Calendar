@@ -59,6 +59,7 @@ export interface VisionBoardItem {
   id: string;
   imageUrl: string;
   quote?: string;
+  description?: string;
   createdAt: number;
 }
 

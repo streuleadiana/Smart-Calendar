@@ -24,7 +24,7 @@ interface CalendarProps {
   onEditTaskClick: (task: Todo) => void;
   onToggleTodo: (id: string) => void;
   onDeleteTodo: (id: string) => void;
-  onTogglePin: (id: string) => void;
+  onTogglePin: (task: Todo) => void;
   onChangeColor: (id: string, color: string) => void;
 }
 
