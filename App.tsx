@@ -1062,7 +1062,7 @@ const App: React.FC = () => {
       )}
 
       {/* SIDEBAR NAVIGATION - Hidden on mobile */}
-      <div className="hidden md:flex">
+      <div className="hidden md:flex lg:sticky lg:top-0 lg:h-screen lg:self-start">
           <Sidebar 
               currentView={currentView}
               setCurrentView={setCurrentView}

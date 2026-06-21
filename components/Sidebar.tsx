@@ -30,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const sidebarWidth = isSidebarOpen ? 'w-64' : 'w-20 hidden lg:flex';
 
   return (
-    <aside className={`fixed inset-y-0 left-0 z-50 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 ${sidebarWidth} flex-shrink-0 flex flex-col border-r transition-all duration-300 ${sidebarClass}`}>
+    <aside className={`fixed inset-y-0 left-0 z-50 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${sidebarWidth} flex-shrink-0 flex flex-col border-r transition-all duration-300 ${sidebarClass}`}>
       <div className="p-4 flex flex-col h-full overflow-y-auto custom-scrollbar">
           {/* Header / Toggle */}
           <div className={`flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-between lg:justify-center'} mb-8`}>
