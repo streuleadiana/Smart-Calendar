@@ -9,6 +9,7 @@ import { TodoList } from './TodoList';
 
 import { checkRecurrence, expandEventsForDateRange } from '../utils/recurrence';
 import { handleShare } from '../utils/share';
+import { translations, LanguageOption } from '../utils/translations';
 
 interface CalendarProps {
   events: CalendarEvent[];
@@ -19,7 +20,7 @@ interface CalendarProps {
   accentColor?: string;
   searchQuery?: string;
   categories: Category[];
-  lang: string;
+  lang: LanguageOption;
   todos: Todo[];
   onAddTaskClick: () => void;
   onEditTaskClick: (task: Todo) => void;
@@ -71,24 +72,24 @@ export const Calendar: React.FC<CalendarProps> = ({
         return 0;
       });
 
-    const dateFormatted = today.toLocaleDateString(lang === 'ro' ? 'ro-RO' : 'en-US', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    let text = lang === 'ro' 
-      ? `🗓️ Programul meu pentru azi (${dateFormatted}):\n` 
-      : `🗓️ My schedule for today (${dateFormatted}):\n`;
-
+    const localeStr = lang === 'ro' ? 'ro-RO' : (lang === 'es' ? 'es-ES' : (lang === 'fr' ? 'fr-FR' : 'en-US'));
+    const dateFormatted = today.toLocaleDateString(localeStr, { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const t = translations[lang] || translations.ro;
+    let text = `🗓️ ${t.planner.shareTodayTitle} (${dateFormatted}):\n`;
+ 
     if (todayEvents.length === 0) {
-      text += lang === 'ro' ? '• Niciun eveniment programat pentru azi. ✨' : '• No events scheduled for today. ✨';
+      text += t.planner.noEventsToday;
     } else {
       todayEvents.forEach(e => {
         text += `• ${e.time ? `${e.time} - ` : ''}${e.title}\n`;
       });
     }
     
-    text += lang === 'ro' ? '\nTrimis din SmartCalendar.' : '\nSent from SmartCalendar.';
+    text += `\n${t.planner.sentFrom}`;
 
     try {
       await handleShare({ 
-        title: lang === 'ro' ? 'Programul meu azi' : "Today's Schedule", 
+        title: t.planner.shareTodayTitle, 
         text 
       });
     } catch (err) {
@@ -120,15 +121,14 @@ export const Calendar: React.FC<CalendarProps> = ({
       });
 
     const formatOptions: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit' };
-    const localeStr = lang === 'ro' ? 'ro-RO' : 'en-US';
+    const localeStr = lang === 'ro' ? 'ro-RO' : (lang === 'es' ? 'es-ES' : (lang === 'fr' ? 'fr-FR' : 'en-US'));
     const rangeStr = `${monday.toLocaleDateString(localeStr, formatOptions)} - ${sunday.toLocaleDateString(localeStr, formatOptions)}`;
 
-    let text = lang === 'ro' 
-      ? `🗓️ Programul meu pentru săptămâna aceasta (${rangeStr}):\n\n` 
-      : `🗓️ My schedule for this week (${rangeStr}):\n\n`;
+    const t = translations[lang] || translations.ro;
+    let text = `🗓️ ${t.planner.shareWeekTitle} (${rangeStr}):\n\n`;
 
     if (weekEvents.length === 0) {
-      text += lang === 'ro' ? '• Niciun eveniment programat pentru această săptămână. ✨' : '• No events scheduled for this week. ✨';
+      text += t.planner.noEventsWeek;
     } else {
       const eventsByDay: Record<string, CalendarEvent[]> = {};
       weekEvents.forEach(e => {
@@ -150,11 +150,11 @@ export const Calendar: React.FC<CalendarProps> = ({
       });
     }
 
-    text += lang === 'ro' ? 'Trimis din SmartCalendar.' : 'Sent from SmartCalendar.';
+    text += t.planner.sentFrom;
 
     try {
       await handleShare({ 
-        title: lang === 'ro' ? 'Program săptămâna asta' : "This Week's Schedule", 
+        title: t.planner.shareWeekTitle, 
         text 
       });
     } catch (err) {
@@ -383,7 +383,8 @@ export const Calendar: React.FC<CalendarProps> = ({
     es: { today: 'Hoy', subtitle: 'Planea tu éxito', aspect: 'Aspecto' },
     fr: { today: "Aujourd'hui", subtitle: 'Planifiez votre succès', aspect: 'Aspect' },
   };
-  const t = tStrings[lang] || tStrings['en'];
+  const localT = tStrings[lang] || tStrings['en'];
+  const t = translations[lang] || translations.ro;
 
   const calendarSwipeHandlers = useSwipeable({
     onSwipedLeft: (e) => {
@@ -400,132 +401,167 @@ export const Calendar: React.FC<CalendarProps> = ({
 
   return (
     <div {...calendarSwipeHandlers} className="w-full h-full flex flex-col">
-      <div className="flex flex-row items-center justify-between mb-2 sm:mb-4 px-1 gap-2">
-        <div className="text-left">
-          <h2 className={`text-lg sm:text-2xl font-bold tracking-tight capitalize ${textHeader}`}>
-            {formattedMonth}
-          </h2>
-          <p className={`hidden md:block ${subHeader} text-xs sm:text-sm mt-0.5`}>{t.subtitle}</p>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-4">
-            <div className={`flex items-center rounded-lg p-0.5 sm:p-1 border shadow-sm ${navContainer}`}>
-              <button 
-                onClick={() => changeMonth(-1)}
-                className={`p-1 sm:p-1.5 rounded-md transition-colors ${buttonNav}`}
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button 
-                onClick={() => setCurrentDate(new Date())}
-                className={`px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-semibold rounded-md transition-colors border-x mx-0.5 sm:mx-1 flex-shrink-0 ${
-                    isNeon 
-                    ? 'text-cyan-400 hover:bg-slate-800 border-slate-700' 
-                    : 'text-slate-600 hover:bg-slate-50 border-slate-100'
-                }`}
-                style={{ color: accentColor }}
-              >
-                {t.today}
-              </button>
-              <button 
-                onClick={() => changeMonth(1)}
-                className={`p-1 sm:p-1.5 rounded-md transition-colors ${buttonNav}`}
-              >
-                <ChevronRight size={20} />
-              </button>
+      <div className="flex-1 overflow-y-auto pb-24 sm:pb-8 custom-scrollbar">
+        <div className="max-w-6xl mx-auto w-full flex flex-col gap-8 lg:gap-10 p-1 py-3 sm:py-6">
+          
+          {/* Navigation & Header */}
+          <div className="flex flex-row items-center justify-between mb-2 sm:mb-4 px-1 gap-2">
+            <div className="text-left">
+              <h2 className={`text-lg sm:text-2xl font-bold tracking-tight capitalize ${textHeader}`}>
+                {formattedMonth}
+              </h2>
+              <p className={`hidden md:block ${subHeader} text-xs sm:text-sm mt-0.5`}>{localT.subtitle}</p>
             </div>
-            
-            <div className="relative">
-              <button
-                onClick={() => setShowShareDropdown(!showShareDropdown)}
-                className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl border font-bold text-xs sm:text-sm transition-all active:scale-95 shadow-sm ${
-                  isNeon 
-                    ? 'border-slate-800 bg-slate-900 text-cyan-400 hover:border-slate-700' 
-                    : 'border-pink-200 bg-pink-50/30 text-pink-600 hover:bg-pink-50/50'
-                }`}
-              >
-                <span className="text-sm">📤</span>
-                <span className="hidden sm:inline whitespace-nowrap">{lang === 'ro' ? 'Distribuie' : 'Share'}</span>
-                <span className="sm:hidden whitespace-nowrap">{lang === 'ro' ? 'Distribuie' : 'Share'}</span>
-              </button>
+            <div className="flex items-center gap-2 sm:gap-4">
+                <div className={`flex items-center rounded-lg p-0.5 sm:p-1 border shadow-sm ${navContainer}`}>
+                  <button 
+                    onClick={() => changeMonth(-1)}
+                    className={`p-1 sm:p-1.5 rounded-md transition-colors ${buttonNav}`}
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                  <button 
+                    onClick={() => setCurrentDate(new Date())}
+                    className={`px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-semibold rounded-md transition-colors border-x mx-0.5 sm:mx-1 flex-shrink-0 ${
+                        isNeon 
+                        ? 'text-cyan-400 hover:bg-slate-800 border-slate-700' 
+                        : 'text-slate-600 hover:bg-slate-50 border-slate-100'
+                    }`}
+                    style={{ color: accentColor }}
+                  >
+                    {localT.today}
+                  </button>
+                  <button 
+                    onClick={() => changeMonth(1)}
+                    className={`p-1 sm:p-1.5 rounded-md transition-colors ${buttonNav}`}
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                </div>
+                
+                <div className="relative">
+                  <button
+                    onClick={() => setShowShareDropdown(!showShareDropdown)}
+                    className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl border font-bold text-xs sm:text-sm transition-all active:scale-95 shadow-sm ${
+                      isNeon 
+                        ? 'border-slate-800 bg-slate-900 text-cyan-400 hover:border-slate-700' 
+                        : 'border-pink-200 bg-pink-50/30 text-pink-600 hover:bg-pink-50/50'
+                    }`}
+                  >
+                    <span className="text-sm">📤</span>
+                    <span className="hidden sm:inline whitespace-nowrap">{t.planner.share}</span>
+                    <span className="sm:hidden whitespace-nowrap">{t.planner.share}</span>
+                  </button>
 
-              {showShareDropdown && (
-                <>
-                  <div className="fixed inset-0 z-35" onClick={() => setShowShareDropdown(false)} />
-                  <div className={`absolute right-0 mt-2 w-56 rounded-2xl shadow-xl z-40 p-2 border animate-in fade-in slide-in-from-top-2 duration-200 ${
-                    isNeon ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-white border-pink-100 text-slate-700'
-                  }`}>
-                    <button
-                      onClick={() => {
-                        handleShareToday();
-                        setShowShareDropdown(false);
-                      }}
-                      className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-left text-sm font-semibold transition-colors ${
-                        isNeon ? 'hover:bg-slate-900 text-cyan-400' : 'hover:bg-pink-50/50 text-pink-600'
-                      }`}
-                    >
-                      <span>🗓️</span> {lang === 'ro' ? 'Programul de azi' : "Today's Schedule"}
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleShareThisWeek();
-                        setShowShareDropdown(false);
-                      }}
-                      className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-left text-sm font-semibold transition-colors ${
-                        isNeon ? 'hover:bg-slate-900 text-cyan-400' : 'hover:bg-pink-50/50 text-pink-600'
-                      }`}
-                    >
-                      <span>📅</span> {lang === 'ro' ? 'Săptămâna aceasta' : 'This Week\'s Schedule'}
-                    </button>
-                  </div>
-                </>
-              )}
+                  {showShareDropdown && (
+                    <>
+                      <div className="fixed inset-0 z-35" onClick={() => setShowShareDropdown(false)} />
+                      <div className={`absolute right-0 mt-2 w-56 rounded-2xl shadow-xl z-40 p-2 border animate-in fade-in slide-in-from-top-2 duration-200 ${
+                        isNeon ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-white border-pink-100 text-slate-700'
+                      }`}>
+                        <button
+                          onClick={() => {
+                            handleShareToday();
+                            setShowShareDropdown(false);
+                          }}
+                          className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-left text-sm font-semibold transition-colors ${
+                            isNeon ? 'hover:bg-slate-900 text-cyan-400' : 'hover:bg-pink-50/50 text-pink-600'
+                          }`}
+                        >
+                          <span>🗓️</span> {t.planner.todaySchedule}
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleShareThisWeek();
+                            setShowShareDropdown(false);
+                          }}
+                          className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-left text-sm font-semibold transition-colors ${
+                            isNeon ? 'hover:bg-slate-900 text-cyan-400' : 'hover:bg-pink-50/50 text-pink-600'
+                          }`}
+                        >
+                          <span>📅</span> {t.planner.thisWeekSchedule}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <button
+                   onClick={() => {
+                       const now = new Date();
+                       let targetDate = currentDate;
+                       // If current view is same month/year as today, use today. Else use 1st of viewed month.
+                       if (currentDate.getMonth() === now.getMonth() && currentDate.getFullYear() === now.getFullYear()) {
+                           targetDate = now;
+                       } else {
+                           targetDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+                       }
+                       onDateSelect(targetDate);
+                   }}
+                   className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 rounded-xl text-white font-medium text-xs sm:text-sm transition-transform hover:-translate-y-0.5 shadow-md hover:shadow-lg"
+                   style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`, boxShadow: `0 4px 14px 0 ${accentColor}40` }}
+                >
+                   <Plus size={16} strokeWidth={2} />
+                   <span className="hidden sm:inline break-keep whitespace-nowrap">{t.planner.addEvent}</span>
+                   <span className="sm:hidden break-keep whitespace-nowrap">{t.planner.add}</span>
+                </button>
             </div>
+          </div>
 
-            <button
-               onClick={() => {
-                   const now = new Date();
-                   let targetDate = currentDate;
-                   // If current view is same month/year as today, use today. Else use 1st of viewed month.
-                   if (currentDate.getMonth() === now.getMonth() && currentDate.getFullYear() === now.getFullYear()) {
-                       targetDate = now;
-                   } else {
-                       targetDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-                   }
-                   onDateSelect(targetDate);
-               }}
-               className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 rounded-xl text-white font-medium text-xs sm:text-sm transition-transform hover:-translate-y-0.5 shadow-md hover:shadow-lg"
-               style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`, boxShadow: `0 4px 14px 0 ${accentColor}40` }}
-            >
-               <Plus size={16} strokeWidth={2} />
-               <span className="hidden sm:inline break-keep whitespace-nowrap">{lang === 'ro' ? 'Adaugă Eveniment' : 'Add Event'}</span>
-               <span className="sm:hidden break-keep whitespace-nowrap">{lang === 'ro' ? 'Adaugă' : 'Add'}</span>
-            </button>
+          {/* Calendar Grid Section */}
+          <div className="w-full animate-in fade-in duration-300">
+            {renderCalendarGrid()}
+          </div>
+
+          {/* Aesthetic Visual Separation */}
+          <div className="relative w-full py-4 flex items-center justify-center select-none">
+            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+              <div className={`w-full border-t-2 ${
+                theme === 'soft' 
+                  ? 'border-pink-100' 
+                  : theme === 'neon' 
+                    ? 'border-slate-800' 
+                    : 'border-slate-200'
+              }`}></div>
+            </div>
+            <div className={`relative flex justify-center text-sm px-6 py-1.5 rounded-full border shadow-sm transition-all duration-300 ${
+              theme === 'neon' 
+                ? 'bg-slate-900 border-slate-800 text-cyan-400' 
+                : theme === 'soft' 
+                  ? 'bg-[#fff5f7] border-pink-100 text-pink-500 font-medium' 
+                  : 'bg-white border-slate-100 text-rose-400 font-medium'
+            }`}>
+              <span className="text-base flex items-center gap-2 select-none animate-pulse">
+                <span>✨</span>
+                <span>🌸</span>
+                <span>✨</span>
+              </span>
+            </div>
+          </div>
+
+          {/* ✅ Task-urile Mele (My Tasks) */}
+          <div className="w-full px-1 animate-in fade-in duration-300">
+             <h3 className={`text-xl font-bold mb-4 flex items-center gap-2 ${textHeader}`}>
+                <span>{t.todoList.title}</span>
+             </h3>
+             <TodoList 
+                todos={todos}
+                onAddTaskClick={onAddTaskClick}
+                onEditTaskClick={onEditTaskClick}
+                onToggleTodo={onToggleTodo}
+                onDeleteTodo={onDeleteTodo}
+                onTogglePin={onTogglePin}
+                onChangeColor={onChangeColor}
+                theme={theme}
+                accentColor={accentColor}
+                searchQuery={searchQuery}
+                categories={categories}
+                hideHeader={true}
+                lang={lang}
+             />
+          </div>
+
         </div>
-      </div>
-      
-      <div className="flex-1 overflow-y-auto pb-24 sm:pb-4 custom-scrollbar space-y-8">
-         {renderCalendarGrid()}
-
-         {/* ✅ Task-urile Mele (My Tasks) */}
-         <div className="mt-8 max-w-4xl mx-auto px-1 animate-in fade-in duration-300">
-            <h3 className={`text-xl font-bold mb-4 flex items-center gap-2 ${textHeader}`}>
-               <span>{lang === 'ro' ? '✅ Task-urile Mele' : '✅ My Tasks'}</span>
-            </h3>
-            <TodoList 
-               todos={todos}
-               onAddTaskClick={onAddTaskClick}
-               onEditTaskClick={onEditTaskClick}
-               onToggleTodo={onToggleTodo}
-               onDeleteTodo={onDeleteTodo}
-               onTogglePin={onTogglePin}
-               onChangeColor={onChangeColor}
-               theme={theme}
-               accentColor={accentColor}
-               searchQuery={searchQuery}
-               categories={categories}
-               hideHeader={true}
-            />
-         </div>
       </div>
 
       {/* Day Detail Modal */}

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Todo, Theme, Category } from '../types';
 import { CheckSquare, Square, Trash2, Plus, ListTodo, Pin, Palette, Pencil, Check, X, Repeat, Heart } from 'lucide-react';
 import { HighlightText } from './HighlightText';
+import { translations, LanguageOption } from '../utils/translations';
 
 interface TodoListProps {
   todos: Todo[];
@@ -17,6 +18,7 @@ interface TodoListProps {
   searchQuery?: string;
   categories: Category[];
   hideHeader?: boolean;
+  lang: LanguageOption;
 }
 
 export const TodoList: React.FC<TodoListProps> = ({ 
@@ -31,7 +33,8 @@ export const TodoList: React.FC<TodoListProps> = ({
   accentColor = '#4F46E5',
   searchQuery = '',
   categories = [],
-  hideHeader = false
+  hideHeader = false,
+  lang
 }) => {
   const isNeon = theme === 'neon';
   const isPastel = theme === 'pastel';
@@ -51,6 +54,8 @@ export const TodoList: React.FC<TodoListProps> = ({
   const textClass = isNeon ? 'text-slate-200' : 'text-slate-800';
   const completedText = isNeon ? 'text-slate-600' : 'text-slate-400';
 
+  const t = translations[lang] || translations.ro;
+
   return (
     <div className={`rounded-3xl shadow-sm border w-full flex flex-col overflow-visible ${containerClass}`}>
       {!hideHeader && (
@@ -61,9 +66,9 @@ export const TodoList: React.FC<TodoListProps> = ({
           >
             <ListTodo size={20} />
           </div>
-          <h3 className="font-bold">My Tasks</h3>
+          <h3 className="font-bold">{t.todoList.title}</h3>
           <span className={`ml-auto text-xs font-semibold px-2 py-1 rounded-full ${isNeon ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600'}`}>
-            {todos.filter(t => !t.completed).length} pending
+            {todos.filter(t => !t.completed).length} {t.todoList.pending}
           </span>
         </div>
       )}
@@ -75,7 +80,7 @@ export const TodoList: React.FC<TodoListProps> = ({
           style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`, boxShadow: `0 4px 14px 0 ${accentColor}40` }}
         >
           <Plus size={18} strokeWidth={1.5} />
-          Add Task
+          {t.todoList.addBtn}
         </button>
       </div>
 
@@ -87,11 +92,13 @@ export const TodoList: React.FC<TodoListProps> = ({
         
         let encouragementText = '';
         if (completionPercentage === 0) {
-          encouragementText = `Hai să începem! 0 din ${totalTasks} task-uri completate. ✨`;
+          encouragementText = t.todoList.motivationStart.replace('{total}', totalTasks.toString());
         } else if (completionPercentage === 100) {
-          encouragementText = "Yay! Ai terminat tot pentru azi! Ești minunată! 💖";
+          encouragementText = t.todoList.motivationDone;
         } else {
-          encouragementText = `Super progres! Ai terminat ${completedTasks} din ${totalTasks} task-uri. 🌸`;
+          encouragementText = t.todoList.motivationProgress
+            .replace('{completed}', completedTasks.toString())
+            .replace('{total}', totalTasks.toString());
         }
 
         return (
@@ -114,8 +121,8 @@ export const TodoList: React.FC<TodoListProps> = ({
         {todos.length === 0 ? (
           <div className="text-center py-10 text-slate-400 text-sm flex flex-col items-center gap-2">
             <span className="text-3xl">🌸</span>
-            <p className="font-medium text-slate-500">Ai terminat tot!</p>
-            <p className="text-xs">E timpul pentru o pauză ☕✨</p>
+            <p className="font-medium text-slate-500">{t.todoList.finishedAll}</p>
+            <p className="text-xs">{t.todoList.takeABreak}</p>
           </div>
         ) : (
           todos.map((todo) => {

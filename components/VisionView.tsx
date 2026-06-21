@@ -79,6 +79,11 @@ export const VisionView: React.FC<VisionViewProps> = ({
             setIsSharingCollage(false);
             return;
           } catch (e: any) {
+            if (e.name === 'AbortError') {
+              console.log("Share cancelled by user");
+              setIsSharingCollage(false);
+              return;
+            }
             console.error("Web Share API error, falling back to download:", e);
           }
         }
@@ -111,16 +116,110 @@ export const VisionView: React.FC<VisionViewProps> = ({
   const textPrimary = isNeon ? 'text-white' : 'text-slate-800';
   const textSecondary = isNeon ? 'text-slate-400' : 'text-slate-500';
 
+  const convertFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+        } else {
+          reject(new Error(lang === 'ro' ? "Formatul citit nu este valid." : "Invalid format read."));
+        }
+      };
+      reader.onerror = (error) => {
+        reject(error || new Error(lang === 'ro' ? "Eroare la citirea fișierului." : "Error reading file."));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const compressAndResizeImage = (file: File, maxDimension: number = 600): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxDimension) {
+              height *= maxDimension / width;
+              width = maxDimension;
+            }
+          } else {
+            if (height > maxDimension) {
+              width *= maxDimension / height;
+              height = maxDimension;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error("Could not get 2D canvas context"));
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              reject(new Error("Could not compress file"));
+              return;
+            }
+            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+              type: "image/jpeg",
+              lastModified: Date.now()
+            });
+            resolve(compressedFile);
+          }, "image/jpeg", 0.65);
+        };
+        img.onerror = () => {
+          reject(new Error(lang === 'ro' ? "Eroare la încărcarea imaginii pentru procesare." : "Failed to load image for processing."));
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = (err) => {
+        reject(err || new Error(lang === 'ro' ? "Eroare la citirea fișierului." : "Failed to read file."));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleSaveVision = async () => {
     if (!newVisionFile && !newVisionImageUrl.trim()) return;
     setIsUploadingVision(true);
     try {
         let imageUrl = '';
         if (newVisionFile) {
-            imageUrl = await uploadImageToStorage(newVisionFile, 'visionBoard');
+            try {
+                // Compress and scale down to ensure tiny payload size (under 1MB limit for firestore & superfast upload)
+                const processedFile = await compressAndResizeImage(newVisionFile);
+                try {
+                    imageUrl = await uploadImageToStorage(processedFile, 'visionBoard');
+                } catch (storageError: any) {
+                    console.warn("Firebase Storage upload timed out or failed, falling back to compressed local Base64...", storageError);
+                    imageUrl = await convertFileToBase64(processedFile);
+                }
+            } catch (compressError: any) {
+                console.error("Image compression failed, trying direct upload as fallback:", compressError);
+                try {
+                    imageUrl = await uploadImageToStorage(newVisionFile, 'visionBoard');
+                } catch (storageError: any) {
+                    console.warn("Storage upload failed for original file, using original base64:", storageError);
+                    imageUrl = await convertFileToBase64(newVisionFile);
+                }
+            }
         } else {
             imageUrl = newVisionImageUrl.trim();
         }
+
+        if (!imageUrl) {
+            throw new Error(lang === 'ro' ? "Eroare: Nu s-a putut obține adresa URL a imaginii." : "Error: Could not get the image URL.");
+        }
+
         await onAddVisionItem({
             imageUrl,
             quote: newVisionQuote.trim() || undefined
@@ -131,7 +230,10 @@ export const VisionView: React.FC<VisionViewProps> = ({
         setIsVisionModalOpen(false);
     } catch (error: any) {
         console.error("Failed to upload image:", error);
-        alert(`Eroare la încărcarea imaginii: ${error?.message || error || "Problemă de conexiune sau lipsă permisiuni"}`);
+        alert(lang === 'ro' 
+          ? `Eroare la încărcarea imaginii: ${error?.message || error || "Problemă de conexiune sau lipsă permisiuni"}`
+          : `Failed to upload image: ${error?.message || error || "Connection error or missing permissions"}`
+        );
     } finally {
         setIsUploadingVision(false);
     }

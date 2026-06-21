@@ -1167,6 +1167,7 @@ const App: React.FC = () => {
         accentColor={accentColor}
         categories={categories}
         theme={theme}
+        lang={lang}
       />
 
       <EditEventModal
@@ -1177,6 +1178,7 @@ const App: React.FC = () => {
         accentColor={accentColor}
         categories={categories}
         theme={theme}
+        lang={lang}
       />
 
       <TaskModal

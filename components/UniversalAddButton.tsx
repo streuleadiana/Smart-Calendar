@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plus, X, CheckSquare, Sparkles, Smile, ShoppingBag, Edit3, CheckCircle2 } from 'lucide-react';
 import { Theme, MoodLog } from '../types';
 import { uploadImageToStorage } from '../lib/firebase';
+import { translations, LanguageOption } from '../utils/translations';
 
 interface UniversalAddButtonProps {
     onSaveNote: (title: string, content: string, folder: string, color: string) => Promise<void>;
@@ -14,15 +15,8 @@ interface UniversalAddButtonProps {
     moodLogs?: MoodLog[];
     noteCategories?: string[];
     noteCategoryColors?: Record<string, string>;
+    lang: LanguageOption;
 }
-
-const MOODS = [
-    { id: 'amazing', emoji: '🤩', label: 'Excelent' },
-    { id: 'happy', emoji: '😊', label: 'Bine' },
-    { id: 'meh', emoji: '😐', label: 'Meh' },
-    { id: 'sad', emoji: '😔', label: 'Trist' },
-    { id: 'terrible', emoji: '😫', label: 'Groaznic' }
-];
 
 export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
     onSaveNote,
@@ -34,10 +28,20 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
     accentColor,
     moodLogs = [],
     noteCategories = ["📓 Jurnal", "🛒 Cumpărături", "💡 Idei", "✈️ Travel"],
-    noteCategoryColors = {}
+    noteCategoryColors = {},
+    lang
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const t = translations[lang] || translations.ro;
+
+    const MOODS = [
+        { id: 'amazing', emoji: '🤩', label: lang === 'ro' ? 'Excelent' : lang === 'en' ? 'Excellent' : lang === 'es' ? 'Excelente' : 'Excellent' },
+        { id: 'happy', emoji: '😊', label: lang === 'ro' ? 'Bine' : lang === 'en' ? 'Good' : lang === 'es' ? 'Bien' : 'Bien' },
+        { id: 'meh', emoji: '😐', label: 'Meh' },
+        { id: 'sad', emoji: '😔', label: lang === 'ro' ? 'Trist' : lang === 'en' ? 'Sad' : lang === 'es' ? 'Triste' : 'Triste' },
+        { id: 'terrible', emoji: '😫', label: lang === 'ro' ? 'Groaznic' : lang === 'en' ? 'Terrible' : lang === 'es' ? 'Terrible' : 'Terrible' }
+    ];
 
     // Modals internal state
     const [activeModal, setActiveModal] = useState<'note' | 'mood' | 'wishlist' | null>(null);
@@ -88,20 +92,15 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
     const todayMoodExists = moodLogs.some(m => m.date === dStr);
 
     // Speed Dial Menu Items in precise, requested visual order:
-    // 1. 🗓️ Eveniment Nou
-    // 2. ✅ Task Nou
-    // 3. 📝 Notiță Nouă
-    // 4. 🛍️ Dorință Nouă
-    // 5. ✨ Starea de azi
     const menuItems = [
-        { label: 'Eveniment Nou', icon: '🗓️', onClick: onAddEvent },
-        { label: 'Task Nou', icon: '✅', onClick: onAddTask },
-        { label: 'Notiță Nouă', icon: '📝', onClick: () => setActiveModal('note') },
-        { label: 'Dorință Nouă', icon: '🛍️', onClick: () => setActiveModal('wishlist') },
+        { label: t.home.newEvent, icon: '🗓️', onClick: onAddEvent },
+        { label: t.home.newTask, icon: '✅', onClick: onAddTask },
+        { label: t.home.newNote, icon: '📝', onClick: () => setActiveModal('note') },
+        { label: t.home.newWishlist, icon: '🛍️', onClick: () => setActiveModal('wishlist') },
     ];
 
     if (!todayMoodExists) {
-        menuItems.push({ label: 'Starea de azi', icon: '✨', onClick: () => setActiveModal('mood') });
+        menuItems.push({ label: t.home.todayState, icon: '✨', onClick: () => setActiveModal('mood') });
     }
 
     const handleSaveQuickNote = async () => {
@@ -118,7 +117,7 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
             const noteColor = noteCategoryColors[folder] || CATEGORY_COLORS[folder] || (folder.includes("Jurnal") ? accentColor + "20" : "#bfdbfe");
 
             await onSaveNote(
-                noteTitle.trim() || 'Notiță Rapidă',
+                noteTitle.trim() || t.home.quickNote,
                 noteContent.trim(),
                 folder,
                 noteColor
@@ -232,7 +231,7 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
                     <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => setActiveModal(null)} />
                     <div className={`relative w-full max-w-lg p-6 rounded-[2rem] shadow-2xl animate-in zoom-in-95 duration-200 ${isNeon ? 'bg-slate-900 border border-slate-800 text-white' : 'bg-white text-slate-800'}`}>
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-2xl font-bold flex items-center gap-2">📝 Notiță Rapidă</h3>
+                            <h3 className="text-2xl font-bold flex items-center gap-2">📝 {t.home.quickNote}</h3>
                             <button onClick={() => setActiveModal(null)} className={`p-2 rounded-full transition-colors ${isNeon ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
                                 <X size={20} />
                             </button>
@@ -240,7 +239,7 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
                         <div className="space-y-4">
                             <div>
                                 <label className={`block text-xs font-bold mb-1.5 ml-1 opacity-70 ${isNeon ? 'text-slate-300' : 'text-slate-600'}`}>
-                                    Categorie
+                                    {t.modals.category}
                                 </label>
                                 <select 
                                     value={noteCategory}
@@ -256,13 +255,13 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
                             </div>
                             <input 
                                 type="text"
-                                placeholder="Titlu opțional..."
+                                placeholder={t.home.optionalTitle}
                                 value={noteTitle}
                                 onChange={e => setNoteTitle(e.target.value)}
                                 className={`w-full p-4 text-lg font-bold rounded-2xl border-none focus:ring-2 transition-all ${isNeon ? 'bg-slate-800 focus:ring-slate-700 placeholder-slate-500' : 'bg-slate-50 focus:ring-slate-200 placeholder-slate-400'}`}
                             />
                             <textarea 
-                                placeholder="Scrie aici la ce te gândești..."
+                                placeholder={lang === 'ro' ? 'Scrie aici la ce te gândești...' : lang === 'es' ? 'Escribe lo que tengas en mente...' : lang === 'fr' ? 'Écrivez tout ce qui vous passe par la tête...' : 'Write whatever is on your mind...'}
                                 value={noteContent}
                                 onChange={e => setNoteContent(e.target.value)}
                                 rows={5}
@@ -274,9 +273,9 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
                                 className="w-full py-4 rounded-2xl font-bold text-white shadow-md active:scale-95 transition-all text-lg flex items-center justify-center gap-2 disabled:opacity-50"
                                 style={{ backgroundColor: accentColor }}
                             >
-                                {isSavingNote ? 'Se salvează...' : (
+                                {isSavingNote ? t.home.saving : (
                                     <>
-                                        <CheckCircle2 size={20} /> Salvează Notița
+                                        <CheckCircle2 size={20} /> {t.home.saveNote}
                                     </>
                                 )}
                             </button>
@@ -302,16 +301,16 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
                                 <X size={20} />
                             </button>
                             <h3 className={`text-2xl font-bold mb-2 ${isNeon ? 'text-white' : 'text-slate-800'} flex flex-col items-center gap-2`}>
-                                <span>Cum te simți astăzi?</span>
+                                <span>{t.home.howDoYouFeel}</span>
                                 {todaysMood && (
                                     <span className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2.5 py-1 rounded-full font-semibold animate-pulse">
-                                        Înregistrat deja ✨
+                                        {t.home.registeredAlready}
                                     </span>
                                 )}
                             </h3>
                             {todaysMood && (
                                 <p className={`text-xs mb-6 ${isNeon ? 'text-slate-400' : 'text-slate-500'}`}>
-                                    Starea ta este salvată. Alege alt emoji pentru a o actualiza.
+                                    {t.home.chooseAnotherState}
                                 </p>
                             )}
                             <div className={`flex justify-center gap-2 sm:gap-4 ${!todaysMood ? 'mt-6' : ''}`}>
@@ -340,7 +339,7 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
                     <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => setActiveModal(null)}></div>
                     <div className={`relative w-full max-w-sm rounded-[2rem] shadow-2xl p-6 animate-in zoom-in-95 duration-200 border ${isNeon ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-100 text-slate-800'}`}>
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-bold flex items-center gap-2">🛍️ Dorință Nouă</h2>
+                            <h2 className="text-2xl font-bold flex items-center gap-2">🛍️ {t.home.newWishlist}</h2>
                             <button onClick={() => setActiveModal(null)} className={`p-2 rounded-full transition-colors ${isNeon ? 'hover:bg-slate-800 text-slate-400' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>
                                 <X size={20} />
                             </button>
@@ -348,29 +347,29 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
                         
                         <div className="flex flex-col gap-4">
                             <div>
-                                <label className="block text-sm font-bold mb-2 ml-1 opacity-70">Nume Produs</label>
+                                <label className="block text-sm font-bold mb-2 ml-1 opacity-70">{t.home.productName}</label>
                                 <input 
                                     type="text"
                                     value={wishlistTitle}
                                     onChange={(e) => setWishlistTitle(e.target.value)}
-                                    placeholder="ex: Geantă pastel..."
+                                    placeholder={t.home.productPlaceholder}
                                     className={`w-full p-4 rounded-2xl focus:outline-none focus:ring-2 transition-all border ${isNeon ? 'bg-slate-800 border-slate-700 text-white focus:ring-slate-600' : 'bg-slate-50 border-slate-200 focus:ring-indigo-400'}`}
                                 />
                             </div>
                             <div className="flex gap-4">
                                 <div className="flex-1">
-                                    <label className="block text-sm font-bold mb-2 ml-1 opacity-70">Preț (opțional)</label>
+                                    <label className="block text-sm font-bold mb-2 ml-1 opacity-70">{t.home.priceOptional}</label>
                                     <input 
                                         type="text"
                                         value={wishlistPrice}
                                         onChange={(e) => setWishlistPrice(e.target.value)}
-                                        placeholder="ex: 150 RON"
+                                        placeholder={lang === 'ro' ? 'ex: 150 RON' : lang === 'es' ? 'ej: 150 EUR' : 'e.g., 150 USD'}
                                         className={`w-full p-4 rounded-2xl focus:outline-none focus:ring-2 transition-all border ${isNeon ? 'bg-slate-800 border-slate-700 text-white focus:ring-slate-600' : 'bg-slate-50 border-slate-200 focus:ring-indigo-400'}`}
                                     />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-bold mb-2 ml-1 opacity-70">Link (opțional - extragem imaginea automat! ✨)</label>
+                                <label className="block text-sm font-bold mb-2 ml-1 opacity-70">{t.home.storeLinkOptional}</label>
                                 <input 
                                     type="url"
                                     value={wishlistLink}
@@ -385,7 +384,7 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
                                 className={`w-full py-4 mt-2 rounded-2xl font-bold text-white shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center`}
                                 style={{ backgroundColor: accentColor }}
                             >
-                                {isSavingWishlist ? 'Se caută imaginea... ✨' : 'Adaugă Dorință'}
+                                {isSavingWishlist ? t.home.imageSearch : t.home.addWishlist}
                             </button>
                         </div>
                     </div>
@@ -394,4 +393,3 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
         </>
     );
 };
-

@@ -64,7 +64,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
   // Translations
   const tStrings: Record<string, {allDay: string, empty: string, sub: string, add: string}> = {
-    ro: { allDay: 'Toată ziua', empty: 'Niciun eveniment planificat', sub: 'Timp să te relaxezi sau să planifici ceva nou! ☕', add: 'Adaugă Misiune' },
+    ro: { allDay: 'Toată ziua', empty: 'Niciun eveniment planificat', sub: 'Timp să te relaxezi sau să planifici ceva nou! ☕', add: 'Adaugă eveniment' },
     en: { allDay: 'All Day', empty: 'Nothing scheduled', sub: 'Time to relax or plan something new! ☕', add: 'Add New Event' },
     es: { allDay: 'Todo el día', empty: 'Nada programado', sub: '¡Tiempo para relajarte o planear algo nuevo! ☕', add: 'Agregar Evento' },
     fr: { allDay: 'Toute la journée', empty: 'Rien de prévu', sub: 'Le temps de se détendre ou de planifier quelque chose de nouveau ! ☕', add: 'Ajouter un événement' }

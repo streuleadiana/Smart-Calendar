@@ -92,14 +92,14 @@ export const uploadImageToStorage = async (file: File, folder: string): Promise<
             return await getDownloadURL(storageRef);
         })();
 
-        // Timeout of 15 seconds to prevent hanging indefinitely if block or rules fail quietly
+        // Timeout of 3 seconds to prevent hanging indefinitely or block or rules fail quietly
         const timeoutPromise = new Promise<string>((_, reject) => {
-            setTimeout(() => reject(new Error("Încărcarea a expirat după 15 secunde (Timeout).")), 15000);
+            setTimeout(() => reject(new Error("Încărcarea a expirat după 3 secunde (Timeout).")), 3000);
         });
 
         return await Promise.race([uploadPromise, timeoutPromise]);
     } catch (error: any) {
-        console.error("Firebase Storage upload failed:", error);
+        console.warn("Firebase Storage upload failed (falling back gracefully):", error);
         throw new Error(error?.message || "Eroare la încărcarea imaginii în Storage.");
     }
 };

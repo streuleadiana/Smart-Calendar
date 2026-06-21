@@ -120,7 +120,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         <div className={`px-6 py-5 border-b flex items-center justify-between ${isSoft ? 'border-pink-100/50 bg-pink-100/10' : isNeon ? 'border-slate-800' : 'border-slate-100'}`}>
           <h2 className={`text-lg font-extrabold ${headingColor}`}>
              {initialTask ? '✨ ' : '🌸 '}
-             {initialTask ? (lang === 'ro' ? 'Editează Task' : 'Edit Task') : (lang === 'ro' ? 'Adaugă Task' : 'Add Task')}
+             {initialTask ? (translations[lang]?.modals?.editTask || 'Edit Task') : (translations[lang]?.modals?.addTask || 'Add Task')}
           </h2>
           <button onClick={onClose} className={`p-2 rounded-full transition-colors ${closeBtnHover}`}>
             <X size={20} />
@@ -128,134 +128,141 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 flex flex-col space-y-4">
-          <div className="space-y-2 mb-4">
-            <label className={labelClass}>🦄 {lang === 'ro' ? 'Categorie' : 'Category'}</label>
-            <div className="flex items-center gap-3">
-              <select
-                value={useCustomColor ? 'custom' : categoryId}
-                onChange={(e) => {
-                   if (e.target.value === 'custom') {
-                       setUseCustomColor(true);
-                       setCategoryId('');
-                   } else {
-                       setUseCustomColor(false);
-                       setCategoryId(e.target.value);
-                   }
-                }}
-                className={`flex-1 p-3.5 border focus:outline-none focus:ring-2 text-sm appearance-none cursor-pointer transition-all ${inputClass}`}
-              >
-                 <option value="">{lang === 'ro' ? 'Alege o categorie...' : 'No category'}</option>
-                 {categories.map(cat => (
-                     <option key={cat.id} value={cat.id}>{cat.name}</option>
-                 ))}
-                 <option value="custom">{lang === 'ro' ? 'Culoare Personalizată...' : 'Custom Color...'}</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-2 mb-4">
-             <label className={labelClass}>🏷️ {lang === 'ro' ? 'Denumire Task' : 'Task Name'}</label>
-             <input
-               autoFocus
-               type="text"
-               value={text}
-               onChange={(e) => setText(e.target.value)}
-               className={`w-full p-3.5 border focus:outline-none focus:ring-2 transition-all ${inputClass}`}
-               placeholder={lang === 'ro' ? 'Ex: Cumpără lapte...' : 'e.g. Buy groceries...'}
-             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 items-start mb-4">
-             <div className="space-y-2">
-                  <label className={labelClass}>📅 Deadline Date</label>
-                  <input
-                      type="date"
-                      value={deadlineDate}
-                      onChange={(e) => setDeadlineDate(e.target.value)}
-                      className={`w-full p-3.5 border focus:outline-none focus:ring-2 transition-all cursor-pointer ${inputClass}`}
-                  />
-             </div>
-             <div className="space-y-2">
-                  <label className={labelClass}>🔁 Repeat</label>
-                  <select
-                      value={recurrence}
-                      onChange={(e) => setRecurrence(e.target.value as any)}
-                      className={`w-full p-3.5 border focus:outline-none focus:ring-2 transition-all cursor-pointer ${inputClass}`}
-                  >
-                      <option value="none">None</option>
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="bi-weekly">Bi-weekly</option>
-                      <option value="monthly">Monthly</option>
-                      <option value="yearly">Yearly</option>
-                  </select>
-             </div>
-          </div>
-
-          {useCustomColor && (
-             <div className="space-y-2 mb-4">
-                  <label className={labelClass}>
-                    🎨 {lang === 'ro' ? 'Culoare Personalizată' : 'Custom Color'}
-                  </label>
-                  <div className="flex items-center gap-3">
-                     <div 
-                        className="relative flex items-center justify-center w-11 h-11 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm transition-transform hover:scale-110"
-                        style={{ borderColor: isSoft ? '#fbcfe8' : isNeon ? '#334155' : '#e2e8f0' }}
+          {(() => {
+             const t = translations[lang] || translations.ro;
+             return (
+               <>
+                 <div className="space-y-2 mb-4">
+                   <label className={labelClass}>🦄 {t.modals.category}</label>
+                   <div className="flex items-center gap-3">
+                     <select
+                       value={useCustomColor ? 'custom' : categoryId}
+                       onChange={(e) => {
+                          if (e.target.value === 'custom') {
+                              setUseCustomColor(true);
+                              setCategoryId('');
+                          } else {
+                              setUseCustomColor(false);
+                              setCategoryId(e.target.value);
+                          }
+                       }}
+                       className={`flex-1 p-3.5 border focus:outline-none focus:ring-2 text-sm appearance-none cursor-pointer transition-all ${inputClass}`}
                      >
-                          <input
-                              type="color"
-                              value={color}
-                              onChange={(e) => setColor(e.target.value)}
-                              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[160%] h-[160%] p-0 m-0 cursor-pointer border-none"
-                          />
+                        <option value="">{t.modals.chooseCategory}</option>
+                        {categories.map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                        <option value="custom">{t.modals.customColor}</option>
+                     </select>
+                   </div>
+                 </div>
+
+                 <div className="space-y-2 mb-4">
+                    <label className={labelClass}>🏷️ {t.modals.taskName}</label>
+                    <input
+                      autoFocus
+                      type="text"
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      className={`w-full p-3.5 border focus:outline-none focus:ring-2 transition-all ${inputClass}`}
+                      placeholder={t.modals.taskPlaceholder}
+                    />
+                 </div>
+
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start mb-4">
+                    <div className="space-y-2">
+                         <label className={labelClass}>📅 {t.modals.deadlineDate}</label>
+                         <input
+                             type="date"
+                             value={deadlineDate}
+                             onChange={(e) => setDeadlineDate(e.target.value)}
+                             className={`w-full p-3.5 border focus:outline-none focus:ring-2 transition-all cursor-pointer ${inputClass}`}
+                         />
+                    </div>
+                    <div className="space-y-2">
+                         <label className={labelClass}>🔁 {t.modals.repeat}</label>
+                         <select
+                             value={recurrence}
+                             onChange={(e) => setRecurrence(e.target.value as any)}
+                             className={`w-full p-3.5 border focus:outline-none focus:ring-2 transition-all cursor-pointer ${inputClass}`}
+                         >
+                             <option value="none">{t.modals.noRepeat}</option>
+                             <option value="daily">{t.modals.daily}</option>
+                             <option value="weekly">{t.modals.weekly}</option>
+                             <option value="bi-weekly">{t.modals.biWeekly}</option>
+                             <option value="monthly">{t.modals.monthly}</option>
+                             <option value="yearly">{t.modals.yearly}</option>
+                         </select>
+                    </div>
+                 </div>
+
+                 {useCustomColor && (
+                    <div className="space-y-2 mb-4">
+                         <label className={labelClass}>
+                           🎨 {t.modals.customColor.replace('...', '')}
+                         </label>
+                         <div className="flex items-center gap-3">
+                            <div 
+                               className="relative flex items-center justify-center w-11 h-11 rounded-full overflow-hidden cursor-pointer border-2 shadow-sm transition-transform hover:scale-110"
+                               style={{ borderColor: isSoft ? '#fbcfe8' : isNeon ? '#334155' : '#e2e8f0' }}
+                            >
+                                 <input
+                                     type="color"
+                                     value={color}
+                                     onChange={(e) => setColor(e.target.value)}
+                                     className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[160%] h-[160%] p-0 m-0 cursor-pointer border-none"
+                                 />
+                            </div>
+                         </div>
+                    </div>
+                 )}
+
+                 <div className="space-y-2 mb-4">
+                   <label className={labelClass}>
+                     🔔 {t.modals.notifyMeBefore}
+                   </label>
+                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                     <div className="flex-1 min-w-0">
+                       <input
+                         type="number"
+                         min="0"
+                         value={offsetValue}
+                         onChange={e => setOffsetValue(Math.max(0, parseInt(e.target.value) || 0))}
+                         className={`w-full p-3.5 border focus:outline-none focus:ring-2 transition-all cursor-pointer shadow-sm ${inputClass}`}
+                       />
                      </div>
-                  </div>
-             </div>
-          )}
+                     <div className="flex-1 min-w-0">
+                       <select
+                         value={offsetUnit}
+                         onChange={e => setOffsetUnit(e.target.value)}
+                         className={`w-full p-3.5 border focus:outline-none focus:ring-2 transition-all cursor-pointer shadow-sm appearance-none ${inputClass}`}
+                       >
+                         <option value="minutes">{t.modals.minutes}</option>
+                         <option value="hours">{t.modals.hours}</option>
+                         <option value="days">{t.modals.days}</option>
+                       </select>
+                     </div>
+                   </div>
+                 </div>
 
-          <div className="space-y-2 mb-4">
-            <label className={labelClass}>
-              🔔 Anunță-mă înainte cu:
-            </label>
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <input
-                  type="number"
-                  min="0"
-                  value={offsetValue}
-                  onChange={e => setOffsetValue(Math.max(0, parseInt(e.target.value) || 0))}
-                  className={`w-full p-3.5 border focus:outline-none focus:ring-2 transition-all cursor-pointer shadow-sm ${inputClass}`}
-                />
-              </div>
-              <div className="flex-1">
-                <select
-                  value={offsetUnit}
-                  onChange={e => setOffsetUnit(e.target.value)}
-                  className={`w-full p-3.5 border focus:outline-none focus:ring-2 transition-all cursor-pointer shadow-sm appearance-none ${inputClass}`}
-                >
-                  <option value="minutes">Minute</option>
-                  <option value="hours">Ore</option>
-                  <option value="days">Zile</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <button
-             type="submit"
-             disabled={!text.trim()}
-             className={`w-full py-4 rounded-full font-extrabold text-white shadow-xl transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
-             style={{ 
-                 background: isSoft 
-                     ? `linear-gradient(135deg, ${accentColor}, #f472b6)`
-                     : `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`, 
-                 boxShadow: isSoft 
-                     ? `0 10px 25px -3px rgba(244,114,182,0.4)`
-                     : `0 10px 25px -3px ${accentColor}50` 
-             }}
-          >
-             {initialTask ? (lang === 'ro' ? 'Salvează modificările' : 'Save Changes') : (lang === 'ro' ? 'Adaugă Task' : 'Add Task')}
-          </button>
+                 <button
+                    type="submit"
+                    disabled={!text.trim()}
+                    className={`w-full py-4 rounded-full font-extrabold text-white shadow-xl transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
+                    style={{ 
+                        background: isSoft 
+                            ? `linear-gradient(135deg, ${accentColor}, #f472b6)`
+                            : `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`, 
+                        boxShadow: isSoft 
+                            ? `0 10px 25px -3px rgba(244,114,182,0.4)`
+                            : `0 10px 25px -3px ${accentColor}50` 
+                    }}
+                 >
+                    {initialTask ? t.modals.saveChanges : t.modals.addTask}
+                 </button>
+               </>
+             );
+          })()}
         </form>
       </div>
     </div>
