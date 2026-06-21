@@ -34,6 +34,8 @@ export const MoodView: React.FC<MoodViewProps> = ({ moodLogs, onSaveMood, theme,
   const todayStr = getLocalDateString();
   const todayMood = moodLogs.find(m => m.date === todayStr);
 
+  const [selectedMoodDate, setSelectedMoodDate] = useState<string>(todayStr);
+  const [isMoodModalOpen, setIsMoodModalOpen] = useState(false);
   const [selectedMood, setSelectedMood] = useState<{ emoji: string, label: string, color: string } | null>(null);
   const [journalNote, setJournalNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -45,23 +47,33 @@ export const MoodView: React.FC<MoodViewProps> = ({ moodLogs, onSaveMood, theme,
 
   // Sync state once the mood logs are loaded asynchronously from Firestore
   React.useEffect(() => {
-    if (todayMood) {
-      setSelectedMood({ emoji: todayMood.moodEmoji, label: todayMood.moodLabel, color: todayMood.color });
-      setJournalNote(todayMood.journalNote || '');
+    const activeLog = moodLogs.find(m => m.date === selectedMoodDate);
+    if (activeLog) {
+      setSelectedMood({ emoji: activeLog.moodEmoji, label: activeLog.moodLabel, color: activeLog.color });
+      setJournalNote(activeLog.journalNote || '');
+    } else {
+      setSelectedMood(null);
+      setJournalNote('');
     }
-  }, [todayMood]);
+  }, [selectedMoodDate, moodLogs]);
 
   const handleSave = async () => {
     if (!selectedMood) return;
     setIsSaving(true);
-    await onSaveMood({
-      date: todayStr,
-      moodEmoji: selectedMood.emoji,
-      moodLabel: selectedMood.label,
-      color: selectedMood.color,
-      journalNote: journalNote.trim()
-    });
-    setIsSaving(false);
+    try {
+      await onSaveMood({
+        date: selectedMoodDate,
+        moodEmoji: selectedMood.emoji,
+        moodLabel: selectedMood.label,
+        color: selectedMood.color,
+        journalNote: journalNote.trim()
+      });
+      setIsMoodModalOpen(false);
+    } catch (error) {
+      console.error("Failed to save mood log:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleGenerateRecap = async () => {
@@ -136,7 +148,7 @@ export const MoodView: React.FC<MoodViewProps> = ({ moodLogs, onSaveMood, theme,
               <button 
                   key={i}
                   onMouseEnter={(e) => {
-                      if (log || !isFuture) {
+                      if (!isFuture) {
                           const rect = e.currentTarget.getBoundingClientRect();
                           setHoveredPixel({
                               log,
@@ -147,9 +159,14 @@ export const MoodView: React.FC<MoodViewProps> = ({ moodLogs, onSaveMood, theme,
                       }
                   }}
                   onMouseLeave={() => setHoveredPixel(null)}
-                  onClick={() => { if (log) setSelectedDayLog(log) }}
-                  disabled={isFuture && !log}
-                  className={`w-[14px] h-[14px] sm:w-[18px] sm:h-[18px] rounded-[4px] sm:rounded-md transition-all duration-300 ${bgClass} ${(log || !isFuture) ? 'hover:scale-150 hover:z-10 cursor-pointer hover:shadow-md' : 'cursor-default opacity-40'}`}
+                  onClick={() => {
+                      if (!isFuture) {
+                          setSelectedMoodDate(dateStr);
+                          setIsMoodModalOpen(true);
+                      }
+                  }}
+                  disabled={isFuture}
+                  className={`w-[14px] h-[14px] sm:w-[18px] sm:h-[18px] rounded-[4px] sm:rounded-md transition-all duration-300 ${bgClass} ${!isFuture ? 'hover:scale-150 hover:z-10 cursor-pointer hover:shadow-md' : 'cursor-not-allowed opacity-40'}`}
                   style={style}
               />
           );
@@ -179,18 +196,39 @@ export const MoodView: React.FC<MoodViewProps> = ({ moodLogs, onSaveMood, theme,
             <div className={`rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 mb-8 transition-all ${isNeon ? 'bg-slate-900 border border-slate-800' : isSoft ? 'bg-white border border-pink-50' : 'bg-white'}`}>
                  <div className="flex flex-col items-center mb-6">
                     <h2 className={`text-xl font-bold text-center ${textPrimary} flex items-center gap-2 justify-center`}>
-                        <span>Cum te simți azi?</span>
-                        {todayMood && (
-                            <span className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-0.5 rounded-full font-semibold animate-pulse">
-                                Înregistrat deja ✨
+                        <span>{selectedMoodDate === todayStr ? 'Cum te simți azi?' : 'Cum te-ai simțit?'}</span>
+                        {moodLogs.some(m => m.date === selectedMoodDate) && (
+                            <span className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-1 rounded-full font-semibold animate-pulse">
+                                Înregistrat ✨
                             </span>
                         )}
                     </h2>
-                    {todayMood && (
+                    {moodLogs.some(m => m.date === selectedMoodDate) && (
                         <p className={`text-xs text-center mt-1 ${textSecondary}`}>
-                            Ai înregistrat deja starea pentru azi. O poți edita mai jos.
+                            Ai înregistrat deja starea pentru această dată. O poți edita mai jos.
                         </p>
                     )}
+                    
+                    {/* Soft-styled Date Picker Inline */}
+                    <div className="mt-3 flex flex-col gap-1 w-full max-w-xs mx-auto">
+                        <label className={`text-[10px] font-bold uppercase tracking-wider ${textSecondary} text-center`}>Alege Data</label>
+                        <input 
+                            type="date"
+                            value={selectedMoodDate}
+                            max={todayStr}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val <= todayStr) {
+                                    setSelectedMoodDate(val);
+                                }
+                            }}
+                            className={`w-full p-2 px-3 rounded-xl text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all border ${
+                                isNeon 
+                                    ? 'bg-slate-800 border-slate-700 text-white' 
+                                    : 'bg-slate-50 border border-slate-200 text-slate-800'
+                            } font-semibold text-sm cursor-pointer`}
+                        />
+                    </div>
                 </div>
                 <div className="flex justify-between sm:justify-center sm:gap-6 mb-6">
                     {DEFAULT_MOODS.map(mood => (
@@ -297,27 +335,95 @@ export const MoodView: React.FC<MoodViewProps> = ({ moodLogs, onSaveMood, theme,
             </div>
         )}
         
-        {/* Day Detail Modal */}
-        {selectedDayLog && (
+        {/* Mood Logging Modal */}
+        {isMoodModalOpen && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => setSelectedDayLog(null)}></div>
-                <div className={`relative w-full max-w-sm flex flex-col items-center rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200 border ${isNeon ? 'bg-slate-900 border-slate-800' : isSoft ? 'bg-[#fff9fa] border-pink-100' : 'bg-white border-slate-100'}`}>
-                    <button onClick={() => setSelectedDayLog(null)} className="absolute top-4 right-4 p-2 rounded-full bg-black/5 hover:bg-black/10 transition-colors">
-                        <X size={18} />
-                    </button>
-                    <span className="text-sm font-bold opacity-50 mb-6">{new Date(selectedDayLog.date).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
-                    
-                    <div className="w-24 h-24 flex items-center justify-center rounded-full text-5xl mb-4 shadow-sm border border-black/5" style={{ backgroundColor: selectedDayLog.color }}>
-                        {selectedDayLog.moodEmoji}
+                <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => setIsMoodModalOpen(false)}></div>
+                <div className={`relative w-full max-w-sm flex flex-col rounded-[2rem] shadow-2xl p-6 sm:p-8 animate-in zoom-in-95 duration-200 border ${isNeon ? 'bg-slate-900 border-slate-800' : isSoft ? 'bg-[#fff9fa] border-pink-100' : 'bg-white border-slate-100'}`}>
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className={`text-xl font-bold flex items-center gap-2 ${textPrimary}`}>
+                            <Heart className="text-pink-400 fill-pink-400" size={20} />
+                            <span>Înregistrează starea</span>
+                        </h2>
+                        <button onClick={() => setIsMoodModalOpen(false)} className={`p-2 rounded-full transition-colors ${isNeon ? 'hover:bg-slate-800 text-slate-400' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>
+                            <X size={20} />
+                        </button>
                     </div>
-                    <h3 className={`text-2xl font-bold mb-4 ${textPrimary}`}>{selectedDayLog.moodLabel}</h3>
-                    
-                    {selectedDayLog.journalNote && (
-                        <div className={`w-full p-4 rounded-2xl text-sm leading-relaxed ${isNeon ? 'bg-slate-800 text-slate-300' : 'bg-slate-50 text-slate-700'}`}>
-                            <MessageCircle size={16} className="inline-block mr-2 opacity-50 mb-0.5" />
-                            {selectedDayLog.journalNote}
+
+                    {/* Date Selector */}
+                    <div className="flex flex-col gap-1.5 align-start text-left mb-4">
+                        <label className={`text-[11px] font-bold uppercase tracking-wider ${textSecondary}`}>Data stării</label>
+                        <input 
+                            type="date"
+                            value={selectedMoodDate}
+                            max={todayStr}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val <= todayStr) {
+                                    setSelectedMoodDate(val);
+                                }
+                            }}
+                            className={`w-full p-2.5 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all border ${
+                                isNeon 
+                                    ? 'bg-slate-800 border-slate-700 text-white' 
+                                    : 'bg-slate-50 border border-slate-200 text-slate-800'
+                            } font-semibold text-sm cursor-pointer`}
+                        />
+                    </div>
+
+                    {/* Mood Emojis */}
+                    <div className="flex flex-col gap-1.5 align-start text-left mb-4">
+                        <label className={`text-[11px] font-bold uppercase tracking-wider ${textSecondary}`}>Selectează starea</label>
+                        <div className="flex justify-between gap-1 mt-1">
+                            {DEFAULT_MOODS.map(mood => (
+                                <button
+                                    key={mood.label}
+                                    type="button"
+                                    onClick={() => setSelectedMood(mood)}
+                                    className={`flex flex-col items-center gap-1 transition-all p-1.5 rounded-2xl hover:scale-105 active:scale-95 ${
+                                        selectedMood?.label === mood.label 
+                                            ? 'ring-2 ring-indigo-400 bg-indigo-50/50' 
+                                            : 'opacity-80 hover:opacity-100'
+                                    }`}
+                                >
+                                    <div className="w-10 h-10 flex items-center justify-center rounded-full text-2xl shadow-sm border border-black/5" style={{ backgroundColor: mood.color }}>
+                                        {mood.emoji}
+                                    </div>
+                                    <span className={`text-[10px] font-semibold ${
+                                        selectedMood?.label === mood.label 
+                                            ? 'text-indigo-600 font-bold dark:text-indigo-400' 
+                                            : textSecondary
+                                    }`}>{mood.label}</span>
+                                </button>
+                            ))}
                         </div>
-                    )}
+                    </div>
+
+                    {/* Journal Note */}
+                    <div className="flex flex-col gap-1.5 align-start text-left mb-4">
+                        <label className={`text-[11px] font-bold uppercase tracking-wider ${textSecondary}`}>Notiță de jurnal (Opțional)</label>
+                        <textarea 
+                            value={journalNote}
+                            onChange={(e) => setJournalNote(e.target.value)}
+                            placeholder="Cum a fost ziua ta?"
+                            className={`w-full p-3 rounded-xl resize-none h-20 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all ${
+                                isNeon 
+                                    ? 'bg-slate-800 text-white placeholder-slate-500 border-slate-700' 
+                                    : 'bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-800'
+                            }`}
+                        />
+                    </div>
+
+                    <button 
+                        onClick={handleSave}
+                        disabled={isSaving || !selectedMood}
+                        className={`w-full py-3.5 mt-2 rounded-xl font-bold text-white shadow-md transition-all hover:opacity-90 active:scale-95 ${
+                            isSaving || !selectedMood ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        style={{ backgroundColor: accentColor }}
+                    >
+                        {isSaving ? 'Se salvează...' : 'Salvează starea'}
+                    </button>
                 </div>
             </div>
         )}
