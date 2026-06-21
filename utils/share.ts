@@ -13,14 +13,36 @@ interface ShareOptions {
 export const handleShare = async ({ title, text, url }: ShareOptions): Promise<void> => {
   let updatedText = text;
   try {
-    const officialURL = '[PUNE_AICI_LINKUL_NOU_DE_LA_VERCEL_INCLUSIV_HTTPS://]';
-    if (!updatedText.includes(officialURL)) {
-      const isRo = /Trimis din|Notiță|Inspirație|indiciu|programul meu/i.test(updatedText);
-      const appLinkMessage = isRo
-        ? `\n\nVezi aplicația aici: ${officialURL} ✨`
-        : `\n\nSee the app here: ${officialURL} ✨`;
-      
-      updatedText = `${updatedText}${appLinkMessage}`;
+    const officialURL = 'https://smartplanner-sigma.vercel.app';
+    
+    // First remove any existing suffix we might have appended, or old links
+    updatedText = updatedText.replace(/Vezi aplicația aici:.*$/gi, '');
+    updatedText = updatedText.replace(/See the app here:.*$/gi, '');
+    updatedText = updatedText.replace(/\[PUNE_AICI_LINKUL_NOU_DE_LA_VERCEL_INCLUSIV_HTTPS:\/\/\]/g, officialURL);
+    
+    // Replace standard translation footers with the exact requested layout
+    if (updatedText.includes("Trimis din SmartPlanner.")) {
+      updatedText = updatedText.replace("Trimis din SmartPlanner.", `Trimis din SmartPlanner✨🩷\n${officialURL}`);
+    } else if (updatedText.includes("Sent from SmartPlanner.")) {
+      updatedText = updatedText.replace("Sent from SmartPlanner.", `Sent from SmartPlanner✨🩷\n${officialURL}`);
+    } else if (updatedText.includes("Enviado desde SmartPlanner.")) {
+      updatedText = updatedText.replace("Enviado desde SmartPlanner.", `Enviado desde SmartPlanner✨🩷\n${officialURL}`);
+    } else if (updatedText.includes("Envoyé depuis SmartPlanner.")) {
+      updatedText = updatedText.replace("Envoyé depuis SmartPlanner.", `Envoyé depuis SmartPlanner✨🩷\n${officialURL}`);
+    } else {
+      // If it doesn't contain the official URL yet, append it beautifully
+      if (!updatedText.includes(officialURL)) {
+        const isRo = /Trimis din|Notiță|Inspirație|indiciu|program/i.test(updatedText);
+        if (isRo) {
+          if (updatedText.includes("Trimis din SmartPlanner")) {
+            updatedText = updatedText.replace(/Trimis din SmartPlanner[.\s✨🌸]*$/i, `Trimis din SmartPlanner✨🩷\n${officialURL}`);
+          } else {
+            updatedText = `${updatedText.trim()}\n\nTrimis din SmartPlanner✨🩷\n${officialURL}`;
+          }
+        } else {
+          updatedText = `${updatedText.trim()}\n\nSent from SmartPlanner✨🩷\n${officialURL}`;
+        }
+      }
     }
   } catch (e) {
     console.error("Error formatting sharing text with official URL", e);
