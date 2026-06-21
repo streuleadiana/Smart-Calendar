@@ -1,26 +1,41 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FDF2F8" />
-      <stop offset="40%" stop-color="#FCE7F3" />
-      <stop offset="100%" stop-color="#FBCFE8" />
-    </linearGradient>
-    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#EC4899" flood-opacity="0.15" />
-    </filter>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+  <rect x="5" y="5" width="110" height="110" rx="25" fill="#FFB6C1" />
 
-  <rect width="512" height="512" rx="120" fill="url(#bgGradient)" />
+  <circle cx="60" cy="60" r="45" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="4 4" />
 
-  <rect x="136" y="136" width="240" height="240" rx="32" fill="#FFFFFF" filter="url(#softShadow)" />
+  <rect x="28" y="38" width="64" height="44" rx="4" fill="#D6809A" />
+  
+  <rect x="30" y="40" width="28" height="40" rx="2" fill="#FFFFFF" />
+  
+  <path d="M 34 48 L 54 48 M 34 54 L 54 54 M 34 60 L 54 60 M 34 66 L 54 66 M 38 44 L 38 70 M 44 44 L 44 70 M 50 44 L 50 70" stroke="#FFD1DC" stroke-width="1" />
+  <rect x="34" y="44" width="20" height="4" fill="#FFD1DC" />
 
-  <rect x="116" y="180" width="40" height="14" rx="7" fill="#F9A8D4" />
-  <rect x="116" y="249" width="40" height="14" rx="7" fill="#F9A8D4" />
-  <rect x="116" y="318" width="40" height="14" rx="7" fill="#F9A8D4" />
+  <rect x="62" y="40" width="28" height="40" rx="2" fill="#FFFFFF" />
+  
+  <circle cx="68" cy="48" r="2.5" fill="#77DD77" />
+  <line x1="73" y1="48" x2="86" y2="48" stroke="#E0E0E0" stroke-width="2" stroke-linecap="round" />
+  
+  <circle cx="68" cy="56" r="2.5" fill="#77DD77" />
+  <line x1="73" y1="56" x2="84" y2="56" stroke="#E0E0E0" stroke-width="2" stroke-linecap="round" />
+  
+  <circle cx="68" cy="64" r="2.5" fill="#77DD77" />
+  <line x1="73" y1="64" x2="80" y2="64" stroke="#E0E0E0" stroke-width="2" stroke-linecap="round" />
 
-  <path d="M 200 260 L 245 305 L 330 200" fill="none" stroke="#6EE7B7" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" />
+  <rect x="58" y="44" width="4" height="2" rx="1" fill="#A9A9A9" />
+  <rect x="58" y="52" width="4" height="2" rx="1" fill="#A9A9A9" />
+  <rect x="58" y="60" width="4" height="2" rx="1" fill="#A9A9A9" />
+  <rect x="58" y="68" width="4" height="2" rx="1" fill="#A9A9A9" />
 
-  <path d="M 370 100 Q 370 145 415 145 Q 370 145 370 190 Q 370 145 325 145 Q 370 145 370 100 Z" fill="#FFFFFF" filter="url(#softShadow)" />
+  <g transform="translate(85, 85) rotate(-45)">
+    <rect x="-4" y="-12" width="8" height="20" fill="#FFD700" />
+    <polygon points="-4,-12 4,-12 0,-18" fill="#F4A460" />
+    <polygon points="-1,-16.5 1,-16.5 0,-18" fill="#555" />
+    <rect x="-4" y="8" width="8" height="4" fill="#FF69B4" />
+    <line x1="-4" y1="8" x2="4" y2="8" stroke="#A9A9A9" stroke-width="1" />
+  </g>
 
-  <path d="M 110 380 Q 110 400 130 400 Q 110 400 110 420 Q 110 400 90 400 Q 110 400 110 380 Z" fill="#FFFFFF" />
+  <g transform="translate(85, 25)">
+    <path d="M -8 5 C -12 5 -12 0 -8 -2 C -8 -6 -2 -8 2 -5 C 6 -8 10 -4 8 0 C 12 0 12 5 8 5 Z" fill="#FFFFFF" />
+    <polygon points="4,-6 5,-3 8,-3 6,-1 7,2 4,0 1,2 2,-1 0,-3 3,-3" fill="#FFD700" />
+  </g>
 </svg>
