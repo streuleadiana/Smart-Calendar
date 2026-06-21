@@ -38,4 +38,20 @@
     <path d="M -8 5 C -12 5 -12 0 -8 -2 C -8 -6 -2 -8 2 -5 C 6 -8 10 -4 8 0 C 12 0 12 5 8 5 Z" fill="#FFFFFF" />
     <polygon points="4,-6 5,-3 8,-3 6,-1 7,2 4,0 1,2 2,-1 0,-3 3,-3" fill="#FFD700" />
   </g>
+
+  <g transform="translate(30, 25) rotate(35)">
+    <rect x="-10" y="-4" width="20" height="8" rx="2" fill="#FFFACD" />
+    <rect x="-11" y="-5" width="3" height="10" rx="1" fill="#F4A460" />
+    <rect x="8" y="-5" width="3" height="10" rx="1" fill="#F4A460" />
+    <path d="M -2 0 L 2 0 L 4 5 L -4 5 Z" fill="#FF69B4" />
+  </g>
+
+  <g transform="translate(60, 95)">
+    <rect x="-8" y="-6" width="16" height="12" rx="1" fill="#FFF" />
+    <line x1="0" y1="-6" x2="0" y2="6" stroke="#D6809A" stroke-width="1" />
+    <line x1="-6" y1="-3" x2="-2" y2="-3" stroke="#E0E0E0" stroke-width="1" />
+    <line x1="-6" y1="0" x2="-2" y2="0" stroke="#E0E0E0" stroke-width="1" />
+    <circle cx="4" cy="-1" r="2" fill="#FFD700" />
+    <line x1="4" y1="1" x2="4" y2="3" stroke="#555" stroke-width="1" />
+  </g>
 </svg>

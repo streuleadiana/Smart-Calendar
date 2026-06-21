@@ -93,10 +93,10 @@ export const UniversalAddButton: React.FC<UniversalAddButtonProps> = ({
 
     // Speed Dial Menu Items in precise, requested visual order:
     const menuItems = [
-        { label: t.home.newEvent, icon: '🗓️', onClick: onAddEvent },
-        { label: t.home.newTask, icon: '✅', onClick: onAddTask },
-        { label: t.home.newNote, icon: '📝', onClick: () => setActiveModal('note') },
-        { label: t.home.newWishlist, icon: '🛍️', onClick: () => setActiveModal('wishlist') },
+        { label: t.modals.addEvent, icon: '🗓️', onClick: onAddEvent },
+        { label: t.modals.addTask, icon: '✅', onClick: onAddTask },
+        { label: lang === 'ro' ? 'Adaugă Notiță' : lang === 'es' ? 'Añadir Nota' : lang === 'fr' ? 'Ajouter Note' : 'Add Note', icon: '📝', onClick: () => setActiveModal('note') },
+        { label: t.home.addWishlist || t.home.newWishlist, icon: '🛍️', onClick: () => setActiveModal('wishlist') },
     ];
 
     if (!todayMoodExists) {

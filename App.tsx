@@ -1309,6 +1309,7 @@ const App: React.FC = () => {
         moodLogs={moodLogs}
         noteCategories={noteCategories}
         noteCategoryColors={noteCategoryColors}
+        lang={lang}
       />
 
       {/* BOTTOM NAVIGATION (Mobile Only) */}
