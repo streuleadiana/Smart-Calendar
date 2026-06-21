@@ -682,21 +682,71 @@ const App: React.FC = () => {
   );
 
   // --- DATA MANAGEMENT ---
+  const sanitizeData = (val: any, seen = new WeakSet()): any => {
+    if (val === null || val === undefined) {
+      return val;
+    }
+    if (typeof val !== 'object') {
+      return val;
+    }
+    if (val instanceof Date) {
+      return val.toISOString();
+    }
+    if (typeof val.toDate === 'function') {
+      try {
+        return val.toDate().toISOString();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    if (typeof val.seconds === 'number' && typeof val.nanoseconds === 'number') {
+      return new Date(val.seconds * 1000).toISOString();
+    }
+    if (seen.has(val)) {
+      return undefined; // Break circular references
+    }
+    seen.add(val);
+    if (Array.isArray(val)) {
+      return val.map(item => sanitizeData(item, seen));
+    }
+    const res: any = {};
+    for (const key of Object.keys(val)) {
+      res[key] = sanitizeData(val[key], seen);
+    }
+    return res;
+  };
+
   const handleExport = () => {
-    const data = {
-      user: { name: userName },
-      events,
-      todos,
-      theme,
+    const rawData = {
+      user: {
+        name: userName,
+        accentColor,
+        theme,
+        font,
+        lang,
+        assistantName,
+        assistantAvatar,
+        noteCategories,
+        noteCategoryColors,
+        categories
+      },
+      events: events || [],
+      todos: todos || [],
+      notes: notes || [],
+      moodLogs: moodLogs || [],
+      wishlist: wishlistItems || [],
+      visionBoard: visionItems || [],
       exportedAt: new Date().toISOString(),
-      version: '1.0'
+      version: '1.1'
     };
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8;' });
+    const sanitizedData = sanitizeData(rawData);
+
+    const blob = new Blob([JSON.stringify(sanitizedData, null, 2)], { type: 'application/json;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `smart-calendar-backup.json`;
+    link.download = `smart-calendar-backup-${new Date().toISOString().split('T')[0]}.json`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -707,13 +757,16 @@ const App: React.FC = () => {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
-        const json = JSON.parse(event.target?.result as string);
-        handleImportData(json);
+        const text = event.target?.result as string;
+        const json = JSON.parse(text);
+        await handleImportData(json);
         alert('Backup restaurat cu succes!');
         window.location.reload();
       } catch (err) {
+        console.error("Exact parsing/restoring error during backup restore:", err);
+        setImportError(err instanceof Error ? err.message : String(err));
         alert('Eroare: Fișier invalid sau corupt.');
       }
     };
@@ -721,23 +774,157 @@ const App: React.FC = () => {
     e.target.value = '';
   };
 
-  const handleImportData = (data: any) => {
-    if (data.user && data.user.name) {
-        setUserName(data.user.name);
-        localStorage.setItem('app_username', data.user.name);
+  const handleImportData = async (data: any) => {
+    if (!data || typeof data !== 'object') {
+      throw new Error('Datele de backup nu sunt un obiect valid.');
     }
-    if (data.events && Array.isArray(data.events)) {
-        setEvents(data.events);
-        storage.saveEvents(data.events);
+
+    const validatedData = {
+      user: data.user || {},
+      events: Array.isArray(data.events) ? data.events : [],
+      todos: Array.isArray(data.todos) ? data.todos : [],
+      notes: Array.isArray(data.notes) ? data.notes : [],
+      moodLogs: Array.isArray(data.moodLogs) ? data.moodLogs : [],
+      wishlist: Array.isArray(data.wishlist) ? data.wishlist : (Array.isArray(data.wishlistItems) ? data.wishlistItems : []),
+      visionBoard: Array.isArray(data.visionBoard) ? data.visionBoard : (Array.isArray(data.visionItems) ? data.visionItems : []),
+      theme: data.theme || data.user?.theme || null
+    };
+
+    if (!auth.currentUser) {
+      if (validatedData.user?.name) {
+        setUserName(validatedData.user.name);
+        localStorage.setItem('app_username', validatedData.user.name);
+      }
+      if (validatedData.events.length > 0) {
+        setEvents(validatedData.events);
+        storage.saveEvents(validatedData.events);
+      }
+      if (validatedData.todos.length > 0) {
+        setTodos(validatedData.todos);
+        storage.saveTodos(validatedData.todos);
+      }
+      if (validatedData.theme) {
+        setTheme(validatedData.theme);
+        storage.saveTheme(validatedData.theme);
+      }
+      return;
     }
-    if (data.todos && Array.isArray(data.todos)) {
-        setTodos(data.todos);
-        storage.saveTodos(data.todos);
+
+    const uid = auth.currentUser.uid;
+
+    const userUpdates: any = {};
+    const userData = validatedData.user;
+    
+    if (userData.name) {
+      userUpdates.mascot = userData.name;
+      setUserName(userData.name);
+      localStorage.setItem('app_username', userData.name);
     }
-    if (data.theme) {
-        setTheme(data.theme);
-        storage.saveTheme(data.theme);
+    if (userData.accentColor) {
+      userUpdates.themeColor = userData.accentColor;
+      localStorage.setItem('app_accent_color', userData.accentColor);
+      setAccentColor(userData.accentColor);
     }
+    if (validatedData.theme) {
+      userUpdates.theme = validatedData.theme;
+      setTheme(validatedData.theme);
+      storage.saveTheme(validatedData.theme);
+    }
+    if (userData.font) {
+      userUpdates.font = userData.font;
+      setFont(userData.font);
+      storage.saveFont(userData.font);
+    }
+    if (userData.lang) {
+      userUpdates.lang = userData.lang;
+      setLang(userData.lang);
+      localStorage.setItem('app_lang', userData.lang);
+    }
+    if (userData.noteCategories) {
+      userUpdates.customNoteCategories = userData.noteCategories;
+      setNoteCategories(userData.noteCategories);
+    }
+    if (userData.noteCategoryColors) {
+      userUpdates.noteCategoryColors = userData.noteCategoryColors;
+      setNoteCategoryColors(userData.noteCategoryColors);
+    }
+
+    if (Object.keys(userUpdates).length > 0) {
+      await setDoc(doc(db, 'users', uid), userUpdates, { merge: true });
+    }
+
+    for (const event of validatedData.events) {
+      if (!event.id) continue;
+      try {
+        await setDoc(doc(db, 'events', event.id), {
+          ...event,
+          userId: uid
+        }, { merge: true });
+      } catch (err) {
+        console.error(`Failed to restore event ${event.id}:`, err);
+      }
+    }
+
+    for (const todo of validatedData.todos) {
+      if (!todo.id) continue;
+      try {
+        await setDoc(doc(db, 'todos', todo.id), {
+          ...todo,
+          userId: uid
+        }, { merge: true });
+      } catch (err) {
+        console.error(`Failed to restore todo ${todo.id}:`, err);
+      }
+    }
+
+    for (const note of validatedData.notes) {
+      if (!note.id) continue;
+      try {
+        await setDoc(doc(db, 'notes', note.id), {
+          ...note,
+          userId: uid
+        }, { merge: true });
+      } catch (err) {
+        console.error(`Failed to restore note ${note.id}:`, err);
+      }
+    }
+
+    for (const log of validatedData.moodLogs) {
+      const logId = log.id || log.date;
+      if (!logId) continue;
+      try {
+        await setDoc(doc(db, 'users', uid, 'moodLogs', logId), {
+          ...log,
+          id: logId
+        }, { merge: true });
+      } catch (err) {
+        console.error(`Failed to restore moodLog ${logId}:`, err);
+      }
+    }
+
+    for (const item of validatedData.wishlist) {
+      if (!item.id) continue;
+      try {
+        await setDoc(doc(db, 'users', uid, 'wishlist', item.id), item, { merge: true });
+      } catch (err) {
+        console.error(`Failed to restore wishlist item ${item.id}:`, err);
+      }
+    }
+
+    for (const item of validatedData.visionBoard) {
+      if (!item.id) continue;
+      try {
+        await setDoc(doc(db, 'users', uid, 'visionBoard', item.id), item, { merge: true });
+      } catch (err) {
+        console.error(`Failed to restore vision board item ${item.id}:`, err);
+      }
+    }
+
+    if (userData.categories && Array.isArray(userData.categories)) {
+      setCategories(userData.categories);
+      storage.saveCategories(userData.categories);
+    }
+
     triggerAiMessage("Datele au fost restaurate cu succes! 💾");
   };
 

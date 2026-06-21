@@ -175,8 +175,8 @@ export const MoodView: React.FC<MoodViewProps> = ({ moodLogs, onSaveMood, theme,
   };
 
   return (
-    <div className={`flex flex-col w-full px-4 pb-32 lg:pb-8 animate-in slide-in-from-bottom-2 ${isNeon ? 'bg-slate-950 text-slate-200' : 'bg-[#fafafa]'}`}>
-        <div className="max-w-xl w-full mx-auto mt-6">
+    <div className={`flex flex-col w-full px-4 sm:px-8 pb-32 lg:pb-8 animate-in slide-in-from-bottom-2 ${isNeon ? 'bg-slate-950 text-slate-200' : 'bg-[#fafafa]'}`}>
+        <div className="max-w-6xl w-full mx-auto mt-6">
             
             <div className="flex items-center justify-between mb-8">
                 <h1 className={`text-3xl font-extrabold tracking-tight ${textPrimary} flex items-center gap-2`}>
@@ -192,88 +192,92 @@ export const MoodView: React.FC<MoodViewProps> = ({ moodLogs, onSaveMood, theme,
                 </button>
             </div>
 
-            {/* Check-in Card (Soft UI) */}
-            <div className={`rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 mb-8 transition-all ${isNeon ? 'bg-slate-900 border border-slate-800' : isSoft ? 'bg-white border border-pink-50' : 'bg-white'}`}>
-                 <div className="flex flex-col items-center mb-6">
-                    <h2 className={`text-xl font-bold text-center ${textPrimary} flex items-center gap-2 justify-center`}>
-                        <span>{selectedMoodDate === todayStr ? 'Cum te simți azi?' : 'Cum te-ai simțit?'}</span>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                {/* Check-in Card (Soft UI) */}
+                <div className={`rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 transition-all ${isNeon ? 'bg-slate-900 border border-slate-800' : isSoft ? 'bg-white border border-pink-50' : 'bg-white'}`}>
+                     <div className="flex flex-col items-center mb-6">
+                        <h2 className={`text-xl font-bold text-center ${textPrimary} flex items-center gap-2 justify-center`}>
+                            <span>{selectedMoodDate === todayStr ? 'Cum te simți azi?' : 'Cum te-ai simțit?'}</span>
+                            {moodLogs.some(m => m.date === selectedMoodDate) && (
+                                <span className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-1 rounded-full font-semibold animate-pulse">
+                                    Înregistrat ✨
+                                </span>
+                            )}
+                        </h2>
                         {moodLogs.some(m => m.date === selectedMoodDate) && (
-                            <span className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-1 rounded-full font-semibold animate-pulse">
-                                Înregistrat ✨
-                            </span>
+                            <p className={`text-xs text-center mt-1 ${textSecondary}`}>
+                                Ai înregistrat deja starea pentru această dată. O poți edita mai jos.
+                            </p>
                         )}
-                    </h2>
-                    {moodLogs.some(m => m.date === selectedMoodDate) && (
-                        <p className={`text-xs text-center mt-1 ${textSecondary}`}>
-                            Ai înregistrat deja starea pentru această dată. O poți edita mai jos.
-                        </p>
-                    )}
+                        
+                        {/* Soft-styled Date Picker Inline */}
+                        <div className="mt-3 flex flex-col gap-1 w-full max-w-xs mx-auto">
+                            <label className={`text-[10px] font-bold uppercase tracking-wider ${textSecondary} text-center`}>Alege Data</label>
+                            <input 
+                                type="date"
+                                value={selectedMoodDate}
+                                max={todayStr}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val <= todayStr) {
+                                        setSelectedMoodDate(val);
+                                    }
+                                }}
+                                className={`w-full p-2 px-3 rounded-xl text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all border ${
+                                    isNeon 
+                                        ? 'bg-slate-800 border-slate-700 text-white' 
+                                        : 'bg-slate-50 border border-slate-200 text-slate-800'
+                                } font-semibold text-sm cursor-pointer`}
+                            />
+                        </div>
+                    </div>
                     
-                    {/* Soft-styled Date Picker Inline */}
-                    <div className="mt-3 flex flex-col gap-1 w-full max-w-xs mx-auto">
-                        <label className={`text-[10px] font-bold uppercase tracking-wider ${textSecondary} text-center`}>Alege Data</label>
-                        <input 
-                            type="date"
-                            value={selectedMoodDate}
-                            max={todayStr}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                if (val <= todayStr) {
-                                    setSelectedMoodDate(val);
-                                }
-                            }}
-                            className={`w-full p-2 px-3 rounded-xl text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all border ${
-                                isNeon 
-                                    ? 'bg-slate-800 border-slate-700 text-white' 
-                                    : 'bg-slate-50 border border-slate-200 text-slate-800'
-                            } font-semibold text-sm cursor-pointer`}
-                        />
+                    {/* Emoji Row with flex-nowrap to avoid breaking into a second row */}
+                    <div className="flex flex-row flex-nowrap justify-between sm:justify-center sm:gap-6 mb-6 overflow-x-auto pb-2 -mx-2 px-2 custom-scrollbar">
+                        {DEFAULT_MOODS.map(mood => (
+                            <button
+                                key={mood.label}
+                                onClick={() => setSelectedMood(mood)}
+                                className={`flex-shrink-0 flex flex-col items-center gap-2 transition-all p-2 rounded-2xl hover:scale-105 active:scale-95 ${selectedMood?.label === mood.label ? 'ring-2 ring-offset-2 ring-indigo-400 bg-slate-50' : 'opacity-80 hover:opacity-100 hover:bg-slate-50'}`}
+                            >
+                                <div className="w-12 h-12 flex items-center justify-center rounded-full text-2xl shadow-sm border border-black/5" style={{ backgroundColor: mood.color }}>
+                                    {mood.emoji}
+                                </div>
+                                <span className={`text-xs font-medium ${selectedMood?.label === mood.label ? 'text-indigo-600 font-bold' : textSecondary}`}>{mood.label}</span>
+                            </button>
+                        ))}
                     </div>
-                </div>
-                <div className="flex justify-between sm:justify-center sm:gap-6 mb-6">
-                    {DEFAULT_MOODS.map(mood => (
-                        <button
-                            key={mood.label}
-                            onClick={() => setSelectedMood(mood)}
-                            className={`flex flex-col items-center gap-2 transition-all p-2 rounded-2xl hover:scale-105 active:scale-95 ${selectedMood?.label === mood.label ? 'ring-2 ring-offset-2 ring-indigo-400 bg-slate-50' : 'opacity-80 hover:opacity-100 hover:bg-slate-50'}`}
-                        >
-                            <div className="w-12 h-12 flex items-center justify-center rounded-full text-2xl shadow-sm border border-black/5" style={{ backgroundColor: mood.color }}>
-                                {mood.emoji}
-                            </div>
-                            <span className={`text-xs font-medium ${selectedMood?.label === mood.label ? 'text-indigo-600 font-bold' : textSecondary}`}>{mood.label}</span>
-                        </button>
-                    ))}
+
+                    {selectedMood && (
+                        <div className="animate-in fade-in slide-in-from-top-4 duration-300 flex flex-col gap-4">
+                             <textarea 
+                                value={journalNote}
+                                onChange={(e) => setJournalNote(e.target.value)}
+                                placeholder="De ce te simți așa? (Opțional)"
+                                className={`w-full p-4 rounded-2xl resize-none h-24 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all ${isNeon ? 'bg-slate-800 text-white placeholder-slate-500' : 'bg-slate-50/50 border border-slate-100 placeholder-slate-400'}`}
+                             />
+                             <button 
+                                onClick={handleSave}
+                                disabled={isSaving}
+                                className={`w-full py-3.5 rounded-2xl font-bold text-white shadow-md transition-all hover:opacity-90 active:scale-95 ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                style={{ backgroundColor: accentColor }}
+                             >
+                                {isSaving ? 'Se salvează...' : 'Salvează Starea'}
+                             </button>
+                        </div>
+                    )}
                 </div>
 
-                {selectedMood && (
-                    <div className="animate-in fade-in slide-in-from-top-4 duration-300 flex flex-col gap-4">
-                         <textarea 
-                            value={journalNote}
-                            onChange={(e) => setJournalNote(e.target.value)}
-                            placeholder="De ce te simți așa? (Opțional)"
-                            className={`w-full p-4 rounded-2xl resize-none h-24 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all ${isNeon ? 'bg-slate-800 text-white placeholder-slate-500' : 'bg-slate-50/50 border border-slate-100 placeholder-slate-400'}`}
-                         />
-                         <button 
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            className={`w-full py-3.5 rounded-2xl font-bold text-white shadow-md transition-all hover:opacity-90 active:scale-95 ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            style={{ backgroundColor: accentColor }}
-                         >
-                            {isSaving ? 'Se salvează...' : 'Salvează Starea'}
-                         </button>
+                {/* Calendar Grid -> Year in Pixels */}
+                <div className={`rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 transition-all ${isNeon ? 'bg-slate-900 border border-slate-800' : isSoft ? 'bg-white border border-pink-50' : 'bg-white'}`}>
+                    <h3 className={`text-lg font-bold mb-6 flex items-center gap-2 ${textPrimary}`}>
+                        <Calendar size={20} className={isNeon ? 'text-indigo-400' : 'text-indigo-500'} />
+                        Anul în Pixeli
+                    </h3>
+                    
+                    <div className="flex flex-wrap gap-1 md:gap-1.5 justify-center sm:justify-start">
+                        {renderYearInPixels()}
                     </div>
-                )}
-            </div>
-
-            {/* Calendar Grid -> Year in Pixels */}
-            <div className={`rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 transition-all ${isNeon ? 'bg-slate-900 border border-slate-800' : isSoft ? 'bg-white border border-pink-50' : 'bg-white'}`}>
-                <h3 className={`text-lg font-bold mb-6 flex items-center gap-2 ${textPrimary}`}>
-                    <Calendar size={20} className={isNeon ? 'text-indigo-400' : 'text-indigo-500'} />
-                    Anul în Pixeli
-                </h3>
-                
-                <div className="flex flex-wrap gap-1 md:gap-1.5 justify-center sm:justify-start">
-                    {renderYearInPixels()}
                 </div>
             </div>
 
