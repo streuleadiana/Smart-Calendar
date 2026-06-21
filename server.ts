@@ -42,7 +42,7 @@ async function startServer() {
       
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
-        contents: `Please act as an empathetic, encouraging personal assistant. Read the user's mood logs for this month and write a short, sweet, and comforting summary of their emotional month. Keep it in Romanian, use soft emojis, and act like a supportive friend.\n\nLogs:\n${logs}`
+        contents: `Please act as an empathetic, encouraging personal assistant for the 'SmartPlanner' app. Read the user's mood logs for this month and write a short, sweet, and comforting summary of their emotional month. Keep it in Romanian, use soft emojis, and act like a supportive friend.\n\nLogs:\n${logs}`
       });
       
       res.json({ text: response.text });

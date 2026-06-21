@@ -126,7 +126,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
     {
       id: '1',
       text: `Salut, ${userName || 'prietene'}! 👋 
-Eu sunt ${assistantName} ${assistantAvatar}.
+Eu sunt ${assistantName} ${assistantAvatar}, asistentul tău din SmartPlanner.
 
 Poți să-mi vorbești liber! Încearcă:
 📅 "Pune ședință luni la 10 cu roșu"

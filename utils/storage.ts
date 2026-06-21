@@ -3,11 +3,11 @@ import { auth, db, cleanPayload } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const STORAGE_KEYS = {
-  USER: 'smart_calendar_user',
-  THEME: 'smart_calendar_theme',
-  EVENTS: 'smart_calendar_events',
-  TODOS: 'smart_calendar_todos',
-  CATEGORIES: 'smart_calendar_categories'
+  USER: 'smart_planner_user',
+  THEME: 'smart_planner_theme',
+  EVENTS: 'smart_planner_events',
+  TODOS: 'smart_planner_todos',
+  CATEGORIES: 'smart_planner_categories'
 };
 
 // Internal helper to get current logged in user
@@ -77,10 +77,10 @@ export const getTheme = (): Theme => {
 };
 
 export const saveFont = (font: FontOption): void => {
-  localStorage.setItem('smart_calendar_font', font);
+  localStorage.setItem('smart_planner_font', font);
 };
 
 export const getFont = (): FontOption => {
-  const f = localStorage.getItem('smart_calendar_font') as FontOption;
+  const f = localStorage.getItem('smart_planner_font') as FontOption;
   return f && ['inter', 'nunito', 'quicksand', 'caveat'].includes(f) ? f : 'inter';
 };

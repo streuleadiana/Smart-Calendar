@@ -27,7 +27,7 @@ const privateVapidKey = process.env.VAPID_PRIVATE_KEY || '';
 
 if (publicVapidKey && privateVapidKey) {
     webpush.setVapidDetails(
-        'mailto:support@smartcalendar.local', // Replace with your email
+        'mailto:support@smartplanner.local', // Replace with your email
         publicVapidKey,
         privateVapidKey
     );

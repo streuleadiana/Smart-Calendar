@@ -13,7 +13,7 @@ interface ShareOptions {
 export const handleShare = async ({ title, text, url }: ShareOptions): Promise<void> => {
   let updatedText = text;
   try {
-    const officialURL = 'https://smart-calendar-sigma.vercel.app';
+    const officialURL = '[PUNE_AICI_LINKUL_NOU_DE_LA_VERCEL_INCLUSIV_HTTPS://]';
     if (!updatedText.includes(officialURL)) {
       const isRo = /Trimis din|Notiță|Inspirație|indiciu|programul meu/i.test(updatedText);
       const appLinkMessage = isRo

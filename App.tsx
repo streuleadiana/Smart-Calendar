@@ -529,7 +529,7 @@ const App: React.FC = () => {
             }
         } catch (error) {
             console.warn("Offline or timeout reached loading categories.");
-            const localCats = localStorage.getItem('smart_calendar_categories');
+            const localCats = localStorage.getItem('smart_planner_categories');
             if (localCats) setCategories(JSON.parse(localCats));
         }
         
@@ -746,7 +746,7 @@ const App: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `smart-calendar-backup-${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `smart-planner-backup-${new Date().toISOString().split('T')[0]}.json`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -1060,7 +1060,7 @@ const App: React.FC = () => {
                     <Sparkles size={40} />
                 </div>
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">Bine ai venit! 👋</h1>
-                <p className="text-slate-500 mb-8">Smart Calendar te ajută să te organizezi eficient.</p>
+                <p className="text-slate-500 mb-8">SmartPlanner te ajută să te organizezi eficient.</p>
                 <form onSubmit={handleStartApp} className="space-y-4">
                     <button 
                         type="submit" 

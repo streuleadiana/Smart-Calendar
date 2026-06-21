@@ -10,8 +10,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Smart Calendar',
-        short_name: 'SmartCal',
+        name: 'SmartPlanner',
+        short_name: 'SmartPlanner',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',

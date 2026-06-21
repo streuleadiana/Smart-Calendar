@@ -42,7 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <Layout size={20} />
                 </div>
                 <span className={`text-lg font-bold ${isNeon ? 'text-white' : 'text-slate-800'}`}>
-                    Smart Calendar
+                    SmartPlanner
                 </span>
             </div>
             <button 

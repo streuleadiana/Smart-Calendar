@@ -404,8 +404,8 @@ export const VisionView: React.FC<VisionViewProps> = ({
                                             e.preventDefault();
                                             const quoteStr = item.quote ? `"${item.quote}"` : '';
                                             const text = quoteStr 
-                                                ? `✨ Inspirație zilnică:\n${quoteStr}\n\nImagine: ${item.imageUrl}\n\nTrimis din SmartCalendar 🌸`
-                                                : `✨ Inspirație zilnică:\nImagine: ${item.imageUrl}\n\nTrimis din SmartCalendar 🌸`;
+                                                ? `✨ Inspirație zilnică:\n${quoteStr}\n\nImagine: ${item.imageUrl}\n\nTrimis din SmartPlanner 🌸`
+                                                : `✨ Inspirație zilnică:\nImagine: ${item.imageUrl}\n\nTrimis din SmartPlanner 🌸`;
                                             await handleShare({ 
                                                 title: 'Inspirație', 
                                                 text,

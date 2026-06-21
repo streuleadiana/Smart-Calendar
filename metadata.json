@@ -1,5 +1,5 @@
 {
-  "name": "Smart Calendar",
+  "name": "Smart Planner",
   "description": "A modern, persistent monthly calendar application using LocalStorage.",
   "requestFramePermissions": [
     "microphone"

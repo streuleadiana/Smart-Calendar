@@ -8,7 +8,7 @@ self.addEventListener('push', function(event) {
     }
   }
 
-  const title = data.title || 'Smart Calendar';
+  const title = data.title || 'SmartPlanner';
   const options = {
     body: data.body || 'Ai o nouă notificare.',
     icon: data.icon || '/icon.svg',

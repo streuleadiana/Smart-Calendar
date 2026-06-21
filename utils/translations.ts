@@ -96,7 +96,7 @@ export const translations = {
       shareWeekTitle: 'Program săptămâna asta',
       noEventsToday: '• Niciun eveniment programat pentru azi. ✨',
       noEventsWeek: '• Niciun eveniment programat pentru această săptămână. ✨',
-      sentFrom: 'Trimis din SmartCalendar.'
+      sentFrom: 'Trimis din SmartPlanner.'
     },
     home: {
       dailyTheme: 'Tema Zilei',
@@ -222,7 +222,7 @@ export const translations = {
       shareWeekTitle: "This Week's Schedule",
       noEventsToday: '• No events scheduled for today. ✨',
       noEventsWeek: '• No events scheduled for this week. ✨',
-      sentFrom: 'Sent from SmartCalendar.'
+      sentFrom: 'Sent from SmartPlanner.'
     },
     home: {
       dailyTheme: 'Daily Theme',
@@ -348,7 +348,7 @@ export const translations = {
       shareWeekTitle: 'Horario de esta semana',
       noEventsToday: '• No hay eventos programados para hoy. ✨',
       noEventsWeek: '• No hay eventos programados para esta semana. ✨',
-      sentFrom: 'Enviado desde SmartCalendar.'
+      sentFrom: 'Enviado desde SmartPlanner.'
     },
     home: {
       dailyTheme: 'Tema del Día',
@@ -473,7 +473,7 @@ export const translations = {
       shareWeekTitle: 'Programme de cette semaine',
       noEventsToday: '• Aucun événement prévu pour d\'aujourd\'hui. ✨',
       noEventsWeek: '• Aucun événement prévu pour cette semaine. ✨',
-      sentFrom: 'Envoyé depuis SmartCalendar.'
+      sentFrom: 'Envoyé depuis SmartPlanner.'
     },
     home: {
       dailyTheme: 'Thème du Jour',
